@@ -255,6 +255,9 @@ export default function App() {
           </Routes>
         </main>
         {session.admin && <AdminNotificationBridge />}
+        {session.user && !session.admin && (
+          <CustomerNotificationBridge uid={session.user.uid} />
+        )}
         <FloatingChatButton />
         <footer>
           <div className="wordmark">
@@ -328,6 +331,55 @@ function AdminNotificationBridge() {
       document.title = "Hosken Biojoias";
     };
   }, [location.pathname, unreadCount]);
+  return null;
+}
+function CustomerNotificationBridge({ uid }: { uid: string }) {
+  const conversation = useCustomerConversation(uid);
+  const [pendingOrderCount, setPendingOrderCount] = useState(
+    () => Object.keys(readCustomerNotificationState(uid).pendingOrders).length,
+  );
+
+  useEffect(() => {
+    const syncPendingOrders = () =>
+      setPendingOrderCount(
+        Object.keys(readCustomerNotificationState(uid).pendingOrders).length,
+      );
+    syncPendingOrders();
+    window.addEventListener(CUSTOMER_NOTIFICATIONS_EVENT, syncPendingOrders);
+    window.addEventListener("storage", syncPendingOrders);
+    return () => {
+      window.removeEventListener(CUSTOMER_NOTIFICATIONS_EVENT, syncPendingOrders);
+      window.removeEventListener("storage", syncPendingOrders);
+    };
+  }, [uid]);
+
+  const unreadCount =
+    (conversation.conversation?.unreadForCustomer || 0) + pendingOrderCount;
+  useEffect(() => {
+    document.title = unreadCount
+      ? `(${unreadCount}) Hosken Biojoias`
+      : "Hosken Biojoias";
+    const appNavigator = navigator as Navigator & {
+      setAppBadge?: (contents?: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    if (unreadCount > 0) {
+      appNavigator.setAppBadge?.(unreadCount).catch(() => {});
+    } else {
+      appNavigator.clearAppBadge?.().catch(() => {});
+    }
+  }, [unreadCount]);
+
+  useEffect(
+    () => () => {
+      document.title = "Hosken Biojoias";
+      const appNavigator = navigator as Navigator & {
+        clearAppBadge?: () => Promise<void>;
+      };
+      appNavigator.clearAppBadge?.().catch(() => {});
+    },
+    [],
+  );
   return null;
 }
 function Home() {
