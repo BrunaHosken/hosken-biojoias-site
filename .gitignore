@@ -4,6 +4,7 @@ dist/
 .env.local
 .firebase/
 .emulator-data/
+firebase-export-*/
 *-debug.log
 .DS_Store
 .tools/
