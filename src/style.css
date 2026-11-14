@@ -319,6 +319,9 @@ nav a.active {
   grid-template-columns: repeat(3, 1fr);
   gap: 22px;
 }
+.line-grid-single {
+  grid-template-columns: minmax(0, 480px);
+}
 .line-card {
   padding: 28px;
   background: #f4eee6;

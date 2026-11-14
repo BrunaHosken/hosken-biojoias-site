@@ -4,14 +4,19 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function admin() { return signedIn() && request.auth.token.get('admin', false) == true; }
     function text(value, limit) { return value is string && value.size() > 0 && value.size() <= limit; }
-    function taxonomy() {
-      return request.resource.data.keys().hasOnly(['name','slug','status'])
-        && text(request.resource.data.name, 80) && text(request.resource.data.slug, 80)
-        && request.resource.data.status in ['published','draft'];
+    function taxonomy(collectionName) {
+      let data = request.resource.data;
+      return (collectionName == 'collections'
+          ? data.keys().hasOnly(['name','slug','status','description'])
+            && (!('description' in data)
+              || (data.description is string && data.description.size() <= 220))
+          : data.keys().hasOnly(['name','slug','status']))
+        && text(data.name, 80) && text(data.slug, 80)
+        && data.status in ['published','draft'];
     }
     match /{taxonomyCollection}/{id} {
       allow read: if taxonomyCollection in ['categories','collections'] && (resource.data.status == 'published' || admin());
-      allow create, update: if taxonomyCollection in ['categories','collections'] && admin() && taxonomy();
+      allow create, update: if taxonomyCollection in ['categories','collections'] && admin() && taxonomy(taxonomyCollection);
       allow delete: if taxonomyCollection in ['categories','collections'] && admin();
     }
     match /products/{id} {

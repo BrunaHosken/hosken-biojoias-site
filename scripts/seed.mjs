@@ -21,16 +21,23 @@ await auth.setCustomUserClaims("local-admin", { admin: true });
 const db = getFirestore();
 const groups = {
   collections: {
-    biojoias: { name: "Biojoias", slug: "biojoias", status: "published" },
+    biojoias: {
+      name: "Biojoias",
+      slug: "biojoias",
+      status: "published",
+      description: "A delicadeza das flores, preservada em cada detalhe.",
+    },
     eletroformacao: {
       name: "Eletroformação",
       slug: "eletroformacao",
-      status: "published",
+      status: "draft",
+      description: "Novas formas de transformar a natureza em arte.",
     },
     "flores-secas": {
       name: "Flores secas",
       slug: "flores-secas",
-      status: "published",
+      status: "draft",
+      description: "A beleza de florescer em outros tempos.",
     },
   },
   categories: {

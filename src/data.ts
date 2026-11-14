@@ -20,6 +20,7 @@ export type Taxonomy = {
   name: string;
   slug: string;
   status: string;
+  description?: string;
 };
 export type Product = {
   id: string;

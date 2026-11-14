@@ -392,6 +392,7 @@ function CustomerNotificationBridge({ uid }: { uid: string }) {
   return null;
 }
 function Home() {
+  const lines = useRecords<Taxonomy>("collections");
   return (
     <>
       <section className="hero">
@@ -431,57 +432,42 @@ function Home() {
         <span>Criação artesanal</span>
         <span>Peças com personalidade</span>
       </section>
-      <section className="page">
-        <div className="section-title">
-          <div>
-            <div className="eyebrow">ENCONTRE SUA PRÓXIMA HISTÓRIA</div>
-            <h2>Conheça nossas linhas</h2>
-          </div>
-          <Link to="/loja">
-            Explorar a loja <ArrowRight size={17} />
-          </Link>
-        </div>
-        <div className="line-grid">
-          {[
-            [
-              "biojoias",
-              "01",
-              "Biojoias",
-              "A delicadeza das flores, preservada em cada detalhe.",
-            ],
-            [
-              "eletroformacao",
-              "02",
-              "Eletroformação",
-              "Novas formas de transformar a natureza em arte.",
-            ],
-            [
-              "flores-secas",
-              "03",
-              "Flores secas",
-              "A beleza de florescer em outros tempos.",
-            ],
-          ].map(([id, n, title, text]) => (
-            <Link
-              className={`line-card line-${id}`}
-              to={`/loja?linha=${id}`}
-              key={id}
-            >
-              <div className="line-top">
-                <span>{n}</span>
-                {id !== "biojoias" && (
-                  <span className="tag">PRÉ-LANÇAMENTO</span>
-                )}
-              </div>
-              <Flower2 className="line-flower" strokeWidth={0.7} />
-              <h3>
-                {title} <ArrowRight size={19} />
-              </h3>
-              <p>{text}</p>
+      {(lines.loading || lines.error || lines.data.length > 0) && (
+        <section className="page">
+          <div className="section-title">
+            <div>
+              <div className="eyebrow">ENCONTRE SUA PRÓXIMA HISTÓRIA</div>
+              <h2>Conheça nossas linhas</h2>
+            </div>
+            <Link to="/loja">
+              Explorar a loja <ArrowRight size={17} />
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+          <Notice {...lines} />
+          {lines.data.length > 0 && (
+            <div
+              className={`line-grid ${lines.data.length === 1 ? "line-grid-single" : ""}`}
+            >
+              {lines.data.map((line) => (
+                <Link
+                  className="line-card"
+                  to={`/loja?linha=${encodeURIComponent(line.id)}`}
+                  key={line.id}
+                >
+                  <Flower2 className="line-flower" strokeWidth={0.7} />
+                  <h3>
+                    {line.name} <ArrowRight size={19} />
+                  </h3>
+                  <p>
+                    {line.description ||
+                      `Conheça as criações da linha ${line.name}.`}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <section className="story-band">
         <span className="eyebrow">POR TRÁS DE CADA PEÇA</span>
         <h2>
@@ -1767,7 +1753,8 @@ function AdminPanel() {
         setEditing("");
       } else {
         const name = String(f.get("name")).trim();
-        const payload = ["categories", "collections"].includes(tab)
+        const isTaxonomy = ["categories", "collections"].includes(tab);
+        const payload = isTaxonomy
           ? {
               name,
               slug: name
@@ -1777,16 +1764,26 @@ function AdminPanel() {
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-|-$/g, ""),
               status: String(f.get("status")),
+              ...(tab === "collections"
+                ? { description: String(f.get("description") || "").trim() }
+                : {}),
             }
           : {
               title: name,
               body: String(f.get("body")).trim(),
               status: String(f.get("status")),
             };
-        await addDoc(collection(db, tab), payload);
+        if (tab === "collections" && editing) {
+          await updateDoc(doc(db, tab, editing), payload);
+          setEditing("");
+          setMessage("Linha atualizada no banco.");
+        } else {
+          await addDoc(collection(db, tab), payload);
+          setMessage("Cadastro salvo no banco.");
+        }
         form.reset();
       }
-      setMessage("Cadastro salvo no banco.");
+      if (tab === "products") setMessage("Cadastro salvo no banco.");
     } catch {
       setMessage(
         "Não foi possível salvar. Confira os campos, sua permissão e a conexão com o banco.",
@@ -1803,6 +1800,20 @@ function AdminPanel() {
       setMessage("Visibilidade atualizada.");
     } catch {
       setMessage("Não foi possível alterar a visibilidade.");
+    }
+  }
+  async function toggleCollection(line: Taxonomy) {
+    try {
+      await updateDoc(doc(db, "collections", line.id), {
+        status: line.status === "published" ? "draft" : "published",
+      });
+      setMessage(
+        line.status === "published"
+          ? "Linha ocultada da vitrine."
+          : "Linha publicada na vitrine.",
+      );
+    } catch {
+      setMessage("Não foi possível alterar a publicação da linha.");
     }
   }
   async function remove(id: string) {
@@ -1827,6 +1838,10 @@ function AdminPanel() {
         : tab === "collections"
           ? lines
           : content;
+  const editingLine =
+    tab === "collections"
+      ? lines.data.find((line) => line.id === editing)
+      : undefined;
   return (
     <div className="page">
       <div className="eyebrow">ÁREA RESTRITA</div>
@@ -1884,8 +1899,14 @@ function AdminPanel() {
         />
       ) : (
         <div className="admin-layout">
-          <form key={tab} className="admin-form" onSubmit={save}>
-            <h2>{editing ? "Editar peça" : "Novo cadastro"}</h2>
+          <form key={`${tab}-${editing}`} className="admin-form" onSubmit={save}>
+            <h2>
+              {editing
+                ? tab === "products"
+                  ? "Editar peça"
+                  : "Editar linha"
+                : "Novo cadastro"}
+            </h2>
             {tab === "products" ? (
               <>
                 <label>
@@ -2027,11 +2048,22 @@ function AdminPanel() {
                   <input
                     name="name"
                     required
+                    defaultValue={editingLine?.name || ""}
                     maxLength={
                       ["categories", "collections"].includes(tab) ? 80 : 160
                     }
                   />
                 </label>
+                {tab === "collections" && (
+                  <label>
+                    Descrição curta para a vitrine (opcional)
+                    <textarea
+                      name="description"
+                      maxLength={220}
+                      defaultValue={editingLine?.description || ""}
+                    />
+                  </label>
+                )}
                 {!["categories", "collections"].includes(tab) && (
                   <label>
                     Texto
@@ -2040,7 +2072,10 @@ function AdminPanel() {
                 )}
                 <label>
                   Publicação
-                  <select name="status">
+                  <select
+                    name="status"
+                    defaultValue={editingLine?.status || "draft"}
+                  >
                     <option value="draft">Rascunho</option>
                     <option value="published">Publicado</option>
                   </select>
@@ -2048,7 +2083,12 @@ function AdminPanel() {
               </>
             )}
             <button className="button" disabled={busy}>
-              {busy ? "Salvando…" : "Salvar cadastro"} <Plus size={17} />
+              {busy
+                ? "Salvando…"
+                : editing
+                  ? "Salvar alterações"
+                  : "Salvar cadastro"}{" "}
+              <Plus size={17} />
             </button>
             {editing && (
               <button
@@ -2098,6 +2138,25 @@ function AdminPanel() {
                       <button
                         className="text-button"
                         onClick={() => toggleProduct(r as Product)}
+                      >
+                        {r.status === "published" ? "Ocultar" : "Publicar"}
+                      </button>
+                    </>
+                  )}
+                  {tab === "collections" && (
+                    <>
+                      <button
+                        className="text-button"
+                        onClick={() => {
+                          setEditing(r.id);
+                          setMessage("");
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="text-button"
+                        onClick={() => toggleCollection(r as Taxonomy)}
                       >
                         {r.status === "published" ? "Ocultar" : "Publicar"}
                       </button>
@@ -2672,7 +2731,7 @@ function AdminOrderCard({ order }: { order: CustomerOrder }) {
           </select>
         </label>
         <label>
-          Código de rastreio
+          Código de rastreio (se houver)
           <input
             value={trackingCode}
             maxLength={100}
