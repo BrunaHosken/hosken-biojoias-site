@@ -7,9 +7,11 @@ import {
 } from "react";
 import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
 import {
+  createUserWithEmailAndPassword,
   onIdTokenChanged,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   type User,
 } from "firebase/auth";
 import {
@@ -17,6 +19,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import {
@@ -576,6 +579,7 @@ function About() {
 }
 function Account() {
   const session = useContext(SessionContext);
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function login(e: FormEvent<HTMLFormElement>) {
@@ -592,6 +596,33 @@ function Account() {
     } catch {
       setError(
         "Não foi possível entrar. Confira os dados e se a autenticação está disponível.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function register(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    const form = new FormData(e.currentTarget);
+    const displayName = String(form.get("displayName")).trim();
+    try {
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        String(form.get("email")),
+        String(form.get("password")),
+      );
+      await updateProfile(credential.user, { displayName });
+      await setDoc(doc(db, "users", credential.user.uid), { displayName });
+    } catch (cause) {
+      const code = (cause as { code?: string }).code;
+      setError(
+        code === "auth/email-already-in-use"
+          ? "Já existe uma conta com esse e-mail. Entre ou use outro endereço."
+          : code === "auth/weak-password"
+            ? "Escolha uma senha com pelo menos 6 caracteres."
+            : "Não foi possível criar a conta. Confira seus dados e tente novamente.",
       );
     } finally {
       setBusy(false);
@@ -621,14 +652,31 @@ function Account() {
         </>
       ) : (
         <>
-          <p>Entre para acessar sua conta.</p>
-          <form onSubmit={login}>
+          <p>
+            {mode === "login"
+              ? "Entre para acessar sua conta."
+              : "Crie uma conta para acompanhar seus pedidos."}
+          </p>
+          <form onSubmit={mode === "login" ? login : register}>
+            {mode === "register" && (
+              <label>
+                Nome
+                <input
+                  name="displayName"
+                  type="text"
+                  autoComplete="name"
+                  maxLength={100}
+                  required
+                />
+              </label>
+            )}
             <label>
               E-mail
               <input
                 name="email"
                 type="email"
                 autoComplete="username"
+                maxLength={254}
                 required
               />
             </label>
@@ -637,7 +685,10 @@ function Account() {
               <input
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                minLength={6}
                 required
               />
             </label>
@@ -647,9 +698,30 @@ function Account() {
               </p>
             )}
             <button className="button" disabled={busy}>
-              {busy ? "Entrando…" : "Entrar"}
+              {busy
+                ? mode === "login"
+                  ? "Entrando…"
+                  : "Criando conta…"
+                : mode === "login"
+                  ? "Entrar"
+                  : "Criar conta"}
             </button>
           </form>
+          <p>
+            {mode === "login"
+              ? "Ainda não tem uma conta?"
+              : "Já tem uma conta?"}{" "}
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                setMode(mode === "login" ? "register" : "login");
+                setError("");
+              }}
+            >
+              {mode === "login" ? "Criar conta" : "Entrar"}
+            </button>
+          </p>
           {localMode && (
             <aside className="notice">
               Depois de iniciar o banco, execute <code>npm run db:seed</code>.

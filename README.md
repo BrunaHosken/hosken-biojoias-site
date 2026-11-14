@@ -29,6 +29,7 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - Páginas separadas: início, loja, produto, novidades, eventos, lojas parceiras, história, contato, conta e carrinho.
 - Layout responsivo, filtros por linha e tipo cadastrados no banco.
 - Login e autorização administrativa com custom claim `admin: true`.
+- Clientes podem criar contas em `/conta` com nome, e-mail e senha; os pedidos serão exibidos nessa área quando o checkout entrar.
 - Cadastro e edição de produtos, preços em centavos, estoque, disponibilidade e visibilidade.
 - Cadastro de linhas, tipos de peça e conteúdo; exclusão e consulta em tempo real.
 - WhatsApp, Instagram e e-mail na página de contato. O e-mail informado é pessoal e ficará público no site.
