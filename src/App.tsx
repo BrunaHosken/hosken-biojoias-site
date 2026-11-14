@@ -20,9 +20,13 @@ import {
 } from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   onIdTokenChanged,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut,
+  updateEmail,
+  updatePassword,
   updateProfile,
   type User,
 } from "firebase/auth";
@@ -48,6 +52,8 @@ import {
   MessageCircle,
   Send,
   Bell,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { auth, db, localMode } from "./firebase";
 import {
@@ -726,6 +732,94 @@ function Account() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [profileMessage, setProfileMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  useEffect(() => {
+    setProfileName(session.user?.displayName || "");
+    setProfileEmail(session.user?.email || "");
+  }, [session.user]);
+  async function saveProfile(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!session.user) return;
+    setBusy(true);
+    setProfileError("");
+    setProfileMessage("");
+    const name = profileName.trim();
+    const email = profileEmail.trim();
+    try {
+      if (email !== session.user.email) await updateEmail(session.user, email);
+      if (name !== session.user.displayName) {
+        await updateProfile(session.user, { displayName: name });
+      }
+      await setDoc(doc(db, "users", session.user.uid), { displayName: name });
+      setProfileMessage("Seus dados foram atualizados.");
+      setEditingProfile(false);
+    } catch (cause) {
+      const code = (cause as { code?: string }).code;
+      setProfileError(
+        code === "auth/requires-recent-login"
+          ? "Por segurança, entre novamente para alterar o e-mail."
+          : code === "auth/email-already-in-use"
+            ? "Esse e-mail já está sendo usado por outra conta."
+            : code === "auth/invalid-email"
+              ? "Confira o formato do e-mail."
+              : "Não foi possível atualizar os dados. Tente novamente.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function changePassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!session.user?.email) return;
+    setBusy(true);
+    setPasswordError("");
+    setPasswordMessage("");
+    const form = new FormData(e.currentTarget);
+    const currentPassword = String(form.get("currentPassword"));
+    const newPassword = String(form.get("newPassword"));
+    const confirmPassword = String(form.get("confirmPassword"));
+    if (newPassword !== confirmPassword) {
+      setPasswordError("A confirmação não corresponde à nova senha.");
+      setBusy(false);
+      return;
+    }
+    try {
+      const credential = EmailAuthProvider.credential(
+        session.user.email,
+        currentPassword,
+      );
+      await reauthenticateWithCredential(session.user, credential);
+      await updatePassword(session.user, newPassword);
+      setPasswordMessage("Sua senha foi alterada.");
+      setChangingPassword(false);
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+    } catch (cause) {
+      const code = (cause as { code?: string }).code;
+      setPasswordError(
+        code === "auth/wrong-password" || code === "auth/invalid-credential"
+          ? "A senha atual está incorreta."
+          : code === "auth/weak-password"
+            ? "A nova senha precisa ter pelo menos 6 caracteres."
+            : code === "auth/requires-recent-login"
+              ? "Entre novamente antes de alterar sua senha."
+              : "Não foi possível alterar a senha. Tente novamente.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   async function login(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -780,23 +874,178 @@ function Account() {
         <p>Carregando sessão…</p>
       ) : session.user ? (
         <>
-          <p>Você entrou como {session.user.email}.</p>
+          <p>Olá, {session.user.displayName || session.user.email}.</p>
           {session.admin && (
             <Link className="button" to="/admin">
               Abrir administração <ArrowRight size={18} />
             </Link>
           )}
-          <p className="muted">
-            Consulte os pedidos e acompanhe cada atualização na sua conta.
-          </p>
-          <Link className="button secondary" to="/pedidos">
-            Meus pedidos <ArrowRight size={18} />
-          </Link>
-          {!session.admin && (
-            <Link className="button secondary account-chat-link" to="/chat">
-              <MessageCircle size={18} /> Falar com o ateliê
-            </Link>
-          )}
+          <section className="account-settings">
+            <div className="account-setting-card account-orders-link">
+              <div>
+                <div className="eyebrow">ACOMPANHAMENTO</div>
+                <h2>Seus pedidos</h2>
+                <p className="muted">
+                  Consulte o histórico e as atualizações dos seus pedidos.
+                </p>
+              </div>
+              <Link className="button secondary" to="/pedidos">
+                Meus pedidos <ArrowRight size={18} />
+              </Link>
+            </div>
+            <section className="account-setting-card">
+              <header className="account-setting-header">
+                <div>
+                  <div className="eyebrow">SEUS DADOS</div>
+                  <h2>Dados pessoais</h2>
+                </div>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    if (editingProfile) {
+                      setProfileName(session.user?.displayName || "");
+                      setProfileEmail(session.user?.email || "");
+                    }
+                    setEditingProfile((value) => !value);
+                    setProfileError("");
+                    setProfileMessage("");
+                  }}
+                >
+                  {editingProfile ? "Cancelar" : "Editar dados"}
+                </button>
+              </header>
+              {editingProfile ? (
+                <form className="account-edit-form" onSubmit={saveProfile}>
+                  <label>
+                    Nome
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      maxLength={100}
+                      required
+                      value={profileName}
+                      onChange={(event) => setProfileName(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    E-mail
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      maxLength={254}
+                      required
+                      value={profileEmail}
+                      onChange={(event) => setProfileEmail(event.target.value)}
+                    />
+                  </label>
+                  {profileError && <p className="notice" role="alert">{profileError}</p>}
+                  <button className="button" disabled={busy}>
+                    {busy ? "Salvando…" : "Salvar dados"}
+                  </button>
+                </form>
+              ) : (
+                <dl className="account-data-list">
+                  <div><dt>Nome</dt><dd>{session.user.displayName || "Não informado"}</dd></div>
+                  <div><dt>E-mail</dt><dd>{session.user.email || "Não informado"}</dd></div>
+                </dl>
+              )}
+              {profileMessage && <p className="account-success" role="status">{profileMessage}</p>}
+            </section>
+            <section className="account-setting-card">
+              <header className="account-setting-header">
+                <div>
+                  <div className="eyebrow">SEGURANÇA</div>
+                  <h2>Senha</h2>
+                </div>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    if (changingPassword) {
+                      setShowCurrentPassword(false);
+                      setShowNewPassword(false);
+                      setShowConfirmPassword(false);
+                    }
+                    setChangingPassword((value) => !value);
+                    setPasswordError("");
+                    setPasswordMessage("");
+                  }}
+                >
+                  {changingPassword ? "Cancelar" : "Alterar senha"}
+                </button>
+              </header>
+              <p className="muted account-password-hint">
+                Sua senha atual não é exibida. Você pode mostrar os campos enquanto digita.
+              </p>
+              {changingPassword && (
+                <form className="account-edit-form" onSubmit={changePassword}>
+                  <label>
+                    Senha atual
+                    <span className="password-field">
+                      <input
+                        name="currentPassword"
+                        type={showCurrentPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        minLength={6}
+                        required
+                      />
+                      <button
+                        type="button"
+                        aria-label={showCurrentPassword ? "Ocultar senha atual" : "Mostrar senha atual"}
+                        onClick={() => setShowCurrentPassword((value) => !value)}
+                      >
+                        {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </span>
+                  </label>
+                  <label>
+                    Nova senha
+                    <span className="password-field">
+                      <input
+                        name="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        minLength={6}
+                        required
+                      />
+                      <button
+                        type="button"
+                        aria-label={showNewPassword ? "Ocultar nova senha" : "Mostrar nova senha"}
+                        onClick={() => setShowNewPassword((value) => !value)}
+                      >
+                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </span>
+                  </label>
+                  <label>
+                    Confirme a nova senha
+                    <span className="password-field">
+                      <input
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        minLength={6}
+                        required
+                      />
+                      <button
+                        type="button"
+                        aria-label={showConfirmPassword ? "Ocultar confirmação" : "Mostrar confirmação"}
+                        onClick={() => setShowConfirmPassword((value) => !value)}
+                      >
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </span>
+                  </label>
+                  {passwordError && <p className="notice" role="alert">{passwordError}</p>}
+                  <button className="button" disabled={busy}>
+                    {busy ? "Atualizando…" : "Salvar nova senha"}
+                  </button>
+                </form>
+              )}
+              {passwordMessage && <p className="account-success" role="status">{passwordMessage}</p>}
+            </section>
+          </section>
         </>
       ) : (
         <>
