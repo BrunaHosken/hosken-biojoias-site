@@ -1094,7 +1094,6 @@ function ChatThread({
             conversation={conversation}
             message={item}
             own={item.senderId === senderId}
-            canModerate={senderRole === "admin"}
             isLatest={item.id === conversation.lastMessageId}
             previousMessage={messages.data[index - 1]}
             now={now}
@@ -1126,7 +1125,6 @@ function ChatMessageBubble({
   conversation,
   message,
   own,
-  canModerate,
   isLatest,
   previousMessage,
   now,
@@ -1134,7 +1132,6 @@ function ChatMessageBubble({
   conversation: ChatConversation;
   message: ChatMessage;
   own: boolean;
-  canModerate: boolean;
   isLatest: boolean;
   previousMessage?: ChatMessage;
   now: number;
@@ -1205,13 +1202,11 @@ function ChatMessageBubble({
         {date && ` · ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date)}`}
         {message.editedAt && " · editada"}
       </small>
-      {!editing && withinEditWindow && (own || canModerate) && (
+      {!editing && withinEditWindow && own && (
         <div className="chat-message-actions">
-          {own && (
-            <button type="button" onClick={() => { setEditText(message.text); setEditing(true); }} disabled={busy}>
-              Editar
-            </button>
-          )}
+          <button type="button" onClick={() => { setEditText(message.text); setEditing(true); }} disabled={busy}>
+            Editar
+          </button>
           <button type="button" onClick={remove} disabled={busy}>
             Excluir
           </button>

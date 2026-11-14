@@ -117,7 +117,7 @@ service cloud.firestore {
           && changed.hasOnly(['lastDeletedMessageId','lastMessage','lastMessageId','lastMessageSenderRole','updatedAt','unreadForAdmin','unreadForCustomer'])
           && changed.hasAll(['lastDeletedMessageId'])
           && request.resource.data.lastDeletedMessageId != resource.data.lastDeletedMessageId
-          && (admin() || deleted.senderId == request.auth.uid)
+          && deleted.senderId == request.auth.uid
           && (request.time - deleted.createdAt) < duration.value(1, 'h')
           && !existsAfter(messagePath(request.resource.data.lastDeletedMessageId))
           && ((removedUnreadForAdmin
@@ -227,7 +227,7 @@ service cloud.firestore {
             || (!admin() && request.resource.data.senderRole == 'customer'));
         allow update: if editableByAuthor();
         allow delete: if signedIn()
-          && (admin() || resource.data.senderId == request.auth.uid)
+          && resource.data.senderId == request.auth.uid
           && (request.time - resource.data.createdAt) < duration.value(1, 'h')
           && conversationAfter().lastDeletedMessageId == messageId;
       }
