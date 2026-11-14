@@ -4,7 +4,10 @@ import {
   useEffect,
   useRef,
   useState,
+  type Dispatch,
   type FormEvent,
+  type RefObject,
+  type SetStateAction,
 } from "react";
 import {
   Link,
@@ -1864,6 +1867,29 @@ const ADMIN_SEEN_ORDERS = "hosken-admin-seen-orders";
 const ADMIN_SEEN_CONVERSATIONS = "hosken-admin-seen-conversations";
 const ADMIN_NOTIFICATIONS_EVENT = "hosken-admin-notifications-updated";
 const CUSTOMER_NOTIFICATIONS_EVENT = "hosken-customer-notifications-updated";
+function useDismissNotificationOnOutside(
+  root: RefObject<HTMLDivElement | null>,
+  open: boolean,
+  setOpen: Dispatch<SetStateAction<boolean>>,
+) {
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (root.current && !root.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, root, setOpen]);
+}
 function readAdminSeenIds(key: string) {
   try {
     const values = JSON.parse(localStorage.getItem(key) || "[]");
@@ -1890,6 +1916,8 @@ function AdminNotificationBell({
   conversations: ChatConversation[];
 }) {
   const [open, setOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+  useDismissNotificationOnOutside(bellRef, open, setOpen);
   const [seenOrders, setSeenOrders] = useState(() => readAdminSeenIds(ADMIN_SEEN_ORDERS));
   const [seenConversations, setSeenConversations] = useState(() =>
     readAdminSeenIds(ADMIN_SEEN_CONVERSATIONS),
@@ -1922,7 +1950,7 @@ function AdminNotificationBell({
     unreadMessages +
     newConversations.filter((conversation) => !conversation.unreadForAdmin).length;
   return (
-    <div className="notification-bell">
+    <div className="notification-bell" ref={bellRef}>
       <button
         type="button"
         className="notification-bell-button"
@@ -2059,6 +2087,8 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
   const orders = useCustomerOrders(uid);
   const conversation = useCustomerConversation(uid);
   const [open, setOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+  useDismissNotificationOnOutside(bellRef, open, setOpen);
   const [notificationState, setNotificationState] = useState(() =>
     readCustomerNotificationState(uid),
   );
@@ -2151,7 +2181,7 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
   }
 
   return (
-    <div className="notification-bell">
+    <div className="notification-bell" ref={bellRef}>
       <button
         type="button"
         className="notification-bell-button"
