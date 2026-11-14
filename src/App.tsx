@@ -2013,10 +2013,12 @@ type CustomerOrderFingerprint = {
 type CustomerOrderUpdate = {
   status: string;
   trackingUpdated: boolean;
+  updatedAt: number;
 };
 type CustomerNotificationState = {
   orders: Record<string, CustomerOrderFingerprint>;
   pendingOrders: Record<string, CustomerOrderUpdate>;
+  acknowledgedOrderUpdates: Record<string, number>;
 };
 function customerNotificationKey(uid: string) {
   return `hosken-customer-notifications:${uid}`;
@@ -2031,12 +2033,17 @@ function readCustomerNotificationState(uid: string): CustomerNotificationState {
           value.pendingOrders && typeof value.pendingOrders === "object"
             ? value.pendingOrders
             : {},
+        acknowledgedOrderUpdates:
+          value.acknowledgedOrderUpdates &&
+          typeof value.acknowledgedOrderUpdates === "object"
+            ? value.acknowledgedOrderUpdates
+            : {},
       };
     }
   } catch {
     /* O sino continua disponível durante esta sessão. */
   }
-  return { orders: {}, pendingOrders: {} };
+  return { orders: {}, pendingOrders: {}, acknowledgedOrderUpdates: {} };
 }
 function saveCustomerNotificationState(
   uid: string,
@@ -2066,6 +2073,9 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
     const previousState = readCustomerNotificationState(uid);
     const currentFingerprints: CustomerNotificationState["orders"] = {};
     const pendingOrders = { ...previousState.pendingOrders };
+    const acknowledgedOrderUpdates = {
+      ...previousState.acknowledgedOrderUpdates,
+    };
 
     for (const order of orders.data) {
       const fingerprint = {
@@ -2075,28 +2085,35 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
       };
       currentFingerprints[order.id] = fingerprint;
       const previous = previousState.orders[order.id];
-      if (!previous) {
-        const createdAt = order.createdAt?.toMillis() ?? 0;
-        if (fingerprint.updatedAt && fingerprint.updatedAt > createdAt) {
-          pendingOrders[order.id] = {
-            status: order.status,
-            trackingUpdated: false,
-          };
-        }
-        continue;
-      }
+      const createdAt = order.createdAt?.toMillis() ?? 0;
+      const acknowledgedAt =
+        acknowledgedOrderUpdates[order.id] ?? createdAt;
+      const trackingUpdated = previous
+        ? previous.trackingCode !== fingerprint.trackingCode
+        : false;
+      const fieldsChanged =
+        Boolean(previous) &&
+        (previous?.status !== fingerprint.status || trackingUpdated);
+      const hasUnopenedUpdate =
+        fingerprint.updatedAt !== null &&
+        fingerprint.updatedAt > acknowledgedAt;
 
-      const trackingUpdated = previous.trackingCode !== fingerprint.trackingCode;
-      if (previous.status !== fingerprint.status || trackingUpdated) {
+      if (hasUnopenedUpdate || fieldsChanged) {
         pendingOrders[order.id] = {
           status: fingerprint.status,
           trackingUpdated:
             trackingUpdated || pendingOrders[order.id]?.trackingUpdated || false,
+          updatedAt:
+            fingerprint.updatedAt ?? Date.now(),
         };
       }
     }
 
-    const nextState = { orders: currentFingerprints, pendingOrders };
+    const nextState = {
+      orders: currentFingerprints,
+      pendingOrders,
+      acknowledgedOrderUpdates,
+    };
     saveCustomerNotificationState(uid, nextState);
     setNotificationState(nextState);
   }, [orders.data, orders.error, orders.loading, uid]);
@@ -2116,7 +2133,20 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
   const count = unreadMessages + pendingOrders.length;
 
   function clearOrderNotifications() {
-    const nextState = { ...notificationState, pendingOrders: {} };
+    const acknowledgedOrderUpdates = {
+      ...notificationState.acknowledgedOrderUpdates,
+    };
+    for (const [id, update] of Object.entries(notificationState.pendingOrders)) {
+      acknowledgedOrderUpdates[id] =
+        update.updatedAt ??
+        notificationState.orders[id]?.updatedAt ??
+        Date.now();
+    }
+    const nextState = {
+      ...notificationState,
+      pendingOrders: {},
+      acknowledgedOrderUpdates,
+    };
     saveCustomerNotificationState(uid, nextState);
     setNotificationState(nextState);
     setOpen(false);
