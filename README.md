@@ -1,6 +1,6 @@
 # Hosken Biojoias
 
-Loja em React + TypeScript + Vite, com Firebase Authentication e Firestore locais. Ainda não realiza pagamentos, frete, chat nem notificações push. O PWA será implementado em uma etapa posterior.
+Loja em React + TypeScript + Vite, com Firebase Authentication e Firestore locais. O chat de texto funciona em tempo real; checkout, frete e notificações push ainda serão implementados. O PWA será preparado em uma etapa posterior.
 
 ## Começar sem conta Firebase
 
@@ -33,6 +33,7 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - Cadastro e edição de produtos, preços em centavos, estoque, disponibilidade e visibilidade.
 - Cadastro de linhas, tipos de peça e conteúdo; exclusão e consulta em tempo real.
 - Histórico de pedidos com leitura em tempo real, status, itens, valores e rastreio. Três registros fictícios aparecem na conta administrativa do emulador.
+- Chat de texto em tempo real: clientes iniciam uma conversa pela bolinha flutuante; a equipe responde em `/admin` → Atendimento. O painel mostra as mensagens não lidas e atualiza o título da aba. Cada autor pode editar ou excluir a própria mensagem por até uma hora; a equipe também pode excluir mensagens nesse prazo. A conversa continua salva. Conversas e mensagens são privadas ao cliente e à equipe autorizada.
 - WhatsApp, Instagram e e-mail na página de contato. O e-mail informado é pessoal e ficará público no site.
 - Logo fornecida pela família; produtos de exemplo usam ilustrações provisórias. Fotos são cadastradas por URL nesta etapa. Upload será implementado com Storage.
 
@@ -48,12 +49,14 @@ Produtos e preços do seed são demonstrativos. Eventos e lojas parceiras têm t
 | `news`, `events`, `partnerStores` | title, body, status                                                                                  | Público: publicados; admin: escrita                                                   |
 | `users`                           | displayName                                                                                          | Dono pode escrever campos permitidos; admin pode ler                                  |
 | `orders`                          | orderNumber, userId, customerName, customerEmail, items, totalCents, status, createdAt, trackingCode | Dono pode ler; admin lê e atualiza status/rastreio; backend cria e confirma pagamento |
+| `conversations/{uid}`             | customerId, customerName, customerEmail, lastMessage, unread counters, timestamps                    | Cliente dono e admin autorizado; criação pelo próprio cliente                         |
+| `conversations/{uid}/messages`    | senderId, senderRole, text, createdAt, editedAt                                                       | Cliente dono e admin autorizado; autor edita/apaga por até uma hora                    |
 
 Pedidos usam `orderNumber`, `userId`, `customerName`, `customerEmail`, `items` (cópias de nome, quantidade e preço unitário), `totalCents`, `status`, `paymentStatus`, `createdAt` e, opcionalmente, `trackingCode`. No painel, a aba Pedidos permite consultar todos e editar somente status, rastreio e data de atualização. O checkout/backend cria o documento e confirma pagamento; preços e itens ficam imutáveis no painel. O código de rastreio é preenchido manualmente com o código fornecido pela transportadora. Os status aceitos pela interface incluem `pending_payment`, `confirmed`, `preparing`, `in_transit`, `completed`, `cancelled` e `refunded`. O índice composto por usuário e data está declarado em `firestore.indexes.json`. O seed cria três pedidos fictícios para cada conta no emulador local; eles aparecem identificados como exemplos e nunca são enviados ao Firebase real.
 
 `status`: `draft` ou `published`. `availability`: `available`, `soldout`, `prelaunch`, `made-to-order`. Estoque e preço devem ser inteiros não negativos. Documentos referenciados de linha e tipo devem existir. Nesta base, evite excluir linhas e tipos usados em produtos; prefira mantê-los em rascunho até implementarmos arquivamento e validação de dependências no backend.
 
-Mensagens, pagamentos, endereços e uploads ainda não estão habilitados. As regras negam por padrão as coleções não implementadas. Senhas são gerenciadas pelo Authentication, nunca armazenadas no Firestore. O backend deverá salvar nos pedidos uma cópia dos dados e preços comprados, reservar estoque por transação e processar webhooks de pagamento com idempotência.
+Push para a tela bloqueada/central de notificações, pagamentos, endereços e uploads ainda não estão habilitados. O contador de não lidas funciona enquanto a aplicação está aberta; push em segundo plano exige PWA, permissão do dispositivo, Firebase Cloud Messaging e um backend. As regras negam por padrão as coleções não implementadas. Senhas são gerenciadas pelo Authentication, nunca armazenadas no Firestore. O backend deverá salvar nos pedidos uma cópia dos dados e preços comprados, reservar estoque por transação e processar webhooks de pagamento com idempotência.
 
 ## Verificação
 

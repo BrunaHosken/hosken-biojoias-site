@@ -2,10 +2,11 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
-import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
+import { Link, NavLink, Route, Routes, useLocation, useParams } from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
   onIdTokenChanged,
@@ -33,13 +34,25 @@ import {
   Minus,
   Leaf,
   LogOut,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 import { auth, db, localMode } from "./firebase";
 import {
   money,
   useCustomerOrders,
   useAdminOrders,
+  useAdminConversations,
+  useCustomerConversation,
+  useConversationMessages,
+  createCustomerConversation,
+  sendChatMessage,
+  markConversationRead,
+  editChatMessage,
+  deleteChatMessage,
   useRecords,
+  type ChatConversation,
+  type ChatMessage,
   type CustomerOrder,
   type Product,
   type Taxonomy,
@@ -214,6 +227,7 @@ export default function App() {
             <Route path="/contato" element={<Contact />} />
             <Route path="/conta" element={<Account />} />
             <Route path="/pedidos" element={<OrdersPage />} />
+            <Route path="/chat" element={<CustomerChat />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/carrinho" element={<Cart />} />
             <Route
@@ -227,6 +241,8 @@ export default function App() {
             />
           </Routes>
         </main>
+        {session.admin && <AdminNotificationBridge />}
+        <FloatingChatButton />
         <footer>
           <div className="wordmark">
             <span>HOSKEN BIOJOIAS</span>
@@ -257,6 +273,49 @@ export default function App() {
       </BasketContext.Provider>
     </SessionContext.Provider>
   );
+}
+function FloatingChatButton() {
+  const session = useContext(SessionContext);
+  const location = useLocation();
+  if (location.pathname === "/chat" || location.pathname === "/admin")
+    return null;
+  return (
+    <Link
+      to={session.admin ? "/admin" : "/chat"}
+      className="chat-fab"
+      aria-label={session.admin ? "Abrir atendimentos" : "Falar com o ateliê"}
+      title={session.admin ? "Abrir atendimentos" : "Falar com o ateliê"}
+    >
+      <MessageCircle size={24} />
+    </Link>
+  );
+}
+function AdminNotificationBridge() {
+  const location = useLocation();
+  const conversations = useAdminConversations(location.pathname !== "/admin");
+  const unreadCount = conversations.data.reduce(
+    (sum, conversation) => sum + (conversation.unreadForAdmin || 0),
+    0,
+  );
+  useEffect(() => {
+    if (location.pathname === "/admin") return;
+    document.title = unreadCount
+      ? `(${unreadCount}) Atendimento · Hosken Biojoias`
+      : "Hosken Biojoias";
+    const appNavigator = navigator as Navigator & {
+      setAppBadge?: (contents?: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    if (unreadCount > 0) {
+      appNavigator.setAppBadge?.(unreadCount).catch(() => {});
+    } else {
+      appNavigator.clearAppBadge?.().catch(() => {});
+    }
+    return () => {
+      document.title = "Hosken Biojoias";
+    };
+  }, [location.pathname, unreadCount]);
+  return null;
 }
 function Home() {
   return (
@@ -665,6 +724,11 @@ function Account() {
           <Link className="button secondary" to="/pedidos">
             Meus pedidos <ArrowRight size={18} />
           </Link>
+          {!session.admin && (
+            <Link className="button secondary account-chat-link" to="/chat">
+              <MessageCircle size={18} /> Falar com o ateliê
+            </Link>
+          )}
         </>
       ) : (
         <>
@@ -869,6 +933,283 @@ function OrderCard({ order }: { order: CustomerOrder }) {
     </article>
   );
 }
+function CustomerChat() {
+  const session = useContext(SessionContext);
+  const chat = useCustomerConversation(session.user?.uid);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function startConversation() {
+    if (!session.user) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await createCustomerConversation(
+        session.user.uid,
+        session.user.displayName || "Cliente",
+        session.user.email || "",
+      );
+    } catch {
+      setMessage("Não foi possível iniciar a conversa. Tente novamente.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!session.ready) return <div className="page">Carregando sua conta…</div>;
+  if (!session.user)
+    return (
+      <div className="page narrow">
+        <div className="eyebrow">ATENDIMENTO HOSKEN BIOJOIAS</div>
+        <h1>Fale com o ateliê</h1>
+        <p className="lead">Entre na sua conta para iniciar uma conversa.</p>
+        <Link className="button" to="/conta">
+          Entrar ou criar conta <ArrowRight size={18} />
+        </Link>
+      </div>
+    );
+  if (session.admin)
+    return (
+      <div className="page narrow">
+        <div className="eyebrow">ATENDIMENTO HOSKEN BIOJOIAS</div>
+        <h1>Caixa de atendimento</h1>
+        <p className="lead">Acesse as conversas pelo painel administrativo.</p>
+        <Link className="button" to="/admin">
+          Abrir administração <ArrowRight size={18} />
+        </Link>
+      </div>
+    );
+  return (
+    <div className="page chat-page">
+      <div className="eyebrow">ATENDIMENTO HOSKEN BIOJOIAS</div>
+      <h1>Fale com o ateliê</h1>
+      <p className="lead">
+        Envie sua mensagem. Nossa equipe responderá por aqui.
+      </p>
+      {chat.loading && <p role="status">Carregando conversa…</p>}
+      {chat.error && (
+        <p className="notice" role="alert">
+          {chat.error}
+        </p>
+      )}
+      {!chat.loading && !chat.error && !chat.conversation && (
+        <section className="chat-start">
+          <MessageCircle size={28} />
+          <h2>Vamos conversar?</h2>
+          <p>Abra um atendimento para falar diretamente com o ateliê.</p>
+          <button className="button" onClick={startConversation} disabled={busy}>
+            {busy ? "Abrindo conversa…" : "Iniciar conversa"}
+            <ArrowRight size={18} />
+          </button>
+          {message && <p className="notice" role="alert">{message}</p>}
+        </section>
+      )}
+      {chat.conversation && (
+        <ChatThread
+          conversation={chat.conversation}
+          senderId={session.user.uid}
+          senderRole="customer"
+          otherPartyName="Hosken Biojoias"
+        />
+      )}
+    </div>
+  );
+}
+function ChatThread({
+  conversation,
+  senderId,
+  senderRole,
+  otherPartyName,
+}: {
+  conversation: ChatConversation;
+  senderId: string;
+  senderRole: ChatMessage["senderRole"];
+  otherPartyName: string;
+}) {
+  const conversationId = conversation.id;
+  const unreadCount = senderRole === "admin"
+    ? conversation.unreadForAdmin
+    : conversation.unreadForCustomer;
+  const messages = useConversationMessages(conversationId);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [now, setNow] = useState(Date.now());
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [messages.data.length]);
+  useEffect(() => {
+    if (unreadCount > 0) {
+      markConversationRead(conversationId, senderRole).catch(() =>
+        setSendError("Não foi possível atualizar as mensagens lidas."),
+      );
+    }
+  }, [conversationId, senderRole, unreadCount]);
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setBusy(true);
+    setSendError("");
+    try {
+      await sendChatMessage(conversationId, senderId, senderRole, text);
+      setText("");
+    } catch {
+      setSendError("Não foi possível enviar a mensagem. Tente novamente.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="chat-thread" aria-label={`Conversa com ${otherPartyName}`}>
+      <header className="chat-thread-header">
+        <span className="chat-avatar"><MessageCircle size={20} /></span>
+        <div>
+          <strong>{otherPartyName}</strong>
+          <small>Atendimento Hosken Biojoias</small>
+        </div>
+      </header>
+      <div className="chat-messages" ref={listRef} aria-live="polite">
+        {messages.loading && <p className="muted">Carregando mensagens…</p>}
+        {messages.error && <p className="notice" role="alert">{messages.error}</p>}
+        {!messages.loading && !messages.error && messages.data.length === 0 && (
+          <p className="chat-empty">Envie uma mensagem para começar.</p>
+        )}
+        {messages.data.map((item, index) => (
+          <ChatMessageBubble
+            key={item.id}
+            conversation={conversation}
+            message={item}
+            own={item.senderId === senderId}
+            canModerate={senderRole === "admin"}
+            isLatest={item.id === conversation.lastMessageId}
+            previousMessage={messages.data[index - 1]}
+            now={now}
+          />
+        ))}
+      </div>
+      <form className="chat-composer" onSubmit={submit}>
+        <label className="sr-only" htmlFor={`message-${conversationId}`}>
+          Escreva sua mensagem
+        </label>
+        <textarea
+          id={`message-${conversationId}`}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={2000}
+          rows={2}
+          placeholder="Escreva sua mensagem…"
+        />
+        <button className="button" disabled={busy || !text.trim()} aria-label="Enviar mensagem">
+          <span>{busy ? "Enviando…" : "Enviar"}</span>
+          <Send size={17} />
+        </button>
+      </form>
+      {sendError && <p className="notice" role="alert">{sendError}</p>}
+    </section>
+  );
+}
+function ChatMessageBubble({
+  conversation,
+  message,
+  own,
+  canModerate,
+  isLatest,
+  previousMessage,
+  now,
+}: {
+  conversation: ChatConversation;
+  message: ChatMessage;
+  own: boolean;
+  canModerate: boolean;
+  isLatest: boolean;
+  previousMessage?: ChatMessage;
+  now: number;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(message.text);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const date = message.createdAt?.toDate();
+  const withinEditWindow = Boolean(
+    date && now >= date.getTime() && now - date.getTime() < 60 * 60 * 1000,
+  );
+  async function saveEdit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await editChatMessage(conversation.id, message, editText, isLatest);
+      setEditing(false);
+    } catch {
+      setError("Não foi possível editar. O prazo pode ter expirado.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove() {
+    if (!window.confirm("Excluir esta mensagem? A conversa continuará salva."))
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      await deleteChatMessage(
+        conversation,
+        message,
+        isLatest ? previousMessage : undefined,
+      );
+    } catch {
+      setError("Não foi possível excluir. O prazo pode ter expirado.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <article className={`chat-message ${own ? "own" : ""}`}>
+      {editing ? (
+        <form className="chat-edit-form" onSubmit={saveEdit}>
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            maxLength={2000}
+            autoFocus
+            aria-label="Editar mensagem"
+          />
+          <div>
+            <button className="text-button" type="button" onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+            <button className="text-button" type="submit" disabled={busy || !editText.trim()}>
+              Salvar
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p>{message.text}</p>
+      )}
+      <small>
+        {own ? "Você" : message.senderRole === "admin" ? "Ateliê" : "Cliente"}
+        {date && ` · ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date)}`}
+        {message.editedAt && " · editada"}
+      </small>
+      {!editing && withinEditWindow && (own || canModerate) && (
+        <div className="chat-message-actions">
+          {own && (
+            <button type="button" onClick={() => { setEditText(message.text); setEditing(true); }} disabled={busy}>
+              Editar
+            </button>
+          )}
+          <button type="button" onClick={remove} disabled={busy}>
+            Excluir
+          </button>
+        </div>
+      )}
+      {error && <span className="chat-message-error" role="alert">{error}</span>}
+    </article>
+  );
+}
 function Cart() {
   const { items, change } = useContext(BasketContext);
   const products = useRecords<Product>("products");
@@ -991,6 +1332,11 @@ const blankProduct = {
 };
 function AdminPanel() {
   const [tab, setTab] = useState("products");
+  const conversations = useAdminConversations();
+  const unreadCount = conversations.data.reduce(
+    (sum, conversation) => sum + (conversation.unreadForAdmin || 0),
+    0,
+  );
   const products = useRecords<Product>("products", true);
   const cats = useRecords<Taxonomy>("categories", true);
   const lines = useRecords<Taxonomy>("collections", true);
@@ -1002,8 +1348,26 @@ function AdminPanel() {
   const [product, setProduct] = useState(blankProduct);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    document.title = unreadCount
+      ? `(${unreadCount}) Atendimento · Hosken Biojoias`
+      : "Administração · Hosken Biojoias";
+    const appNavigator = navigator as Navigator & {
+      setAppBadge?: (contents?: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    if (unreadCount > 0) {
+      appNavigator.setAppBadge?.(unreadCount).catch(() => {});
+    } else {
+      appNavigator.clearAppBadge?.().catch(() => {});
+    }
+    return () => {
+      document.title = "Hosken Biojoias";
+    };
+  }, [unreadCount]);
   const tabs = [
     ["orders", "Pedidos"],
+    ["chat", "Atendimento"],
     ["products", "Produtos"],
     ["categories", "Tipos de peça"],
     ["collections", "Linhas"],
@@ -1113,11 +1477,24 @@ function AdminPanel() {
             key={id}
           >
             {label}
+            {id === "chat" && unreadCount > 0 && (
+              <span className="unread-badge" aria-label={`${unreadCount} mensagens não lidas`}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
       {tab === "orders" ? (
         <AdminOrders />
+      ) : tab === "chat" ? (
+        <AdminChatInbox
+          conversations={conversations.data}
+          loading={conversations.loading}
+          error={conversations.error}
+          unreadCount={unreadCount}
+          adminId={auth.currentUser?.uid || ""}
+        />
       ) : (
         <div className="admin-layout">
           <form key={tab} className="admin-form" onSubmit={save}>
@@ -1352,6 +1729,77 @@ function AdminPanel() {
         </div>
       )}
     </div>
+  );
+}
+
+function AdminChatInbox({
+  conversations,
+  loading,
+  error,
+  unreadCount,
+  adminId,
+}: {
+  conversations: ChatConversation[];
+  loading: boolean;
+  error: string;
+  unreadCount: number;
+  adminId: string;
+}) {
+  const [selectedId, setSelectedId] = useState("");
+  const selected = conversations.find((item) => item.id === selectedId) || conversations[0];
+  return (
+    <section className="admin-inbox">
+      <div className="admin-inbox-heading">
+        <div>
+          <h2>Atendimentos</h2>
+          <p className="muted">Mensagens atualizadas em tempo real.</p>
+        </div>
+        {unreadCount > 0 && <span className="unread-summary">{unreadCount} não lida{unreadCount === 1 ? "" : "s"}</span>}
+      </div>
+      {error && <p className="notice" role="alert">{error}</p>}
+      {loading ? (
+        <p role="status">Carregando atendimentos…</p>
+      ) : conversations.length === 0 ? (
+        <div className="empty">
+          <MessageCircle />
+          <h2>Nenhum atendimento ainda.</h2>
+          <p>As conversas iniciadas pelos clientes aparecerão aqui.</p>
+        </div>
+      ) : (
+        <div className="admin-inbox-layout">
+          <nav className="conversation-list" aria-label="Lista de atendimentos">
+            {conversations.map((conversation) => (
+              <button
+                type="button"
+                key={conversation.id}
+                className={`conversation-preview ${selected?.id === conversation.id ? "selected" : ""}`}
+                onClick={() => setSelectedId(conversation.id)}
+              >
+                <span className="conversation-preview-top">
+                  <strong>{conversation.customerName || "Cliente"}</strong>
+                  {!!conversation.unreadForAdmin && (
+                    <span className="unread-badge">{conversation.unreadForAdmin > 99 ? "99+" : conversation.unreadForAdmin}</span>
+                  )}
+                </span>
+                <small>{conversation.customerEmail}</small>
+                <span className="conversation-preview-last">
+                  {conversation.lastMessage || "Conversa iniciada"}
+                </span>
+              </button>
+            ))}
+          </nav>
+          {selected && (
+            <ChatThread
+              key={selected.id}
+              conversation={selected}
+              senderId={adminId}
+              senderRole="admin"
+              otherPartyName={selected.customerName || selected.customerEmail || "Cliente"}
+            />
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

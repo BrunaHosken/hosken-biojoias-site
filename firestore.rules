@@ -53,7 +53,183 @@ service cloud.firestore {
         && (!('trackingCode' in request.resource.data) || (request.resource.data.trackingCode is string && request.resource.data.trackingCode.size() <= 100))
         && request.resource.data.updatedAt == request.time;
     }
-    // Chat e uploads serão habilitados com regras específicas na próxima etapa.
+    match /conversations/{conversationId} {
+      function messagePath(id) {
+        return /databases/$(database)/documents/conversations/$(conversationId)/messages/$(id);
+      }
+      function isMessageUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let message = getAfter(messagePath(request.resource.data.lastMessageId)).data;
+        return signedIn()
+          && (admin() || resource.data.customerId == request.auth.uid)
+          && changed.hasOnly(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt','unreadForAdmin','unreadForCustomer'])
+          && changed.hasAll(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt'])
+          && request.resource.data.lastMessage is string
+          && request.resource.data.lastMessage.size() > 0
+          && request.resource.data.lastMessage.size() <= 2000
+          && request.resource.data.lastMessageId is string
+          && request.resource.data.lastMessageSenderRole == (admin() ? 'admin' : 'customer')
+          && request.resource.data.updatedAt == request.time
+          && message.senderId == request.auth.uid
+          && message.senderRole == request.resource.data.lastMessageSenderRole
+          && message.text == request.resource.data.lastMessage
+          && message.createdAt == request.time
+          && ((admin()
+            && changed.hasAll(['unreadForCustomer'])
+            && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer + 1
+            && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin)
+            || (!admin()
+              && changed.hasAll(['unreadForAdmin'])
+              && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin + 1
+              && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer));
+      }
+      function isMessageEditUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let message = getAfter(messagePath(resource.data.lastMessageId)).data;
+        return signedIn()
+          && (admin() || resource.data.customerId == request.auth.uid)
+          && changed.hasOnly(['lastMessage','updatedAt'])
+          && changed.hasAll(['lastMessage','updatedAt'])
+          && request.resource.data.lastMessage is string
+          && request.resource.data.lastMessage.size() > 0
+          && request.resource.data.lastMessage.size() <= 2000
+          && request.resource.data.updatedAt == request.time
+          && message.senderId == request.auth.uid
+          && message.senderRole == resource.data.lastMessageSenderRole
+          && message.text == request.resource.data.lastMessage
+          && message.editedAt == request.time
+          && (request.time - message.createdAt) < duration.value(1, 'h');
+      }
+      function isMessageDeleteUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let deleted = get(messagePath(request.resource.data.lastDeletedMessageId)).data;
+        let removedUnreadForAdmin = deleted.senderRole == 'customer'
+          && deleted.createdAt > resource.data.adminLastReadAt
+          && resource.data.unreadForAdmin > 0;
+        let removedUnreadForCustomer = deleted.senderRole == 'admin'
+          && deleted.createdAt > resource.data.customerLastReadAt
+          && resource.data.unreadForCustomer > 0;
+        return signedIn()
+          && (admin() || resource.data.customerId == request.auth.uid)
+          && changed.hasOnly(['lastDeletedMessageId','lastMessage','lastMessageId','lastMessageSenderRole','updatedAt','unreadForAdmin','unreadForCustomer'])
+          && changed.hasAll(['lastDeletedMessageId'])
+          && request.resource.data.lastDeletedMessageId != resource.data.lastDeletedMessageId
+          && (admin() || deleted.senderId == request.auth.uid)
+          && (request.time - deleted.createdAt) < duration.value(1, 'h')
+          && !existsAfter(messagePath(request.resource.data.lastDeletedMessageId))
+          && ((removedUnreadForAdmin
+            && changed.hasAll(['unreadForAdmin'])
+            && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin - 1
+            && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer)
+            || (!removedUnreadForAdmin
+              && !changed.hasAll(['unreadForAdmin'])
+              && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin
+              && ((removedUnreadForCustomer
+                && changed.hasAll(['unreadForCustomer'])
+                && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer - 1)
+                || (!removedUnreadForCustomer
+                  && !changed.hasAll(['unreadForCustomer'])
+                  && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer))))
+          && ((resource.data.lastMessageId == request.resource.data.lastDeletedMessageId
+            && changed.hasAll(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt'])
+            && request.resource.data.updatedAt == request.time
+            && ((request.resource.data.lastMessageId == ''
+              && request.resource.data.lastMessage == ''
+              && request.resource.data.lastMessageSenderRole == '')
+              || (request.resource.data.lastMessageId != ''
+                && getAfter(messagePath(request.resource.data.lastMessageId)).data.text == request.resource.data.lastMessage
+                && getAfter(messagePath(request.resource.data.lastMessageId)).data.senderRole == request.resource.data.lastMessageSenderRole)))
+            || (resource.data.lastMessageId != request.resource.data.lastDeletedMessageId
+              && !changed.hasAll(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt'])
+              && request.resource.data.lastMessage == resource.data.lastMessage
+              && request.resource.data.lastMessageId == resource.data.lastMessageId
+              && request.resource.data.lastMessageSenderRole == resource.data.lastMessageSenderRole
+              && request.resource.data.updatedAt == resource.data.updatedAt));
+      }
+      function markAdminRead() {
+        return admin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadForAdmin','adminLastReadAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasAll(['unreadForAdmin','adminLastReadAt'])
+          && resource.data.unreadForAdmin > 0
+          && request.resource.data.unreadForAdmin == 0
+          && request.resource.data.adminLastReadAt == request.time;
+      }
+      function markCustomerRead() {
+        return signedIn()
+          && resource.data.customerId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadForCustomer','customerLastReadAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasAll(['unreadForCustomer','customerLastReadAt'])
+          && resource.data.unreadForCustomer > 0
+          && request.resource.data.unreadForCustomer == 0
+          && request.resource.data.customerLastReadAt == request.time;
+      }
+      allow read: if admin() || (signedIn() && resource.data.customerId == request.auth.uid);
+      allow create: if signedIn()
+        && conversationId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['customerId','customerName','customerEmail','status','lastMessage','lastMessageId','lastMessageSenderRole','lastDeletedMessageId','unreadForAdmin','unreadForCustomer','adminLastReadAt','customerLastReadAt','createdAt','updatedAt'])
+        && request.resource.data.keys().hasAll(['customerId','customerName','customerEmail','status','lastMessage','lastMessageId','lastMessageSenderRole','lastDeletedMessageId','unreadForAdmin','unreadForCustomer','adminLastReadAt','customerLastReadAt','createdAt','updatedAt'])
+        && request.resource.data.customerId == request.auth.uid
+        && text(request.resource.data.customerName, 100)
+        && request.resource.data.customerEmail is string
+        && request.resource.data.customerEmail.size() <= 254
+        && request.resource.data.status == 'open'
+        && request.resource.data.lastMessage is string
+        && request.resource.data.lastMessage.size() == 0
+        && request.resource.data.lastMessageId == ''
+        && request.resource.data.lastMessageSenderRole == ''
+        && request.resource.data.lastDeletedMessageId == ''
+        && request.resource.data.unreadForAdmin == 0
+        && request.resource.data.unreadForCustomer == 0
+        && request.resource.data.adminLastReadAt == request.time
+        && request.resource.data.customerLastReadAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isMessageUpdate() || isMessageEditUpdate() || isMessageDeleteUpdate() || markAdminRead() || markCustomerRead();
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        function conversation() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+        function conversationAfter() {
+          return getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+        function editableByAuthor() {
+          let changed = request.resource.data.diff(resource.data).affectedKeys();
+          return signedIn()
+            && resource.data.senderId == request.auth.uid
+            && (request.time - resource.data.createdAt) < duration.value(1, 'h')
+            && changed.hasOnly(['text','editedAt'])
+            && changed.hasAll(['text','editedAt'])
+            && text(request.resource.data.text, 2000)
+            && request.resource.data.editedAt == request.time
+            && request.resource.data.senderId == resource.data.senderId
+            && request.resource.data.senderRole == resource.data.senderRole
+            && request.resource.data.createdAt == resource.data.createdAt
+            && (conversation().lastMessageId != messageId
+              || (conversationAfter().lastMessageId == messageId
+                && conversationAfter().lastMessage == request.resource.data.text));
+        }
+        allow read: if admin() || (signedIn() && conversation().customerId == request.auth.uid);
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['senderId','senderRole','text','createdAt'])
+          && request.resource.data.keys().hasAll(['senderId','senderRole','text','createdAt'])
+          && request.resource.data.senderId == request.auth.uid
+          && text(request.resource.data.text, 2000)
+          && request.resource.data.createdAt == request.time
+          && (admin() || conversation().customerId == request.auth.uid)
+          && conversationAfter().lastMessageId == messageId
+          && conversationAfter().lastMessage == request.resource.data.text
+          && ((admin() && request.resource.data.senderRole == 'admin')
+            || (!admin() && request.resource.data.senderRole == 'customer'));
+        allow update: if editableByAuthor();
+        allow delete: if signedIn()
+          && (admin() || resource.data.senderId == request.auth.uid)
+          && (request.time - resource.data.createdAt) < duration.value(1, 'h')
+          && conversationAfter().lastDeletedMessageId == messageId;
+      }
+    }
+    // Uploads ainda serão habilitados com regras específicas.
     match /{document=**} { allow read, write: if false; }
   }
 }
