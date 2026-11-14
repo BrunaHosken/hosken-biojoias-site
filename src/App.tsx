@@ -2008,6 +2008,7 @@ function AdminHeaderNotificationBell() {
 type CustomerOrderFingerprint = {
   status: string;
   trackingCode: string;
+  updatedAt: number | null;
 };
 type CustomerOrderUpdate = {
   status: string;
@@ -2062,35 +2063,36 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
 
   useEffect(() => {
     if (orders.loading || orders.error) return;
-    const key = customerNotificationKey(uid);
-    const hasBaseline = localStorage.getItem(key) !== null;
     const previousState = readCustomerNotificationState(uid);
-    const currentOrders = orders.data.filter((order) => !order.isDemo);
     const currentFingerprints: CustomerNotificationState["orders"] = {};
     const pendingOrders = { ...previousState.pendingOrders };
 
-    for (const order of currentOrders) {
+    for (const order of orders.data) {
       const fingerprint = {
         status: order.status,
         trackingCode: order.trackingCode || "",
+        updatedAt: order.updatedAt?.toMillis() ?? null,
       };
       currentFingerprints[order.id] = fingerprint;
       const previous = previousState.orders[order.id];
-      if (!hasBaseline) continue;
       if (!previous) {
-        pendingOrders[order.id] = {
-          status: order.status,
-          trackingUpdated: false,
-        };
-      } else {
-        const trackingUpdated = previous.trackingCode !== fingerprint.trackingCode;
-        if (previous.status !== fingerprint.status || trackingUpdated) {
+        const createdAt = order.createdAt?.toMillis() ?? 0;
+        if (fingerprint.updatedAt && fingerprint.updatedAt > createdAt) {
           pendingOrders[order.id] = {
-            status: fingerprint.status,
-            trackingUpdated:
-              trackingUpdated || pendingOrders[order.id]?.trackingUpdated || false,
+            status: order.status,
+            trackingUpdated: false,
           };
         }
+        continue;
+      }
+
+      const trackingUpdated = previous.trackingCode !== fingerprint.trackingCode;
+      if (previous.status !== fingerprint.status || trackingUpdated) {
+        pendingOrders[order.id] = {
+          status: fingerprint.status,
+          trackingUpdated:
+            trackingUpdated || pendingOrders[order.id]?.trackingUpdated || false,
+        };
       }
     }
 
