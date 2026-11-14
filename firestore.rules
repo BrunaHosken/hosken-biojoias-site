@@ -158,19 +158,19 @@ service cloud.firestore {
           && validMessageDeleteUpdate(messageId, changed);
       }
       function markAdminRead() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
         return admin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadForAdmin','adminLastReadAt'])
-          && request.resource.data.diff(resource.data).affectedKeys().hasAll(['unreadForAdmin','adminLastReadAt'])
-          && resource.data.unreadForAdmin > 0
+          && changed.hasOnly(['unreadForAdmin','adminLastReadAt'])
+          && changed.hasAll(['adminLastReadAt'])
           && request.resource.data.unreadForAdmin == 0
           && request.resource.data.adminLastReadAt == request.time;
       }
       function markCustomerRead() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
         return signedIn()
           && resource.data.customerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadForCustomer','customerLastReadAt'])
-          && request.resource.data.diff(resource.data).affectedKeys().hasAll(['unreadForCustomer','customerLastReadAt'])
-          && resource.data.unreadForCustomer > 0
+          && changed.hasOnly(['unreadForCustomer','customerLastReadAt'])
+          && changed.hasAll(['customerLastReadAt'])
           && request.resource.data.unreadForCustomer == 0
           && request.resource.data.customerLastReadAt == request.time;
       }

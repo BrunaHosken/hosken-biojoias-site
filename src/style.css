@@ -689,6 +689,11 @@ nav a.active {
   min-width: 0;
   gap: 4px;
 }
+.customer-order-notification {
+  display: grid;
+  gap: 4px;
+  padding: 2px 0;
+}
 .notification-list strong {
   font-size: 11px;
   font-weight: 600;

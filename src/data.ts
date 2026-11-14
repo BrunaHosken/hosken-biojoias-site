@@ -56,6 +56,7 @@ export type CustomerOrder = {
   status: string;
   paymentStatus?: string;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
   trackingCode?: string;
   isDemo?: boolean;
 };

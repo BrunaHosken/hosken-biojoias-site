@@ -176,6 +176,9 @@ export default function App() {
           <div className="header-actions">
             <Link to="/conta">{session.user ? "Minha conta" : "Entrar"}</Link>
             {session.admin && <AdminHeaderNotificationBell />}
+            {session.user && !session.admin && (
+              <CustomerHeaderNotificationBell uid={session.user.uid} />
+            )}
             {session.user && (
               <button
                 className="header-logout"
@@ -1808,6 +1811,7 @@ function AdminPanel() {
 const ADMIN_SEEN_ORDERS = "hosken-admin-seen-orders";
 const ADMIN_SEEN_CONVERSATIONS = "hosken-admin-seen-conversations";
 const ADMIN_NOTIFICATIONS_EVENT = "hosken-admin-notifications-updated";
+const CUSTOMER_NOTIFICATIONS_EVENT = "hosken-customer-notifications-updated";
 function readAdminSeenIds(key: string) {
   try {
     const values = JSON.parse(localStorage.getItem(key) || "[]");
@@ -1857,13 +1861,14 @@ function AdminNotificationBell({
     (conversation) =>
       conversation.unreadForAdmin > 0 || !seenConversations.has(conversation.id),
   );
+  const unreadMessages = newConversations.reduce(
+    (total, conversation) => total + (conversation.unreadForAdmin || 0),
+    0,
+  );
   const count =
     newOrders.length +
-    newConversations.reduce(
-      (total, conversation) =>
-        total + (conversation.unreadForAdmin || 1),
-      0,
-    );
+    unreadMessages +
+    newConversations.filter((conversation) => !conversation.unreadForAdmin).length;
   return (
     <div className="notification-bell">
       <button
@@ -1889,45 +1894,47 @@ function AdminNotificationBell({
             <p className="notification-empty">Tudo em dia por aqui.</p>
           ) : (
             <div className="notification-list">
-              {newOrders.map((order) => (
+              {newOrders.length > 0 && (
                 <Link
-                  key={`order-${order.id}`}
-                  to={`/admin?tab=orders&order=${encodeURIComponent(order.id)}`}
+                  to="/admin?tab=orders"
                   onClick={() => {
-                    markAdminNotificationSeen(ADMIN_SEEN_ORDERS, order.id);
+                    newOrders.forEach((order) =>
+                      markAdminNotificationSeen(ADMIN_SEEN_ORDERS, order.id),
+                    );
                     setOpen(false);
                   }}
                 >
                   <span className="notification-icon"><ShoppingBag size={17} /></span>
                   <span>
-                    <strong>Novo pedido {order.orderNumber || order.id.slice(-8).toUpperCase()}</strong>
-                    <small>{order.customerName || order.customerEmail || "Cliente"}</small>
+                    <strong>
+                      {newOrders.length} pedido{newOrders.length === 1 ? "" : "s"} pendente{newOrders.length === 1 ? "" : "s"}
+                    </strong>
                   </span>
                 </Link>
-              ))}
-              {newConversations.map((conversation) => (
+              )}
+              {newConversations.length > 0 && (
                 <Link
-                  key={`conversation-${conversation.id}`}
-                  to={`/admin?tab=chat&conversation=${encodeURIComponent(conversation.id)}`}
+                  to="/admin?tab=chat"
                   onClick={() => {
-                    markAdminNotificationSeen(ADMIN_SEEN_CONVERSATIONS, conversation.id);
+                    newConversations.forEach((conversation) =>
+                      markAdminNotificationSeen(
+                        ADMIN_SEEN_CONVERSATIONS,
+                        conversation.id,
+                      ),
+                    );
                     setOpen(false);
                   }}
                 >
                   <span className="notification-icon"><MessageCircle size={17} /></span>
                   <span>
                     <strong>
-                      {conversation.unreadForAdmin > 0
-                        ? `${conversation.unreadForAdmin} nova${conversation.unreadForAdmin === 1 ? "" : "s"} mensagem${conversation.unreadForAdmin === 1 ? "" : "ns"}`
-                        : "Novo atendimento"}
+                      {unreadMessages > 0
+                        ? `${unreadMessages} nova${unreadMessages === 1 ? "" : "s"} mensagem${unreadMessages === 1 ? "" : "ns"}`
+                        : `${newConversations.length} novo${newConversations.length === 1 ? "" : "s"} atendimento${newConversations.length === 1 ? "" : "s"}`}
                     </strong>
-                    <small>{conversation.customerName || conversation.customerEmail || "Cliente"}</small>
-                    <small className="notification-preview">
-                      {conversation.lastMessage || "Conversa iniciada"}
-                    </small>
                   </span>
                 </Link>
-              ))}
+              )}
             </div>
           )}
         </section>
@@ -1943,6 +1950,181 @@ function AdminHeaderNotificationBell() {
       orders={orders.data}
       conversations={conversations.data}
     />
+  );
+}
+
+type CustomerOrderFingerprint = {
+  status: string;
+  trackingCode: string;
+};
+type CustomerOrderUpdate = {
+  status: string;
+  trackingUpdated: boolean;
+};
+type CustomerNotificationState = {
+  orders: Record<string, CustomerOrderFingerprint>;
+  pendingOrders: Record<string, CustomerOrderUpdate>;
+};
+function customerNotificationKey(uid: string) {
+  return `hosken-customer-notifications:${uid}`;
+}
+function readCustomerNotificationState(uid: string): CustomerNotificationState {
+  try {
+    const value = JSON.parse(localStorage.getItem(customerNotificationKey(uid)) || "null");
+    if (value && typeof value === "object") {
+      return {
+        orders: value.orders && typeof value.orders === "object" ? value.orders : {},
+        pendingOrders:
+          value.pendingOrders && typeof value.pendingOrders === "object"
+            ? value.pendingOrders
+            : {},
+      };
+    }
+  } catch {
+    /* O sino continua disponível durante esta sessão. */
+  }
+  return { orders: {}, pendingOrders: {} };
+}
+function saveCustomerNotificationState(
+  uid: string,
+  state: CustomerNotificationState,
+) {
+  try {
+    localStorage.setItem(customerNotificationKey(uid), JSON.stringify(state));
+    window.dispatchEvent(new Event(CUSTOMER_NOTIFICATIONS_EVENT));
+  } catch {
+    /* O sino continua disponível durante esta sessão. */
+  }
+}
+function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
+  const orders = useCustomerOrders(uid);
+  const conversation = useCustomerConversation(uid);
+  const [open, setOpen] = useState(false);
+  const [notificationState, setNotificationState] = useState(() =>
+    readCustomerNotificationState(uid),
+  );
+
+  useEffect(() => {
+    setNotificationState(readCustomerNotificationState(uid));
+  }, [uid]);
+
+  useEffect(() => {
+    if (orders.loading || orders.error) return;
+    const key = customerNotificationKey(uid);
+    const hasBaseline = localStorage.getItem(key) !== null;
+    const previousState = readCustomerNotificationState(uid);
+    const currentOrders = orders.data.filter((order) => !order.isDemo);
+    const currentFingerprints: CustomerNotificationState["orders"] = {};
+    const pendingOrders = { ...previousState.pendingOrders };
+
+    for (const order of currentOrders) {
+      const fingerprint = {
+        status: order.status,
+        trackingCode: order.trackingCode || "",
+      };
+      currentFingerprints[order.id] = fingerprint;
+      const previous = previousState.orders[order.id];
+      if (!hasBaseline) continue;
+      if (!previous) {
+        pendingOrders[order.id] = {
+          status: order.status,
+          trackingUpdated: false,
+        };
+      } else {
+        const trackingUpdated = previous.trackingCode !== fingerprint.trackingCode;
+        if (previous.status !== fingerprint.status || trackingUpdated) {
+          pendingOrders[order.id] = {
+            status: fingerprint.status,
+            trackingUpdated:
+              trackingUpdated || pendingOrders[order.id]?.trackingUpdated || false,
+          };
+        }
+      }
+    }
+
+    const nextState = { orders: currentFingerprints, pendingOrders };
+    saveCustomerNotificationState(uid, nextState);
+    setNotificationState(nextState);
+  }, [orders.data, orders.error, orders.loading, uid]);
+
+  useEffect(() => {
+    const syncState = () => setNotificationState(readCustomerNotificationState(uid));
+    window.addEventListener(CUSTOMER_NOTIFICATIONS_EVENT, syncState);
+    window.addEventListener("storage", syncState);
+    return () => {
+      window.removeEventListener(CUSTOMER_NOTIFICATIONS_EVENT, syncState);
+      window.removeEventListener("storage", syncState);
+    };
+  }, [uid]);
+
+  const unreadMessages = conversation.conversation?.unreadForCustomer || 0;
+  const pendingOrders = Object.entries(notificationState.pendingOrders);
+  const count = unreadMessages + pendingOrders.length;
+
+  function clearOrderNotifications() {
+    const nextState = { ...notificationState, pendingOrders: {} };
+    saveCustomerNotificationState(uid, nextState);
+    setNotificationState(nextState);
+    setOpen(false);
+  }
+
+  return (
+    <div className="notification-bell">
+      <button
+        type="button"
+        className="notification-bell-button"
+        aria-label={count ? `${count} notificações não lidas` : "Notificações"}
+        aria-expanded={open}
+        aria-controls="customer-notification-panel"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Bell size={21} />
+        {count > 0 && <span className="unread-badge">{count > 99 ? "99+" : count}</span>}
+      </button>
+      {open && (
+        <section className="notification-panel" id="customer-notification-panel">
+          <header>
+            <strong>Notificações</strong>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar notificações">
+              <X size={17} />
+            </button>
+          </header>
+          {!count ? (
+            <p className="notification-empty">Tudo em dia por aqui.</p>
+          ) : (
+            <div className="notification-list">
+              {pendingOrders.length > 0 && (
+                <Link to="/pedidos" onClick={clearOrderNotifications}>
+                  <span className="notification-icon"><ShoppingBag size={17} /></span>
+                  <span>
+                    {pendingOrders.map(([id, update]) => (
+                      <span className="customer-order-notification" key={id}>
+                        <strong>Pedido atualizado</strong>
+                        <small>
+                          {update.trackingUpdated
+                            ? "Código de rastreio atualizado"
+                            : orderStatusLabels[update.status] || "Confira o andamento do pedido"}
+                        </small>
+                      </span>
+                    ))}
+                  </span>
+                </Link>
+              )}
+              {unreadMessages > 0 && (
+                <Link to="/chat" onClick={() => setOpen(false)}>
+                  <span className="notification-icon"><MessageCircle size={17} /></span>
+                  <span>
+                    <strong>
+                      {unreadMessages} nova{unreadMessages === 1 ? "" : "s"} mensagem{unreadMessages === 1 ? "" : "ns"} do ateliê
+                    </strong>
+                  </span>
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
   );
 }
 
