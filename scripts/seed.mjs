@@ -139,20 +139,28 @@ const sampleOrders = [
     totalCents: 7400,
   },
 ];
-for (const order of sampleOrders) {
-  const ref = db.collection("orders").doc(order.id);
-  if (!(await ref.get()).exists) {
-    const { id, daysAgo, ...data } = order;
-    await ref.set({
-      ...data,
-      userId: "local-admin",
-      paymentStatus: "approved",
-      createdAt: new Date(now - daysAgo * 24 * 60 * 60 * 1000),
-      isDemo: true,
-    });
-    count++;
+const { users } = await auth.listUsers();
+for (const user of users) {
+  for (const order of sampleOrders) {
+    const refId =
+      user.uid === "local-admin"
+        ? order.id
+        : `${order.id}-${user.uid.replaceAll("/", "_")}`;
+    const ref = db.collection("orders").doc(refId);
+    if (!(await ref.get()).exists) {
+      const { id, daysAgo, ...data } = order;
+      await ref.set({
+        ...data,
+        userId: user.uid,
+        paymentStatus: "approved",
+        createdAt: new Date(now - daysAgo * 24 * 60 * 60 * 1000),
+        isDemo: true,
+      });
+      count++;
+    }
   }
 }
+console.log(`Pedidos de exemplo associados a ${users.length} contas locais.`);
 console.log(
   `${count} registros criados no emulador. Dados existentes preservados.`,
 );
