@@ -881,23 +881,25 @@ function Account() {
             </Link>
           )}
           <section className="account-settings">
-            <div className="account-setting-card account-orders-link">
-              <div>
-                <div className="eyebrow">ACOMPANHAMENTO</div>
-                <h2>Seus pedidos</h2>
-                <p className="muted">
-                  Consulte o histórico e as atualizações dos seus pedidos.
-                </p>
+            {!session.admin && (
+              <div className="account-setting-card account-orders-link">
+                <div>
+                  <div className="eyebrow">ACOMPANHAMENTO</div>
+                  <h2>Seus pedidos</h2>
+                  <p className="muted">
+                    Consulte o histórico e as atualizações dos seus pedidos.
+                  </p>
+                </div>
+                <Link
+                  className="account-orders-arrow"
+                  to="/pedidos"
+                  aria-label="Ver meus pedidos"
+                  title="Ver meus pedidos"
+                >
+                  <ArrowRight size={24} />
+                </Link>
               </div>
-              <Link
-                className="account-orders-arrow"
-                to="/pedidos"
-                aria-label="Ver meus pedidos"
-                title="Ver meus pedidos"
-              >
-                <ArrowRight size={24} />
-              </Link>
-            </div>
+            )}
             <section className="account-setting-card">
               <header className="account-setting-header">
                 <div>
