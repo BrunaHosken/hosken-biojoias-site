@@ -120,7 +120,8 @@ export default function App() {
         )}
         <header>
           <Link to="/" className="wordmark">
-            HOSKEN<small>BIOJOIAS · FEITO À MÃO</small>
+            <span>HOSKEN BIOJOIAS</span>
+            <small>FEITO À MÃO</small>
           </Link>
           <button
             className="icon mobile-menu"
@@ -185,7 +186,7 @@ export default function App() {
               element={
                 <ContentPage
                   name="partnerStores"
-                  title="A Hosken perto de você"
+                  title="Hosken Biojoias perto de você"
                   subtitle="Conheça nossos pontos de encontro e lojas parceiras."
                 />
               }
@@ -208,7 +209,8 @@ export default function App() {
         </main>
         <footer>
           <div className="wordmark">
-            HOSKEN<small>NATUREZA QUE ACOMPANHA VOCÊ.</small>
+            <span>HOSKEN BIOJOIAS</span>
+            <small>NATUREZA QUE ACOMPANHA VOCÊ.</small>
           </div>
           <p>Flores naturais. Histórias únicas. Feito à mão.</p>
           <div>
@@ -219,7 +221,6 @@ export default function App() {
             >
               Instagram ↗
             </a>
-            <a href="tel:+5522992339779">(22) 99233-9779</a>
             <a
               href="https://wa.me/5522992339779"
               target="_blank"
@@ -227,6 +228,7 @@ export default function App() {
             >
               WhatsApp ↗
             </a>
+            <a href="mailto:nil2martins@gmail.com">E-mail</a>
             <Link to="/contato">Contato</Link>
             {session.admin && <Link to="/admin">Administrar</Link>}
           </div>
@@ -263,7 +265,7 @@ function Home() {
           </div>
         </div>
         <div className="hero-art">
-          <span className="art-label">O UNIVERSO HOSKEN</span>
+          <span className="art-label">O UNIVERSO HOSKEN BIOJOIAS</span>
           <img
             src="/hosken-logo.png"
             alt="Hosken Biojoias, logo com orquídeas rosas e folhagens"
@@ -518,7 +520,7 @@ function ContentPage({
   const records = useRecords<Content>(name);
   return (
     <div className="page">
-      <div className="eyebrow">UNIVERSO HOSKEN</div>
+      <div className="eyebrow">UNIVERSO HOSKEN BIOJOIAS</div>
       <h1>{title}</h1>
       <p className="lead">{subtitle}</p>
       <Notice {...records} />
@@ -597,7 +599,7 @@ function Account() {
   }
   return (
     <div className="page narrow">
-      <div className="eyebrow">SEU ESPAÇO NA HOSKEN</div>
+      <div className="eyebrow">SEU ESPAÇO NA HOSKEN BIOJOIAS</div>
       <h1>Minha conta</h1>
       {!session.ready ? (
         <p>Carregando sessão…</p>
@@ -1147,18 +1149,13 @@ function Contact() {
       <h1>Um contato, muitas histórias.</h1>
       <p className="lead">
         Tem alguma dúvida sobre as peças ou quer conversar sobre uma encomenda?
-        Fale com a Hosken.
+        Fale com a Hosken Biojoias.
       </p>
       <div className="contact-links">
         <a href="https://wa.me/5522992339779" target="_blank" rel="noreferrer">
           <strong>WhatsApp ↗</strong>
           <span>(22) 99233-9779</span>
           <p>Converse sobre peças e encomendas.</p>
-        </a>
-        <a href="tel:+5522992339779">
-          <strong>Telefone</strong>
-          <span>(22) 99233-9779</span>
-          <p>Toque para ligar.</p>
         </a>
         <a
           href="https://www.instagram.com/hosken.biojoias/"
@@ -1168,6 +1165,11 @@ function Contact() {
           <strong>Instagram ↗</strong>
           <span>@hosken.biojoias</span>
           <p>Acompanhe as criações e o dia a dia do ateliê.</p>
+        </a>
+        <a href="mailto:nil2martins@gmail.com">
+          <strong>E-mail</strong>
+          <span>nil2martins@gmail.com</span>
+          <p>Escreva para conversar sobre uma peça ou encomenda.</p>
         </a>
       </div>
     </div>

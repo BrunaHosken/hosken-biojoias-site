@@ -31,7 +31,7 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - Login e autorização administrativa com custom claim `admin: true`.
 - Cadastro e edição de produtos, preços em centavos, estoque, disponibilidade e visibilidade.
 - Cadastro de linhas, tipos de peça e conteúdo; exclusão e consulta em tempo real.
-- Telefone, WhatsApp e Instagram. Os contatos atuais estão em `src/App.tsx`.
+- WhatsApp, Instagram e e-mail na página de contato. O e-mail informado é pessoal e ficará público no site.
 - Logo fornecida pela família; produtos de exemplo usam ilustrações provisórias. Fotos são cadastradas por URL nesta etapa. Upload será implementado com Storage.
 
 Produtos e preços do seed são demonstrativos. Eventos e lojas parceiras têm título e texto nesta base; campos próprios de data, localização e mapa serão acrescentados antes do lançamento. Conteúdo ainda não tem editor de atualização. O carrinho confere disponibilidade para exibição; o checkout deverá revalidar todos os dados no servidor.
