@@ -147,16 +147,24 @@ for (const user of users) {
         ? order.id
         : `${order.id}-${user.uid.replaceAll("/", "_")}`;
     const ref = db.collection("orders").doc(refId);
-    if (!(await ref.get()).exists) {
+    const existing = await ref.get();
+    if (!existing.exists) {
       const { id, daysAgo, ...data } = order;
       await ref.set({
         ...data,
         userId: user.uid,
+        customerName: user.displayName || "Cliente de exemplo",
+        customerEmail: user.email || "",
         paymentStatus: "approved",
         createdAt: new Date(now - daysAgo * 24 * 60 * 60 * 1000),
         isDemo: true,
       });
       count++;
+    } else if (existing.data().isDemo) {
+      await ref.update({
+        customerName: user.displayName || "Cliente de exemplo",
+        customerEmail: user.email || "",
+      });
     }
   }
 }

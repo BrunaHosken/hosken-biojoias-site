@@ -597,6 +597,48 @@ nav a.active {
   color: var(--muted);
   font-size: 10px;
 }
+.admin-orders {
+  display: grid;
+  gap: 18px;
+}
+.admin-orders > h2,
+.admin-orders > p {
+  margin-bottom: 0;
+}
+.admin-order-card {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 28px;
+  border: 1px solid var(--border);
+  padding: 24px;
+}
+.admin-order-summary > div:first-child {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.admin-customer {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+.admin-customer span,
+.admin-order-summary > small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.admin-order-form {
+  display: grid;
+  align-content: start;
+}
+.admin-order-form .button {
+  justify-self: start;
+}
+.admin-order-form .notice {
+  margin-top: 14px;
+}
 .content-card {
   padding: 30px;
   border: 1px solid var(--border);
@@ -1048,6 +1090,11 @@ footer > small {
   }
   .order-card {
     padding: 20px 16px;
+  }
+  .admin-order-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 18px 15px;
   }
   .order-card-header {
     gap: 10px;

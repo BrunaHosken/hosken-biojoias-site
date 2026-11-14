@@ -42,10 +42,16 @@ service cloud.firestore {
       allow create, update: if signedIn() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['displayName']) && text(request.resource.data.displayName, 100);
     }
-    // Pedidos são criados/atualizados apenas por backend confiável (Admin SDK).
+    // O backend cria pedidos e confirma pagamentos. A administração só altera
+    // o andamento logístico e o código de rastreio.
     match /orders/{id} {
       allow read: if signedIn() && (resource.data.userId == request.auth.uid || admin());
-      allow write: if false;
+      allow create, delete: if false;
+      allow update: if admin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'trackingCode', 'updatedAt'])
+        && request.resource.data.status in ['pending_payment', 'confirmed', 'preparing', 'in_transit', 'completed', 'cancelled', 'refunded']
+        && (!('trackingCode' in request.resource.data) || (request.resource.data.trackingCode is string && request.resource.data.trackingCode.size() <= 100))
+        && request.resource.data.updatedAt == request.time;
     }
     // Chat e uploads serão habilitados com regras específicas na próxima etapa.
     match /{document=**} { allow read, write: if false; }

@@ -19,6 +19,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  serverTimestamp,
   setDoc,
   updateDoc,
 } from "firebase/firestore";
@@ -37,6 +38,7 @@ import { auth, db, localMode } from "./firebase";
 import {
   money,
   useCustomerOrders,
+  useAdminOrders,
   useRecords,
   type CustomerOrder,
   type Product,
@@ -752,16 +754,14 @@ function Account() {
 }
 const orderStatusLabels: Record<string, string> = {
   pending_payment: "Aguardando pagamento",
-  paid: "Pagamento confirmado",
   confirmed: "Pagamento confirmado",
   preparing: "Em preparação",
-  shipped: "A caminho",
   in_transit: "A caminho",
-  delivered: "Concluído",
   completed: "Concluído",
   cancelled: "Cancelado",
   refunded: "Reembolsado",
 };
+const orderStatusOptions = Object.keys(orderStatusLabels);
 function OrdersPage() {
   const session = useContext(SessionContext);
   const orders = useCustomerOrders(session.user?.uid);
@@ -1003,6 +1003,7 @@ function AdminPanel() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const tabs = [
+    ["orders", "Pedidos"],
     ["products", "Produtos"],
     ["categories", "Tipos de peça"],
     ["collections", "Linhas"],
@@ -1115,235 +1116,353 @@ function AdminPanel() {
           </button>
         ))}
       </div>
-      <div className="admin-layout">
-        <form key={tab} className="admin-form" onSubmit={save}>
-          <h2>{editing ? "Editar peça" : "Novo cadastro"}</h2>
-          {tab === "products" ? (
-            <>
-              <label>
-                Nome
-                <input
-                  required
-                  maxLength={120}
-                  value={product.name}
-                  onChange={(e) =>
-                    setProduct({ ...product, name: e.target.value })
-                  }
-                />
-              </label>
-              <label>
-                Descrição
-                <textarea
-                  required
-                  maxLength={3000}
-                  value={product.description}
-                  onChange={(e) =>
-                    setProduct({ ...product, description: e.target.value })
-                  }
-                />
-              </label>
-              <div className="form-pair">
+      {tab === "orders" ? (
+        <AdminOrders />
+      ) : (
+        <div className="admin-layout">
+          <form key={tab} className="admin-form" onSubmit={save}>
+            <h2>{editing ? "Editar peça" : "Novo cadastro"}</h2>
+            {tab === "products" ? (
+              <>
                 <label>
-                  Preço (R$)
+                  Nome
                   <input
                     required
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={product.priceCents / 100}
+                    maxLength={120}
+                    value={product.name}
                     onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        priceCents: Math.round(Number(e.target.value) * 100),
-                      })
+                      setProduct({ ...product, name: e.target.value })
                     }
                   />
                 </label>
                 <label>
-                  Estoque
-                  <input
+                  Descrição
+                  <textarea
                     required
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={product.stock}
+                    maxLength={3000}
+                    value={product.description}
                     onChange={(e) =>
-                      setProduct({ ...product, stock: Number(e.target.value) })
+                      setProduct({ ...product, description: e.target.value })
                     }
                   />
                 </label>
-              </div>
-              <label>
-                Linha
-                <select
-                  required
-                  value={product.collectionId}
-                  onChange={(e) =>
-                    setProduct({ ...product, collectionId: e.target.value })
-                  }
-                >
-                  <option value="">Selecione</option>
-                  {lines.data.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Tipo de peça
-                <select
-                  required
-                  value={product.categoryId}
-                  onChange={(e) =>
-                    setProduct({ ...product, categoryId: e.target.value })
-                  }
-                >
-                  <option value="">Selecione</option>
-                  {cats.data.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Disponibilidade
-                <select
-                  value={product.availability}
-                  onChange={(e) =>
-                    setProduct({ ...product, availability: e.target.value })
-                  }
-                >
-                  {Object.entries(availability).map(([id, label]) => (
-                    <option key={id} value={id}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                URL da foto (opcional)
-                <input
-                  type="url"
-                  maxLength={2000}
-                  value={product.imageUrl}
-                  onChange={(e) =>
-                    setProduct({ ...product, imageUrl: e.target.value })
-                  }
-                  placeholder="https://…"
-                />
-              </label>
-              <label>
-                Publicação
-                <select
-                  value={product.status}
-                  onChange={(e) =>
-                    setProduct({ ...product, status: e.target.value })
-                  }
-                >
-                  <option value="draft">Rascunho</option>
-                  <option value="published">Publicado</option>
-                </select>
-              </label>
-            </>
-          ) : (
-            <>
-              <label>
-                {["categories", "collections"].includes(tab)
-                  ? "Nome"
-                  : "Título"}
-                <input
-                  name="name"
-                  required
-                  maxLength={
-                    ["categories", "collections"].includes(tab) ? 80 : 160
-                  }
-                />
-              </label>
-              {!["categories", "collections"].includes(tab) && (
+                <div className="form-pair">
+                  <label>
+                    Preço (R$)
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={product.priceCents / 100}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          priceCents: Math.round(Number(e.target.value) * 100),
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Estoque
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={product.stock}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          stock: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                </div>
                 <label>
-                  Texto
-                  <textarea name="body" required maxLength={5000} />
+                  Linha
+                  <select
+                    required
+                    value={product.collectionId}
+                    onChange={(e) =>
+                      setProduct({ ...product, collectionId: e.target.value })
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    {lines.data.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-              )}
-              <label>
-                Publicação
-                <select name="status">
-                  <option value="draft">Rascunho</option>
-                  <option value="published">Publicado</option>
-                </select>
-              </label>
-            </>
-          )}
-          <button className="button" disabled={busy}>
-            {busy ? "Salvando…" : "Salvar cadastro"} <Plus size={17} />
-          </button>
-          {editing && (
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setEditing("");
-                setProduct(blankProduct);
-              }}
-            >
-              Cancelar edição
-            </button>
-          )}
-          {message && (
-            <p role="status" className="notice">
-              {message}
-            </p>
-          )}
-        </form>
-        <section>
-          <h2>Cadastros existentes</h2>
-          <Notice {...records} />
-          {records.data.map((r) => (
-            <article className="admin-row" key={r.id}>
-              <div>
-                <strong>{"name" in r ? r.name : r.title}</strong>
-                <small>
-                  {r.status === "published" ? "Publicado" : "Rascunho"}
-                  {"stock" in r ? ` · Estoque: ${r.stock}` : ""}
-                </small>
-              </div>
-              <div>
-                {tab === "products" && (
-                  <>
-                    <button
-                      className="text-button"
-                      onClick={() => {
-                        const p = r as Product;
-                        const { id, ...data } = p;
-                        setProduct(data);
-                        setEditing(id);
-                        setMessage("");
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() => toggleProduct(r as Product)}
-                    >
-                      {r.status === "published" ? "Ocultar" : "Publicar"}
-                    </button>
-                  </>
+                <label>
+                  Tipo de peça
+                  <select
+                    required
+                    value={product.categoryId}
+                    onChange={(e) =>
+                      setProduct({ ...product, categoryId: e.target.value })
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    {cats.data.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Disponibilidade
+                  <select
+                    value={product.availability}
+                    onChange={(e) =>
+                      setProduct({ ...product, availability: e.target.value })
+                    }
+                  >
+                    {Object.entries(availability).map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  URL da foto (opcional)
+                  <input
+                    type="url"
+                    maxLength={2000}
+                    value={product.imageUrl}
+                    onChange={(e) =>
+                      setProduct({ ...product, imageUrl: e.target.value })
+                    }
+                    placeholder="https://…"
+                  />
+                </label>
+                <label>
+                  Publicação
+                  <select
+                    value={product.status}
+                    onChange={(e) =>
+                      setProduct({ ...product, status: e.target.value })
+                    }
+                  >
+                    <option value="draft">Rascunho</option>
+                    <option value="published">Publicado</option>
+                  </select>
+                </label>
+              </>
+            ) : (
+              <>
+                <label>
+                  {["categories", "collections"].includes(tab)
+                    ? "Nome"
+                    : "Título"}
+                  <input
+                    name="name"
+                    required
+                    maxLength={
+                      ["categories", "collections"].includes(tab) ? 80 : 160
+                    }
+                  />
+                </label>
+                {!["categories", "collections"].includes(tab) && (
+                  <label>
+                    Texto
+                    <textarea name="body" required maxLength={5000} />
+                  </label>
                 )}
-                <button className="text-button" onClick={() => remove(r.id)}>
-                  Excluir
-                </button>
-              </div>
-            </article>
-          ))}
-          {!records.loading && !records.data.length && (
-            <p className="muted">Nenhum cadastro ainda.</p>
-          )}
-        </section>
-      </div>
+                <label>
+                  Publicação
+                  <select name="status">
+                    <option value="draft">Rascunho</option>
+                    <option value="published">Publicado</option>
+                  </select>
+                </label>
+              </>
+            )}
+            <button className="button" disabled={busy}>
+              {busy ? "Salvando…" : "Salvar cadastro"} <Plus size={17} />
+            </button>
+            {editing && (
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setEditing("");
+                  setProduct(blankProduct);
+                }}
+              >
+                Cancelar edição
+              </button>
+            )}
+            {message && (
+              <p role="status" className="notice">
+                {message}
+              </p>
+            )}
+          </form>
+          <section>
+            <h2>Cadastros existentes</h2>
+            <Notice {...records} />
+            {records.data.map((r) => (
+              <article className="admin-row" key={r.id}>
+                <div>
+                  <strong>{"name" in r ? r.name : r.title}</strong>
+                  <small>
+                    {r.status === "published" ? "Publicado" : "Rascunho"}
+                    {"stock" in r ? ` · Estoque: ${r.stock}` : ""}
+                  </small>
+                </div>
+                <div>
+                  {tab === "products" && (
+                    <>
+                      <button
+                        className="text-button"
+                        onClick={() => {
+                          const p = r as Product;
+                          const { id, ...data } = p;
+                          setProduct(data);
+                          setEditing(id);
+                          setMessage("");
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="text-button"
+                        onClick={() => toggleProduct(r as Product)}
+                      >
+                        {r.status === "published" ? "Ocultar" : "Publicar"}
+                      </button>
+                    </>
+                  )}
+                  <button className="text-button" onClick={() => remove(r.id)}>
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            ))}
+            {!records.loading && !records.data.length && (
+              <p className="muted">Nenhum cadastro ainda.</p>
+            )}
+          </section>
+        </div>
+      )}
     </div>
+  );
+}
+
+function AdminOrders() {
+  const orders = useAdminOrders();
+  return (
+    <section className="admin-orders">
+      <h2>Pedidos recebidos</h2>
+      <p className="muted">
+        Atualize o andamento e o rastreio. O status do pagamento e os valores
+        não são alterados aqui.
+      </p>
+      <Notice {...orders} />
+      {orders.data.map((order) => (
+        <AdminOrderCard key={order.id} order={order} />
+      ))}
+      {!orders.loading && !orders.error && orders.data.length === 0 && (
+        <p className="muted">Nenhum pedido cadastrado ainda.</p>
+      )}
+    </section>
+  );
+}
+
+function AdminOrderCard({ order }: { order: CustomerOrder }) {
+  const [status, setStatus] = useState(order.status);
+  const [trackingCode, setTrackingCode] = useState(order.trackingCode || "");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const createdAt = order.createdAt?.toDate();
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setMessage("");
+    try {
+      await updateDoc(doc(db, "orders", order.id), {
+        status,
+        trackingCode: trackingCode.trim(),
+        updatedAt: serverTimestamp(),
+      });
+      setMessage("Status e rastreio atualizados.");
+    } catch {
+      setMessage("Não foi possível atualizar este pedido. Tente novamente.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <article className="admin-order-card">
+      <div className="admin-order-summary">
+        <div>
+          <strong>
+            {order.orderNumber || order.id.slice(-8).toUpperCase()}
+          </strong>
+          {order.isDemo && <span className="tag">PEDIDO DE EXEMPLO</span>}
+        </div>
+        <p className="admin-customer">
+          <strong>{order.customerName || "Cliente"}</strong>
+          {order.customerEmail && <span>{order.customerEmail}</span>}
+        </p>
+        <small>
+          {createdAt
+            ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(
+                createdAt,
+              )
+            : "Data indisponível"}
+        </small>
+        <ul className="order-items">
+          {order.items.map((item, index) => (
+            <li key={`${item.productId}-${index}`}>
+              <span>
+                {item.name} <small>× {item.quantity}</small>
+              </span>
+              <strong>{money(item.quantity * item.unitPriceCents)}</strong>
+            </li>
+          ))}
+        </ul>
+        <p className="order-total">
+          <span>Total</span>
+          <strong>{money(order.totalCents)}</strong>
+        </p>
+      </div>
+      <form className="admin-order-form" onSubmit={save}>
+        <label>
+          Andamento
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {orderStatusOptions.map((value) => (
+              <option key={value} value={value}>
+                {orderStatusLabels[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Código de rastreio
+          <input
+            value={trackingCode}
+            maxLength={100}
+            onChange={(e) => setTrackingCode(e.target.value)}
+            placeholder="Opcional"
+          />
+        </label>
+        <button className="button" disabled={busy}>
+          {busy ? "Salvando…" : "Atualizar pedido"}
+        </button>
+        {message && (
+          <p role="status" className="notice">
+            {message}
+          </p>
+        )}
+      </form>
+    </article>
   );
 }
 

@@ -41,6 +41,8 @@ export type OrderItem = {
 export type CustomerOrder = {
   id: string;
   userId: string;
+  customerName?: string;
+  customerEmail?: string;
   orderNumber?: string;
   items: OrderItem[];
   totalCents: number;
@@ -125,6 +127,36 @@ export function useCustomerOrders(uid: string | undefined) {
     );
     return unsubscribe;
   }, [uid]);
+  return { data, error, loading };
+}
+export function useAdminOrders() {
+  const [data, setData] = useState<CustomerOrder[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const ordersQuery = query(
+      collection(db, "orders"),
+      orderBy("createdAt", "desc"),
+    );
+    const unsubscribe = onSnapshot(
+      ordersQuery,
+      (snapshot) => {
+        setData(
+          snapshot.docs.map(
+            (snapshot) =>
+              ({ id: snapshot.id, ...snapshot.data() }) as CustomerOrder,
+          ),
+        );
+        setError("");
+        setLoading(false);
+      },
+      () => {
+        setError("Não foi possível carregar os pedidos. Tente novamente.");
+        setLoading(false);
+      },
+    );
+    return unsubscribe;
+  }, []);
   return { data, error, loading };
 }
 export const money = (cents: number) =>
