@@ -1094,6 +1094,8 @@ function ChatThread({
           matchesConversationPath,
           matchesConversationOwner,
           validUnreadCounters,
+          unreadForAdmin: conversation.unreadForAdmin,
+          unreadForCustomer: conversation.unreadForCustomer,
           senderRole,
           messageLength: text.trim().length,
           adminClaim,
@@ -1102,7 +1104,7 @@ function ChatThread({
       }
       setSendError(
         localMode
-          ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, contadores ${validUnreadCounters ? "ok" : "inválidos"}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
+          ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, não lidas equipe/cliente ${conversation.unreadForAdmin}/${conversation.unreadForCustomer}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
           : "Não foi possível enviar a mensagem. Tente novamente.",
       );
     } finally {
