@@ -14,7 +14,7 @@ import {
   writeBatch,
   type Timestamp,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { auth, db, localMode } from "./firebase";
 export type Taxonomy = {
   id: string;
   name: string;
@@ -334,6 +334,24 @@ export async function sendChatMessage(
   if (!cleanText || cleanText.length > 2000) return;
   const conversationRef = doc(db, "conversations", conversationId);
   const messageRef = doc(collection(conversationRef, "messages"));
+  const currentUser = auth.currentUser;
+  const diagnostics = {
+    projectId: db.app.options.projectId,
+    localMode,
+    authUidMatchesSender: currentUser?.uid === senderId,
+    conversationPathMatchesSender: conversationId === senderId,
+    senderRole,
+    messageLength: cleanText.length,
+    messageId: messageRef.id,
+    conversationFields: [
+      "lastMessage",
+      "lastMessageId",
+      "lastMessageSenderRole",
+      "updatedAt",
+      senderRole === "customer" ? "unreadForAdmin" : "unreadForCustomer",
+    ],
+  };
+  if (import.meta.env.DEV) console.info("[Hosken chat] tentativa de envio", diagnostics);
   const batch = writeBatch(db);
   batch.set(messageRef, {
     senderId,
@@ -350,7 +368,21 @@ export async function sendChatMessage(
       ? { unreadForAdmin: increment(1) }
       : { unreadForCustomer: increment(1) }),
   });
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (cause) {
+    if (import.meta.env.DEV) {
+      console.error("[Hosken chat] batch de envio recusado", {
+        ...diagnostics,
+        errorCode:
+          typeof cause === "object" && cause !== null && "code" in cause
+            ? String(cause.code)
+            : "desconhecido",
+        errorMessage: cause instanceof Error ? cause.message : String(cause),
+      });
+    }
+    throw cause;
+  }
 }
 export async function markConversationRead(
   conversationId: string,

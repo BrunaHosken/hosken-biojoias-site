@@ -1082,19 +1082,27 @@ function ChatThread({
         /* A falha original continua sendo exibida abaixo. */
       }
       const matchesAuth = currentUser?.uid === senderId;
-      const matchesConversation = conversation.id === senderId;
+      const matchesConversationPath = conversation.id === senderId;
+      const matchesConversationOwner = conversation.customerId === senderId;
+      const validUnreadCounters =
+        Number.isInteger(conversation.unreadForAdmin) &&
+        Number.isInteger(conversation.unreadForCustomer);
       if (import.meta.env.DEV) {
         console.error("Chat message send failed", {
           code,
           matchesAuth,
-          matchesConversation,
+          matchesConversationPath,
+          matchesConversationOwner,
+          validUnreadCounters,
+          senderRole,
+          messageLength: text.trim().length,
           adminClaim,
           projectId: auth.app.options.projectId,
         });
       }
       setSendError(
         localMode
-          ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, conversa ${matchesConversation ? "ok" : "divergente"}, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
+          ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, contadores ${validUnreadCounters ? "ok" : "inválidos"}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
           : "Não foi possível enviar a mensagem. Tente novamente.",
       );
     } finally {
