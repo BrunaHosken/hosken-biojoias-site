@@ -82,6 +82,77 @@ for (const [group, documents] of Object.entries(groups)) {
     }
   }
 }
+const now = Date.now();
+const sampleOrders = [
+  {
+    id: "demo-order-completed",
+    orderNumber: "DEMO-1001",
+    daysAgo: 28,
+    status: "completed",
+    trackingCode: "",
+    items: [
+      {
+        productId: "orquidea-exemplo",
+        name: "Conjunto Orquídea",
+        quantity: 1,
+        unitPriceCents: 15900,
+      },
+    ],
+    totalCents: 15900,
+  },
+  {
+    id: "demo-order-in-transit",
+    orderNumber: "DEMO-1002",
+    daysAgo: 6,
+    status: "in_transit",
+    trackingCode: "DEMO-HOSKEN-002",
+    items: [
+      {
+        productId: "colar-exemplo",
+        name: "Colar Jardim",
+        quantity: 1,
+        unitPriceCents: 8900,
+      },
+      {
+        productId: "orquidea-exemplo",
+        name: "Conjunto Orquídea",
+        quantity: 1,
+        unitPriceCents: 15900,
+      },
+    ],
+    totalCents: 24800,
+  },
+  {
+    id: "demo-order-preparing",
+    orderNumber: "DEMO-1003",
+    daysAgo: 2,
+    status: "preparing",
+    trackingCode: "",
+    items: [
+      {
+        productId: "brinco-exemplo",
+        name: "Brincos Jardim",
+        quantity: 1,
+        unitPriceCents: 7400,
+      },
+    ],
+    totalCents: 7400,
+  },
+];
+for (const order of sampleOrders) {
+  const ref = db.collection("orders").doc(order.id);
+  if (!(await ref.get()).exists) {
+    const { id, daysAgo, ...data } = order;
+    await ref.set({
+      ...data,
+      userId: "local-admin",
+      paymentStatus: "approved",
+      createdAt: new Date(now - daysAgo * 24 * 60 * 60 * 1000),
+      isDemo: true,
+    });
+    count++;
+  }
+}
 console.log(
   `${count} registros criados no emulador. Dados existentes preservados.`,
 );

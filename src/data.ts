@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+  type Timestamp,
+} from "firebase/firestore";
 import { db } from "./firebase";
 export type Taxonomy = {
   id: string;
@@ -24,6 +31,24 @@ export type Content = {
   title: string;
   body: string;
   status: string;
+};
+export type OrderItem = {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPriceCents: number;
+};
+export type CustomerOrder = {
+  id: string;
+  userId: string;
+  orderNumber?: string;
+  items: OrderItem[];
+  totalCents: number;
+  status: string;
+  paymentStatus?: string;
+  createdAt: Timestamp;
+  trackingCode?: string;
+  isDemo?: boolean;
 };
 export function useRecords<T>(name: string, all = false) {
   const [data, setData] = useState<T[]>([]);
@@ -62,6 +87,44 @@ export function useRecords<T>(name: string, all = false) {
       unsub();
     };
   }, [name, all]);
+  return { data, error, loading };
+}
+export function useCustomerOrders(uid: string | undefined) {
+  const [data, setData] = useState<CustomerOrder[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(Boolean(uid));
+  useEffect(() => {
+    setData([]);
+    setError("");
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const ordersQuery = query(
+      collection(db, "orders"),
+      where("userId", "==", uid),
+      orderBy("createdAt", "desc"),
+    );
+    const unsubscribe = onSnapshot(
+      ordersQuery,
+      (snapshot) => {
+        setData(
+          snapshot.docs.map(
+            (snapshot) =>
+              ({ id: snapshot.id, ...snapshot.data() }) as CustomerOrder,
+          ),
+        );
+        setError("");
+        setLoading(false);
+      },
+      () => {
+        setError("Não foi possível carregar seus pedidos. Tente novamente.");
+        setLoading(false);
+      },
+    );
+    return unsubscribe;
+  }, [uid]);
   return { data, error, loading };
 }
 export const money = (cents: number) =>

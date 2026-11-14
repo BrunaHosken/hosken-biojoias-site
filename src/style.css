@@ -504,6 +504,99 @@ nav a.active {
   grid-template-columns: repeat(2, 1fr);
   gap: 25px;
 }
+.order-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 30px;
+}
+.order-card {
+  border: 1px solid var(--border);
+  padding: 24px 28px;
+  background: #fffdf9;
+}
+.order-card-header {
+  height: auto;
+  padding: 0 0 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+.order-card-header small {
+  font-size: 10px;
+  letter-spacing: 0.4px;
+}
+.order-card-header h2 {
+  font-size: 26px;
+  margin: 4px 0;
+}
+.order-status-group {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+.order-status {
+  border-radius: 30px;
+  padding: 8px 12px;
+  color: #73552f;
+  background: #f6efe3;
+  font-size: 11px;
+}
+.status-completed,
+.status-delivered {
+  color: #52683f;
+  background: #edf2e8;
+}
+.status-in_transit,
+.status-shipped {
+  color: #426476;
+  background: #eaf1f4;
+}
+.status-cancelled,
+.status-refunded {
+  color: #8a4c51;
+  background: #f7ebeb;
+}
+.order-items {
+  display: grid;
+  gap: 11px;
+  padding: 18px 0;
+  margin: 0;
+  list-style: none;
+}
+.order-items li,
+.order-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 13px;
+}
+.order-items li small {
+  color: var(--muted);
+}
+.order-items li strong,
+.order-total strong {
+  font-weight: 500;
+  white-space: nowrap;
+}
+.order-tracking {
+  padding: 12px 14px;
+  margin: 0 0 16px;
+  background: #f4f0e9;
+  font-size: 12px;
+}
+.order-total {
+  padding-top: 17px;
+  border-top: 1px solid var(--border);
+}
+.demo-note {
+  margin: 15px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
 .content-card {
   padding: 30px;
   border: 1px solid var(--border);
@@ -952,6 +1045,23 @@ footer > small {
   }
   .content-grid {
     grid-template-columns: 1fr;
+  }
+  .order-card {
+    padding: 20px 16px;
+  }
+  .order-card-header {
+    gap: 10px;
+  }
+  .order-card-header h2 {
+    font-size: 22px;
+  }
+  .order-status {
+    font-size: 10px;
+    text-align: center;
+  }
+  .order-items li,
+  .order-total {
+    font-size: 12px;
   }
   .product-detail h1 {
     font-size: 42px;

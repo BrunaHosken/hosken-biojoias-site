@@ -29,9 +29,10 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - Páginas separadas: início, loja, produto, novidades, eventos, lojas parceiras, história, contato, conta e carrinho.
 - Layout responsivo, filtros por linha e tipo cadastrados no banco.
 - Login e autorização administrativa com custom claim `admin: true`.
-- Clientes podem criar contas em `/conta` com nome, e-mail e senha; os pedidos serão exibidos nessa área quando o checkout entrar.
+- Clientes podem criar contas em `/conta` com nome, e-mail e senha. A página `/pedidos` mostra, em tempo real, os pedidos associados à conta, com status, itens, valores e código de rastreio.
 - Cadastro e edição de produtos, preços em centavos, estoque, disponibilidade e visibilidade.
 - Cadastro de linhas, tipos de peça e conteúdo; exclusão e consulta em tempo real.
+- Histórico de pedidos com leitura em tempo real, status, itens, valores e rastreio. Três registros fictícios aparecem na conta administrativa do emulador.
 - WhatsApp, Instagram e e-mail na página de contato. O e-mail informado é pessoal e ficará público no site.
 - Logo fornecida pela família; produtos de exemplo usam ilustrações provisórias. Fotos são cadastradas por URL nesta etapa. Upload será implementado com Storage.
 
@@ -46,7 +47,9 @@ Produtos e preços do seed são demonstrativos. Eventos e lojas parceiras têm t
 | `products`                        | name, description, priceCents, stock, categoryId, collectionId, availability, status, imageUrl | Público: publicados; admin: escrita                  |
 | `news`, `events`, `partnerStores` | title, body, status                                                                            | Público: publicados; admin: escrita                  |
 | `users`                           | displayName                                                                                    | Dono pode escrever campos permitidos; admin pode ler |
-| `orders`                          | userId, itens/valores e estados a definir no backend                                           | Dono/admin podem ler; somente backend escreve        |
+| `orders`                          | orderNumber, userId, items, totalCents, status, paymentStatus, createdAt, trackingCode         | Dono/admin podem ler; somente backend escreve        |
+
+Pedidos usam `orderNumber`, `userId`, `items` (cópias de nome, quantidade e preço unitário), `totalCents`, `status`, `paymentStatus`, `createdAt` e, opcionalmente, `trackingCode`. Os status aceitos pela interface incluem `pending_payment`, `confirmed`, `preparing`, `in_transit`, `completed`, `cancelled` e `refunded`. O índice composto por usuário e data está declarado em `firestore.indexes.json`. O seed inclui três pedidos fictícios visíveis apenas para a conta administrativa local; cada um aparece identificado como exemplo.
 
 `status`: `draft` ou `published`. `availability`: `available`, `soldout`, `prelaunch`, `made-to-order`. Estoque e preço devem ser inteiros não negativos. Documentos referenciados de linha e tipo devem existir. Nesta base, evite excluir linhas e tipos usados em produtos; prefira mantê-los em rascunho até implementarmos arquivamento e validação de dependências no backend.
 
