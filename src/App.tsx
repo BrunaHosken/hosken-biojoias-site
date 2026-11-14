@@ -1067,8 +1067,36 @@ function ChatThread({
     try {
       await sendChatMessage(conversationId, senderId, senderRole, text);
       setText("");
-    } catch {
-      setSendError("Não foi possível enviar a mensagem. Tente novamente.");
+    } catch (cause) {
+      const code =
+        typeof cause === "object" && cause !== null && "code" in cause
+          ? String(cause.code)
+          : "erro desconhecido";
+      const currentUser = auth.currentUser;
+      let adminClaim = "indisponível";
+      try {
+        adminClaim = (await currentUser?.getIdTokenResult())?.claims.admin === true
+          ? "sim"
+          : "não";
+      } catch {
+        /* A falha original continua sendo exibida abaixo. */
+      }
+      const matchesAuth = currentUser?.uid === senderId;
+      const matchesConversation = conversation.id === senderId;
+      if (import.meta.env.DEV) {
+        console.error("Chat message send failed", {
+          code,
+          matchesAuth,
+          matchesConversation,
+          adminClaim,
+          projectId: auth.app.options.projectId,
+        });
+      }
+      setSendError(
+        localMode
+          ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, conversa ${matchesConversation ? "ok" : "divergente"}, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
+          : "Não foi possível enviar a mensagem. Tente novamente.",
+      );
     } finally {
       setBusy(false);
     }

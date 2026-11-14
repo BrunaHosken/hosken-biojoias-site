@@ -55,7 +55,7 @@ service cloud.firestore {
     }
     match /conversations/{conversationId} {
       function canAccessConversation() {
-        return admin() || (signedIn() && conversationId == request.auth.uid);
+        return signedIn() && (conversationId == request.auth.uid || admin());
       }
       function messagePath(id) {
         return /databases/$(database)/documents/conversations/$(conversationId)/messages/$(id);
@@ -63,34 +63,36 @@ service cloud.firestore {
       function isMessageUpdate() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         let message = getAfter(messagePath(request.resource.data.lastMessageId)).data;
+        let customerMessage = request.resource.data.lastMessageSenderRole == 'customer';
+        let adminMessage = request.resource.data.lastMessageSenderRole == 'admin';
         return signedIn()
-          && (admin() || resource.data.customerId == request.auth.uid)
           && changed.hasOnly(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt','unreadForAdmin','unreadForCustomer'])
           && changed.hasAll(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt'])
           && request.resource.data.lastMessage is string
           && request.resource.data.lastMessage.size() > 0
           && request.resource.data.lastMessage.size() <= 2000
           && request.resource.data.lastMessageId is string
-          && request.resource.data.lastMessageSenderRole == (admin() ? 'admin' : 'customer')
           && request.resource.data.updatedAt == request.time
           && message.senderId == request.auth.uid
           && message.senderRole == request.resource.data.lastMessageSenderRole
           && message.text == request.resource.data.lastMessage
           && message.createdAt == request.time
-          && ((admin()
-            && changed.hasAll(['unreadForCustomer'])
-            && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer + 1
-            && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin)
-            || (!admin()
+          && ((customerMessage
+            && resource.data.customerId == request.auth.uid
               && changed.hasAll(['unreadForAdmin'])
               && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin + 1
-              && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer));
+            && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer)
+            || (adminMessage
+              && admin()
+              && changed.hasAll(['unreadForCustomer'])
+              && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer + 1
+              && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin));
       }
       function isMessageEditUpdate() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         let message = getAfter(messagePath(resource.data.lastMessageId)).data;
         return signedIn()
-          && (admin() || resource.data.customerId == request.auth.uid)
+          && (resource.data.customerId == request.auth.uid || admin())
           && changed.hasOnly(['lastMessage','updatedAt'])
           && changed.hasAll(['lastMessage','updatedAt'])
           && request.resource.data.lastMessage is string
@@ -103,23 +105,18 @@ service cloud.firestore {
           && message.editedAt == request.time
           && (request.time - message.createdAt) < duration.value(1, 'h');
       }
-      function isMessageDeleteUpdate() {
-        let changed = request.resource.data.diff(resource.data).affectedKeys();
-        let deleted = get(messagePath(request.resource.data.lastDeletedMessageId)).data;
+      function validMessageDeleteUpdate(messageId, changed) {
+        let deleted = get(messagePath(messageId)).data;
         let removedUnreadForAdmin = deleted.senderRole == 'customer'
           && deleted.createdAt > resource.data.adminLastReadAt
           && resource.data.unreadForAdmin > 0;
         let removedUnreadForCustomer = deleted.senderRole == 'admin'
           && deleted.createdAt > resource.data.customerLastReadAt
           && resource.data.unreadForCustomer > 0;
-        return signedIn()
-          && (admin() || resource.data.customerId == request.auth.uid)
+        return deleted.senderId == request.auth.uid
+          && (request.time - deleted.createdAt) < duration.value(1, 'h')
           && changed.hasOnly(['lastDeletedMessageId','lastMessage','lastMessageId','lastMessageSenderRole','updatedAt','unreadForAdmin','unreadForCustomer'])
           && changed.hasAll(['lastDeletedMessageId'])
-          && request.resource.data.lastDeletedMessageId != resource.data.lastDeletedMessageId
-          && deleted.senderId == request.auth.uid
-          && (request.time - deleted.createdAt) < duration.value(1, 'h')
-          && !existsAfter(messagePath(request.resource.data.lastDeletedMessageId))
           && ((removedUnreadForAdmin
             && changed.hasAll(['unreadForAdmin'])
             && request.resource.data.unreadForAdmin == resource.data.unreadForAdmin - 1
@@ -148,6 +145,17 @@ service cloud.firestore {
               && request.resource.data.lastMessageId == resource.data.lastMessageId
               && request.resource.data.lastMessageSenderRole == resource.data.lastMessageSenderRole
               && request.resource.data.updatedAt == resource.data.updatedAt));
+      }
+      function isMessageDeleteUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let messageId = request.resource.data.lastDeletedMessageId;
+        return signedIn()
+          && (resource.data.customerId == request.auth.uid || admin())
+          && messageId is string
+          && messageId != resource.data.lastDeletedMessageId
+          && exists(messagePath(messageId))
+          && !existsAfter(messagePath(messageId))
+          && validMessageDeleteUpdate(messageId, changed);
       }
       function markAdminRead() {
         return admin()
@@ -223,8 +231,9 @@ service cloud.firestore {
           && canAccessConversation()
           && conversationAfter().lastMessageId == messageId
           && conversationAfter().lastMessage == request.resource.data.text
-          && ((admin() && request.resource.data.senderRole == 'admin')
-            || (!admin() && request.resource.data.senderRole == 'customer'));
+          && ((request.resource.data.senderRole == 'customer'
+              && conversationId == request.auth.uid)
+            || (request.resource.data.senderRole == 'admin' && admin()));
         allow update: if editableByAuthor();
         allow delete: if signedIn()
           && resource.data.senderId == request.auth.uid
