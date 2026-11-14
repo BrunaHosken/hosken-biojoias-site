@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function admin() { return signedIn() && request.auth.token.admin == true; }
+    function text(value, limit) { return value is string && value.size() > 0 && value.size() <= limit; }
+    function taxonomy() {
+      return request.resource.data.keys().hasOnly(['name','slug','status'])
+        && text(request.resource.data.name, 80) && text(request.resource.data.slug, 80)
+        && request.resource.data.status in ['published','draft'];
+    }
+    match /{taxonomyCollection}/{id} {
+      allow read: if taxonomyCollection in ['categories','collections'] && (resource.data.status == 'published' || admin());
+      allow create, update: if taxonomyCollection in ['categories','collections'] && admin() && taxonomy();
+      allow delete: if taxonomyCollection in ['categories','collections'] && admin();
+    }
+    match /products/{id} {
+      allow read: if resource.data.status == 'published' || admin();
+      allow create, update: if admin()
+        && request.resource.data.keys().hasOnly(['name','description','priceCents','stock','categoryId','collectionId','status','availability','imageUrl'])
+        && text(request.resource.data.name, 120)
+        && text(request.resource.data.description, 3000)
+        && request.resource.data.priceCents is int && request.resource.data.priceCents >= 0
+        && request.resource.data.stock is int && request.resource.data.stock >= 0
+        && request.resource.data.status in ['published','draft']
+        && request.resource.data.availability in ['available','soldout','prelaunch','made-to-order']
+        && request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 2000
+        && exists(/databases/$(database)/documents/categories/$(request.resource.data.categoryId))
+        && exists(/databases/$(database)/documents/collections/$(request.resource.data.collectionId));
+      allow delete: if admin();
+    }
+    match /{contentCollection}/{id} {
+      allow read: if contentCollection in ['news','events','partnerStores'] && (resource.data.status == 'published' || admin());
+      allow create, update: if contentCollection in ['news','events','partnerStores'] && admin()
+        && request.resource.data.keys().hasOnly(['title','body','status'])
+        && text(request.resource.data.title, 160) && text(request.resource.data.body, 5000)
+        && request.resource.data.status in ['published','draft'];
+      allow delete: if contentCollection in ['news','events','partnerStores'] && admin();
+    }
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['displayName']) && text(request.resource.data.displayName, 100);
+    }
+    // Pedidos são criados/atualizados apenas por backend confiável (Admin SDK).
+    match /orders/{id} {
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid || admin());
+      allow write: if false;
+    }
+    // Chat e uploads serão habilitados com regras específicas na próxima etapa.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

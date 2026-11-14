@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+.firebase/
+.emulator-data/
+*-debug.log
+.DS_Store
+.tools/
+.artifacts/
+*.tsbuildinfo
