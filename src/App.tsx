@@ -889,8 +889,13 @@ function Account() {
                   Consulte o histórico e as atualizações dos seus pedidos.
                 </p>
               </div>
-              <Link className="button secondary" to="/pedidos">
-                Meus pedidos <ArrowRight size={18} />
+              <Link
+                className="account-orders-arrow"
+                to="/pedidos"
+                aria-label="Ver meus pedidos"
+                title="Ver meus pedidos"
+              >
+                <ArrowRight size={24} />
               </Link>
             </div>
             <section className="account-setting-card">
