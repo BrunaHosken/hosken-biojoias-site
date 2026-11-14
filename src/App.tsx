@@ -2011,8 +2011,7 @@ type CustomerOrderFingerprint = {
   updatedAt: number | null;
 };
 type CustomerOrderUpdate = {
-  status: string;
-  trackingUpdated: boolean;
+  orderCode: string;
   updatedAt: number;
 };
 type CustomerNotificationState = {
@@ -2100,9 +2099,8 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
 
       if (hasUnopenedUpdate || fieldsChanged) {
         pendingOrders[order.id] = {
-          status: fingerprint.status,
-          trackingUpdated:
-            trackingUpdated || pendingOrders[order.id]?.trackingUpdated || false,
+          orderCode:
+            order.orderNumber || order.id.slice(-8).toUpperCase(),
           updatedAt:
             fingerprint.updatedAt ?? Date.now(),
         };
@@ -2184,11 +2182,7 @@ function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
                     {pendingOrders.map(([id, update]) => (
                       <span className="customer-order-notification" key={id}>
                         <strong>Pedido atualizado</strong>
-                        <small>
-                          {update.trackingUpdated
-                            ? "Código de rastreio atualizado"
-                            : orderStatusLabels[update.status] || "Confira o andamento do pedido"}
-                        </small>
+                        <small>Pedido {update.orderCode || id.slice(-8).toUpperCase()}</small>
                       </span>
                     ))}
                   </span>
