@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function admin() { return signedIn() && request.auth.token.admin == true; }
+    function admin() { return signedIn() && request.auth.token.get('admin', false) == true; }
     function text(value, limit) { return value is string && value.size() > 0 && value.size() <= limit; }
     function taxonomy() {
       return request.resource.data.keys().hasOnly(['name','slug','status'])
@@ -54,6 +54,9 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
     match /conversations/{conversationId} {
+      function canAccessConversation() {
+        return admin() || (signedIn() && conversationId == request.auth.uid);
+      }
       function messagePath(id) {
         return /databases/$(database)/documents/conversations/$(conversationId)/messages/$(id);
       }
@@ -210,14 +213,14 @@ service cloud.firestore {
               || (conversationAfter().lastMessageId == messageId
                 && conversationAfter().lastMessage == request.resource.data.text));
         }
-        allow read: if admin() || (signedIn() && conversation().customerId == request.auth.uid);
+        allow read: if canAccessConversation();
         allow create: if signedIn()
           && request.resource.data.keys().hasOnly(['senderId','senderRole','text','createdAt'])
           && request.resource.data.keys().hasAll(['senderId','senderRole','text','createdAt'])
           && request.resource.data.senderId == request.auth.uid
           && text(request.resource.data.text, 2000)
           && request.resource.data.createdAt == request.time
-          && (admin() || conversation().customerId == request.auth.uid)
+          && canAccessConversation()
           && conversationAfter().lastMessageId == messageId
           && conversationAfter().lastMessage == request.resource.data.text
           && ((admin() && request.resource.data.senderRole == 'admin')

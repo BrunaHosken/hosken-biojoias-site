@@ -218,7 +218,8 @@ export function useCustomerConversation(uid: string | undefined) {
         setError("");
         setLoading(false);
       },
-      () => {
+      (cause) => {
+        if (import.meta.env.DEV) console.error("Chat conversation listener failed", cause);
         setError("Não foi possível carregar a conversa. Tente novamente.");
         setLoading(false);
       },
@@ -291,7 +292,8 @@ export function useConversationMessages(conversationId: string | undefined) {
         setError("");
         setLoading(false);
       },
-      () => {
+      (cause) => {
+        if (import.meta.env.DEV) console.error("Chat message listener failed", cause);
         setError("Não foi possível carregar as mensagens. Tente novamente.");
         setLoading(false);
       },

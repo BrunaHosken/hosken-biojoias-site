@@ -6,7 +6,15 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Link, NavLink, Route, Routes, useLocation, useParams } from "react-router-dom";
+import {
+  Link,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
   onIdTokenChanged,
@@ -36,6 +44,7 @@ import {
   LogOut,
   MessageCircle,
   Send,
+  Bell,
 } from "lucide-react";
 import { auth, db, localMode } from "./firebase";
 import {
@@ -166,6 +175,7 @@ export default function App() {
           </nav>
           <div className="header-actions">
             <Link to="/conta">{session.user ? "Minha conta" : "Entrar"}</Link>
+            {session.admin && <AdminHeaderNotificationBell />}
             {session.user && (
               <button
                 className="header-logout"
@@ -281,7 +291,7 @@ function FloatingChatButton() {
     return null;
   return (
     <Link
-      to={session.admin ? "/admin" : "/chat"}
+      to={session.admin ? "/admin?tab=chat" : "/chat"}
       className="chat-fab"
       aria-label={session.admin ? "Abrir atendimentos" : "Falar com o ateliê"}
       title={session.admin ? "Abrir atendimentos" : "Falar com o ateliê"}
@@ -936,24 +946,29 @@ function OrderCard({ order }: { order: CustomerOrder }) {
 function CustomerChat() {
   const session = useContext(SessionContext);
   const chat = useCustomerConversation(session.user?.uid);
-  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  async function startConversation() {
-    if (!session.user) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      await createCustomerConversation(
-        session.user.uid,
-        session.user.displayName || "Cliente",
-        session.user.email || "",
-      );
-    } catch {
-      setMessage("Não foi possível iniciar a conversa. Tente novamente.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const attemptedUsers = useRef(new Set<string>());
+  useEffect(() => {
+    const user = session.user;
+    if (
+      !session.ready ||
+      !user ||
+      session.admin ||
+      chat.loading ||
+      chat.error ||
+      chat.conversation ||
+      attemptedUsers.current.has(user.uid)
+    )
+      return;
+    attemptedUsers.current.add(user.uid);
+    createCustomerConversation(
+      user.uid,
+      user.displayName || "Cliente",
+      user.email || "",
+    ).catch(() => {
+      setMessage("Não foi possível abrir o chat. Recarregue a página para tentar novamente.");
+    });
+  }, [session.ready, session.user, session.admin, chat.loading, chat.error, chat.conversation]);
   if (!session.ready) return <div className="page">Carregando sua conta…</div>;
   if (!session.user)
     return (
@@ -991,14 +1006,10 @@ function CustomerChat() {
         </p>
       )}
       {!chat.loading && !chat.error && !chat.conversation && (
-        <section className="chat-start">
+        <section className="chat-start" role="status">
           <MessageCircle size={28} />
-          <h2>Vamos conversar?</h2>
-          <p>Abra um atendimento para falar diretamente com o ateliê.</p>
-          <button className="button" onClick={startConversation} disabled={busy}>
-            {busy ? "Abrindo conversa…" : "Iniciar conversa"}
-            <ArrowRight size={18} />
-          </button>
+          <h2>Abrindo sua conversa…</h2>
+          <p>Estamos preparando o atendimento com a Hosken Biojoias.</p>
           {message && <p className="notice" role="alert">{message}</p>}
         </section>
       )}
@@ -1331,8 +1342,21 @@ const blankProduct = {
   imageUrl: "",
 };
 function AdminPanel() {
-  const [tab, setTab] = useState("products");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs = [
+    "orders",
+    "chat",
+    "products",
+    "categories",
+    "collections",
+    "news",
+    "events",
+    "partnerStores",
+  ];
+  const requestedTab = searchParams.get("tab");
+  const tab = requestedTab && validTabs.includes(requestedTab) ? requestedTab : "orders";
   const conversations = useAdminConversations();
+  const adminOrders = useAdminOrders();
   const unreadCount = conversations.data.reduce(
     (sum, conversation) => sum + (conversation.unreadForAdmin || 0),
     0,
@@ -1469,7 +1493,11 @@ function AdminPanel() {
           <button
             className={tab === id ? "selected" : ""}
             onClick={() => {
-              setTab(id);
+              const next = new URLSearchParams(searchParams);
+              next.set("tab", id);
+              if (id !== "chat") next.delete("conversation");
+              if (id !== "orders") next.delete("order");
+              setSearchParams(next);
               setEditing("");
               setProduct(blankProduct);
               setMessage("");
@@ -1486,7 +1514,10 @@ function AdminPanel() {
         ))}
       </div>
       {tab === "orders" ? (
-        <AdminOrders />
+        <AdminOrders
+          orders={adminOrders}
+          focusOrderId={searchParams.get("order") || ""}
+        />
       ) : tab === "chat" ? (
         <AdminChatInbox
           conversations={conversations.data}
@@ -1494,6 +1525,15 @@ function AdminPanel() {
           error={conversations.error}
           unreadCount={unreadCount}
           adminId={auth.currentUser?.uid || ""}
+          selectedConversationId={searchParams.get("conversation") || ""}
+          onSelectConversation={(id) => {
+            const next = new URLSearchParams(searchParams);
+            next.set("tab", "chat");
+            next.set("conversation", id);
+            next.delete("order");
+            setSearchParams(next);
+            markAdminNotificationSeen(ADMIN_SEEN_CONVERSATIONS, id);
+          }}
         />
       ) : (
         <div className="admin-layout">
@@ -1732,21 +1772,167 @@ function AdminPanel() {
   );
 }
 
+const ADMIN_SEEN_ORDERS = "hosken-admin-seen-orders";
+const ADMIN_SEEN_CONVERSATIONS = "hosken-admin-seen-conversations";
+const ADMIN_NOTIFICATIONS_EVENT = "hosken-admin-notifications-updated";
+function readAdminSeenIds(key: string) {
+  try {
+    const values = JSON.parse(localStorage.getItem(key) || "[]");
+    return new Set<string>(Array.isArray(values) ? values : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+function markAdminNotificationSeen(key: string, id: string) {
+  try {
+    const values = readAdminSeenIds(key);
+    values.add(id);
+    localStorage.setItem(key, JSON.stringify([...values]));
+    window.dispatchEvent(new Event(ADMIN_NOTIFICATIONS_EVENT));
+  } catch {
+    /* O aviso segue funcionando durante esta sessão. */
+  }
+}
+function AdminNotificationBell({
+  orders,
+  conversations,
+}: {
+  orders: CustomerOrder[];
+  conversations: ChatConversation[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [seenOrders, setSeenOrders] = useState(() => readAdminSeenIds(ADMIN_SEEN_ORDERS));
+  const [seenConversations, setSeenConversations] = useState(() =>
+    readAdminSeenIds(ADMIN_SEEN_CONVERSATIONS),
+  );
+  useEffect(() => {
+    const syncSeen = () => {
+      setSeenOrders(readAdminSeenIds(ADMIN_SEEN_ORDERS));
+      setSeenConversations(readAdminSeenIds(ADMIN_SEEN_CONVERSATIONS));
+    };
+    window.addEventListener(ADMIN_NOTIFICATIONS_EVENT, syncSeen);
+    window.addEventListener("storage", syncSeen);
+    return () => {
+      window.removeEventListener(ADMIN_NOTIFICATIONS_EVENT, syncSeen);
+      window.removeEventListener("storage", syncSeen);
+    };
+  }, []);
+  const newOrders = orders.filter(
+    (order) => !order.isDemo && !seenOrders.has(order.id),
+  );
+  const newConversations = conversations.filter(
+    (conversation) =>
+      conversation.unreadForAdmin > 0 || !seenConversations.has(conversation.id),
+  );
+  const count =
+    newOrders.length +
+    newConversations.reduce(
+      (total, conversation) =>
+        total + (conversation.unreadForAdmin || 1),
+      0,
+    );
+  return (
+    <div className="notification-bell">
+      <button
+        type="button"
+        className="notification-bell-button"
+        aria-label={count ? `${count} notificações não lidas` : "Notificações"}
+        aria-expanded={open}
+        aria-controls="admin-notification-panel"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Bell size={21} />
+        {count > 0 && <span className="unread-badge">{count > 99 ? "99+" : count}</span>}
+      </button>
+      {open && (
+        <section className="notification-panel" id="admin-notification-panel">
+          <header>
+            <strong>Notificações</strong>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar notificações">
+              <X size={17} />
+            </button>
+          </header>
+          {!newOrders.length && !newConversations.length ? (
+            <p className="notification-empty">Tudo em dia por aqui.</p>
+          ) : (
+            <div className="notification-list">
+              {newOrders.map((order) => (
+                <Link
+                  key={`order-${order.id}`}
+                  to={`/admin?tab=orders&order=${encodeURIComponent(order.id)}`}
+                  onClick={() => {
+                    markAdminNotificationSeen(ADMIN_SEEN_ORDERS, order.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="notification-icon"><ShoppingBag size={17} /></span>
+                  <span>
+                    <strong>Novo pedido {order.orderNumber || order.id.slice(-8).toUpperCase()}</strong>
+                    <small>{order.customerName || order.customerEmail || "Cliente"}</small>
+                  </span>
+                </Link>
+              ))}
+              {newConversations.map((conversation) => (
+                <Link
+                  key={`conversation-${conversation.id}`}
+                  to={`/admin?tab=chat&conversation=${encodeURIComponent(conversation.id)}`}
+                  onClick={() => {
+                    markAdminNotificationSeen(ADMIN_SEEN_CONVERSATIONS, conversation.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="notification-icon"><MessageCircle size={17} /></span>
+                  <span>
+                    <strong>
+                      {conversation.unreadForAdmin > 0
+                        ? `${conversation.unreadForAdmin} nova${conversation.unreadForAdmin === 1 ? "" : "s"} mensagem${conversation.unreadForAdmin === 1 ? "" : "ns"}`
+                        : "Novo atendimento"}
+                    </strong>
+                    <small>{conversation.customerName || conversation.customerEmail || "Cliente"}</small>
+                    <small className="notification-preview">
+                      {conversation.lastMessage || "Conversa iniciada"}
+                    </small>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+function AdminHeaderNotificationBell() {
+  const conversations = useAdminConversations();
+  const orders = useAdminOrders();
+  return (
+    <AdminNotificationBell
+      orders={orders.data}
+      conversations={conversations.data}
+    />
+  );
+}
+
 function AdminChatInbox({
   conversations,
   loading,
   error,
   unreadCount,
   adminId,
+  selectedConversationId,
+  onSelectConversation,
 }: {
   conversations: ChatConversation[];
   loading: boolean;
   error: string;
   unreadCount: number;
   adminId: string;
+  selectedConversationId: string;
+  onSelectConversation: (id: string) => void;
 }) {
-  const [selectedId, setSelectedId] = useState("");
-  const selected = conversations.find((item) => item.id === selectedId) || conversations[0];
+  const selected =
+    conversations.find((item) => item.id === selectedConversationId) ||
+    conversations[0];
   return (
     <section className="admin-inbox">
       <div className="admin-inbox-heading">
@@ -1773,7 +1959,7 @@ function AdminChatInbox({
                 type="button"
                 key={conversation.id}
                 className={`conversation-preview ${selected?.id === conversation.id ? "selected" : ""}`}
-                onClick={() => setSelectedId(conversation.id)}
+                onClick={() => onSelectConversation(conversation.id)}
               >
                 <span className="conversation-preview-top">
                   <strong>{conversation.customerName || "Cliente"}</strong>
@@ -1803,8 +1989,22 @@ function AdminChatInbox({
   );
 }
 
-function AdminOrders() {
-  const orders = useAdminOrders();
+function AdminOrders({
+  orders,
+  focusOrderId,
+}: {
+  orders: ReturnType<typeof useAdminOrders>;
+  focusOrderId: string;
+}) {
+  useEffect(() => {
+    if (!focusOrderId || orders.loading) return;
+    const timer = window.setTimeout(() => {
+      document
+        .getElementById(`admin-order-${focusOrderId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [focusOrderId, orders.data.length, orders.loading]);
   return (
     <section className="admin-orders">
       <h2>Pedidos recebidos</h2>
@@ -1847,7 +2047,7 @@ function AdminOrderCard({ order }: { order: CustomerOrder }) {
     }
   }
   return (
-    <article className="admin-order-card">
+      <article className="admin-order-card" id={`admin-order-${order.id}`}>
       <div className="admin-order-summary">
         <div>
           <strong>
