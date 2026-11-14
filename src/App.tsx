@@ -149,6 +149,18 @@ export default function App() {
           </nav>
           <div className="header-actions">
             <Link to="/conta">{session.user ? "Minha conta" : "Entrar"}</Link>
+            {session.user && (
+              <button
+                className="header-logout"
+                type="button"
+                aria-label="Sair da conta"
+                title="Sair da conta"
+                onClick={() => signOut(auth)}
+              >
+                <LogOut size={17} />
+                <span>Sair</span>
+              </button>
+            )}
             <Link
               to="/carrinho"
               className="bag"

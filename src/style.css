@@ -140,6 +140,20 @@ nav a.active {
 .header-actions {
   gap: 23px;
 }
+.header-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.header-logout:hover {
+  color: var(--wine);
+}
 .bag {
   display: flex;
   align-items: center;
@@ -818,6 +832,15 @@ footer > small {
   .header-actions > a:first-child {
     display: none;
   }
+  .header-actions {
+    gap: 9px;
+  }
+  .header-logout {
+    padding: 6px;
+  }
+  .header-logout span {
+    display: none;
+  }
   .hero {
     grid-template-columns: 1fr;
     min-height: 0;
@@ -966,6 +989,21 @@ footer > small {
   }
   .contact-links strong {
     font-size: 26px;
+  }
+}
+@media (max-width: 380px) {
+  header {
+    gap: 8px;
+  }
+  .wordmark {
+    font-size: 19px;
+    letter-spacing: 0.7px;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .mobile-menu {
+    padding: 6px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
