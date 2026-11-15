@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import { SessionContext } from "../../app/contexts";
 import { useAdminConversations, useAdminOrders } from "../../data";
 import { auth, localMode } from "../../firebase";
@@ -76,9 +77,13 @@ export function AdminPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [catalogVersion, setCatalogVersion] = useState(0);
   const [catalogUploadBusy, setCatalogUploadBusy] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const requestedTab = searchParams.get("tab");
   const tab =
     requestedTab && validTabs.includes(requestedTab) ? requestedTab : "orders";
+  const activeTabLabel =
+    moduleGroups.flatMap((group) => group.items).find(([id]) => id === tab)?.[1] ??
+    "Pedidos";
   const conversations = useAdminConversations();
   const adminOrders = useAdminOrders();
   const unreadCount = conversations.data.reduce(
@@ -111,6 +116,7 @@ export function AdminPanel() {
     if (id !== "orders") next.delete("order");
     setSearchParams(next);
     setCatalogVersion((version) => version + 1);
+    setMobileNavOpen(false);
   }
 
   return (
@@ -122,7 +128,21 @@ export function AdminPanel() {
         tempo real.
       </p>
       <div className="admin-workspace">
-        <nav className="admin-navigation" aria-label="Seções administrativas">
+        <button
+          type="button"
+          className={`admin-mobile-nav-toggle${mobileNavOpen ? " is-open" : ""}`}
+          aria-expanded={mobileNavOpen}
+          aria-controls="admin-navigation"
+          onClick={() => setMobileNavOpen((open) => !open)}
+        >
+          <span>{activeTabLabel}</span>
+          <ChevronDown size={18} aria-hidden="true" />
+        </button>
+        <nav
+          className={`admin-navigation${mobileNavOpen ? " is-open" : ""}`}
+          id="admin-navigation"
+          aria-label="Seções administrativas"
+        >
           {moduleGroups.map((group) => (
             <section className="admin-nav-group" key={group.label}>
               <h2>{group.label}</h2>

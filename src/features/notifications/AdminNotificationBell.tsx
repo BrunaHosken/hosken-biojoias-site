@@ -86,7 +86,7 @@ function AdminNotificationBell({
     <div className="notification-bell" ref={bellRef}>
       <button
         type="button"
-        className="notification-bell-button"
+        className={`notification-bell-button${count > 0 ? " has-notifications" : ""}${open ? " is-open" : ""}`}
         aria-label={count ? `${count} notificações não lidas` : "Notificações"}
         aria-expanded={open}
         aria-controls="admin-notification-panel"

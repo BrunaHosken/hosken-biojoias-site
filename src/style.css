@@ -459,7 +459,7 @@ nav a.active {
 .piece-art > svg {
   width: 55%;
   height: 55%;
-  color: #985869;
+  color: #827c6a;
 }
 .piece-art > small {
   font-size: 8px;
@@ -717,8 +717,13 @@ nav a.active {
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  color: var(--wine);
+  color: #847b70;
   background: #fffdf9;
+}
+.notification-bell-button:hover,
+.notification-bell-button.is-open,
+.notification-bell-button.has-notifications {
+  color: var(--wine);
 }
 .notification-bell-button .unread-badge {
   position: absolute;
@@ -1441,6 +1446,9 @@ textarea {
   gap: 34px;
   align-items: start;
 }
+.admin-mobile-nav-toggle {
+  display: none;
+}
 .admin-navigation {
   display: flex;
   flex-direction: column;
@@ -2093,8 +2101,29 @@ footer > small {
 }
 @media (max-width: 760px) {
   .admin-workspace {
-    grid-template-columns: 1fr;
-    gap: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .admin-mobile-nav-toggle {
+    display: flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    background: #fbf7f1;
+    color: var(--wine);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+  }
+  .admin-mobile-nav-toggle > svg {
+    transition: transform 140ms ease;
+  }
+  .admin-mobile-nav-toggle.is-open > svg {
+    transform: rotate(180deg);
   }
   .admin-navigation {
     display: grid;
@@ -2102,6 +2131,9 @@ footer > small {
     align-items: start;
     gap: 10px;
     padding: 11px;
+  }
+  .admin-navigation:not(.is-open) {
+    display: none;
   }
   .admin-nav-group,
   .admin-nav-group + .admin-nav-group {
@@ -2368,17 +2400,37 @@ footer > small {
     padding: 18px 15px;
   }
   .admin-inbox-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
   .conversation-list {
-    max-height: 240px;
+    display: flex;
+    order: 2;
+    width: 100%;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+  }
+  .conversation-preview {
+    flex: 0 0 min(78vw, 270px);
+    min-width: 0;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+    scroll-snap-align: start;
+  }
+  .admin-inbox-layout > .chat-thread {
+    order: 1;
+    width: 100%;
   }
   .chat-thread {
-    min-height: 460px;
+    min-height: min(58dvh, 510px);
+    grid-template-rows: auto minmax(160px, 1fr) auto auto;
   }
   .chat-messages {
-    min-height: 210px;
-    max-height: 440px;
+    min-height: 160px;
+    max-height: 38dvh;
     padding: 14px;
   }
   .chat-message {
