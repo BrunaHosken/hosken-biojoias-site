@@ -1,0 +1,110 @@
+.account-chat-link {
+  margin-top: 12px;
+}
+.account-settings {
+  display: grid;
+  gap: 16px;
+  margin-top: 30px;
+}
+.account-setting-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  padding: 24px;
+  background: #fff;
+}
+.account-setting-header {
+  height: auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.account-setting-header h2,
+.account-orders-link h2 {
+  margin: 5px 0 0;
+  font-size: 30px;
+}
+.account-orders-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.account-orders-link .muted {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+.account-orders-arrow {
+  display: grid;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: var(--wine);
+  transition: transform 180ms ease;
+}
+.account-orders-arrow:hover {
+  transform: translateX(4px);
+}
+.account-data-list {
+  display: grid;
+  margin: 0;
+}
+.account-data-list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.account-data-list dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+.account-data-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-size: 12px;
+}
+.account-edit-form {
+  margin: 18px 0 0;
+}
+.account-edit-form .notice {
+  margin: 0 0 18px;
+}
+.account-password-hint {
+  margin-bottom: 0;
+  font-size: 12px;
+}
+.password-field {
+  position: relative;
+  display: block;
+}
+.password-field input {
+  padding-right: 48px;
+}
+.password-field button {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+}
+.account-success {
+  margin: 14px 0 0;
+  color: #416d4b;
+  font-size: 12px;
+}

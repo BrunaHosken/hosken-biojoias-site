@@ -1,0 +1,32 @@
+footer {
+  border-top: 1px solid var(--border);
+  padding: 46px 5% 25px;
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+footer .wordmark {
+  font-size: 30px;
+}
+footer .wordmark small {
+  font-size: 7px;
+}
+footer p {
+  font-size: 11px;
+  margin: auto;
+  color: var(--muted);
+}
+footer > div:last-of-type {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  font-size: 11px;
+}
+footer > small {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  font-size: 10px;
+  margin-top: 12px;
+}

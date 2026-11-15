@@ -7,6 +7,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -227,7 +228,6 @@ export async function editChatMessage(
   conversationId: string,
   message: ChatMessage,
   nextText: string,
-  isLatest: boolean,
 ) {
   const cleanText = nextText.trim();
   if (!cleanText || cleanText.length > 2000) throw new Error("Invalid message");
@@ -238,18 +238,25 @@ export async function editChatMessage(
     "messages",
     message.id,
   );
-  const updatedMessage = { text: cleanText, editedAt: serverTimestamp() };
-  if (!isLatest) {
-    await updateDoc(messageRef, updatedMessage);
-    return;
-  }
-  const batch = writeBatch(db);
-  batch.update(messageRef, updatedMessage);
-  batch.update(doc(db, "conversations", conversationId), {
-    lastMessage: cleanText,
-    updatedAt: serverTimestamp(),
+  const conversationRef = doc(db, "conversations", conversationId);
+  await runTransaction(db, async (transaction) => {
+    const conversationSnapshot = await transaction.get(conversationRef);
+    const messageSnapshot = await transaction.get(messageRef);
+    if (!conversationSnapshot.exists() || !messageSnapshot.exists()) {
+      throw new Error("Chat message no longer exists");
+    }
+
+    transaction.update(messageRef, {
+      text: cleanText,
+      editedAt: serverTimestamp(),
+    });
+    if (conversationSnapshot.data().lastMessageId === message.id) {
+      transaction.update(conversationRef, {
+        lastMessage: cleanText,
+        updatedAt: serverTimestamp(),
+      });
+    }
   });
-  await batch.commit();
 }
 export async function deleteChatMessage(
   conversation: ChatConversation,

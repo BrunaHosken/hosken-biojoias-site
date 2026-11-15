@@ -341,11 +341,23 @@ function ChatMessageBubble({
     e.preventDefault();
     setBusy(true);
     try {
-      await editChatMessage(conversation.id, message, editText, isLatest);
+      await editChatMessage(conversation.id, message, editText);
       setEditing(false);
       notify("Mensagem editada.", "success");
-    } catch {
-      notify("Não foi possível editar. O prazo pode ter expirado.", "error");
+    } catch (cause) {
+      if (import.meta.env.DEV) {
+        console.error("Falha ao editar mensagem", cause);
+      }
+      const code =
+        typeof cause === "object" && cause !== null && "code" in cause
+          ? String(cause.code)
+          : "";
+      notify(
+        code === "permission-denied"
+          ? "O Firebase recusou a edição. Atualize a conversa e tente novamente."
+          : "Não foi possível editar a mensagem. Verifique a conexão e tente novamente.",
+        "error",
+      );
     } finally {
       setBusy(false);
     }
