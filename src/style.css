@@ -207,6 +207,9 @@ nav a.active {
 .mobile-menu {
   display: none;
 }
+.account-icon {
+  display: none;
+}
 .hero {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2164,8 +2167,19 @@ footer > small {
     align-items: start;
     gap: 5px;
   }
-  .header-actions > a:first-child {
+  .header-actions .account-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+  }
+  .account-link span {
     display: none;
+  }
+  .header-actions .account-icon {
+    display: block;
+    width: 21px;
+    height: 21px;
   }
   .header-actions {
     gap: 9px;

@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { LogOut, Menu, ShoppingBag, X } from "lucide-react";
+import { LogOut, Menu, ShoppingBag, UserRound, X } from "lucide-react";
 import { BasketContext, SessionContext } from "../app/contexts";
 import { auth } from "../firebase";
 import {
@@ -63,7 +63,15 @@ export function SiteHeader() {
         ))}
       </nav>
       <div className="header-actions">
-        <Link to="/conta">{session.user ? "Minha conta" : "Entrar"}</Link>
+        <Link
+          to="/conta"
+          className="account-link"
+          aria-label={session.user ? "Minha conta" : "Entrar ou criar conta"}
+          title={session.user ? "Minha conta" : "Entrar ou criar conta"}
+        >
+          <UserRound className="account-icon" aria-hidden="true" />
+          <span>{session.user ? "Minha conta" : "Entrar"}</span>
+        </Link>
         {session.admin && <AdminHeaderNotificationBell />}
         {session.user && !session.admin && (
           <CustomerHeaderNotificationBell uid={session.user.uid} />
