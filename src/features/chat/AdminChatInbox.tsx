@@ -1,4 +1,5 @@
-import { MessageCircle } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, MessageCircle } from "lucide-react";
 import { ChatThread } from "./CustomerChat";
 import type { ChatConversation } from "../../data";
 
@@ -19,6 +20,7 @@ export function AdminChatInbox({
   selectedConversationId: string;
   onSelectConversation: (id: string) => void;
 }) {
+  const [showConversations, setShowConversations] = useState(false);
   const selected =
     conversations.find((item) => item.id === selectedConversationId) ||
     conversations[0];
@@ -49,44 +51,65 @@ export function AdminChatInbox({
           <p>As conversas iniciadas pelos clientes aparecerão aqui.</p>
         </div>
       ) : (
-        <div className="admin-inbox-layout">
-          <nav className="conversation-list" aria-label="Lista de atendimentos">
-            {conversations.map((conversation) => (
-              <button
-                type="button"
-                key={conversation.id}
-                className={`conversation-preview ${selected?.id === conversation.id ? "selected" : ""}`}
-                onClick={() => onSelectConversation(conversation.id)}
-              >
-                <span className="conversation-preview-top">
-                  <strong>{conversation.customerName || "Cliente"}</strong>
-                  {!!conversation.unreadForAdmin && (
-                    <span className="unread-badge">
-                      {conversation.unreadForAdmin > 99
-                        ? "99+"
-                        : conversation.unreadForAdmin}
-                    </span>
-                  )}
-                </span>
-                <small>{conversation.customerEmail}</small>
-                <span className="conversation-preview-last">
-                  {conversation.lastMessage || "Conversa iniciada"}
-                </span>
-              </button>
-            ))}
-          </nav>
-          {selected && (
-            <ChatThread
-              key={selected.id}
-              conversation={selected}
-              senderId={adminId}
-              senderRole="admin"
-              otherPartyName={
-                selected.customerName || selected.customerEmail || "Cliente"
-              }
-            />
-          )}
-        </div>
+        <>
+          <button
+            type="button"
+            className={`mobile-conversation-toggle${showConversations ? " is-open" : ""}`}
+            aria-expanded={showConversations}
+            aria-controls="admin-conversation-list"
+            onClick={() => setShowConversations((open) => !open)}
+          >
+            <span>Conversas ({conversations.length})</span>
+            <ChevronDown size={17} aria-hidden="true" />
+          </button>
+          <div
+            className={`admin-inbox-layout${showConversations ? " show-conversations" : ""}`}
+          >
+            <nav
+              className="conversation-list"
+              id="admin-conversation-list"
+              aria-label="Lista de atendimentos"
+            >
+              {conversations.map((conversation) => (
+                <button
+                  type="button"
+                  key={conversation.id}
+                  className={`conversation-preview ${selected?.id === conversation.id ? "selected" : ""}`}
+                  onClick={() => {
+                    onSelectConversation(conversation.id);
+                    setShowConversations(false);
+                  }}
+                >
+                  <span className="conversation-preview-top">
+                    <strong>{conversation.customerName || "Cliente"}</strong>
+                    {!!conversation.unreadForAdmin && (
+                      <span className="unread-badge">
+                        {conversation.unreadForAdmin > 99
+                          ? "99+"
+                          : conversation.unreadForAdmin}
+                      </span>
+                    )}
+                  </span>
+                  <small>{conversation.customerEmail}</small>
+                  <span className="conversation-preview-last">
+                    {conversation.lastMessage || "Conversa iniciada"}
+                  </span>
+                </button>
+              ))}
+            </nav>
+            {selected && (
+              <ChatThread
+                key={selected.id}
+                conversation={selected}
+                senderId={adminId}
+                senderRole="admin"
+                otherPartyName={
+                  selected.customerName || selected.customerEmail || "Cliente"
+                }
+              />
+            )}
+          </div>
+        </>
       )}
     </section>
   );
