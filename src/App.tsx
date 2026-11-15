@@ -1388,6 +1388,7 @@ function OrderCard({ order }: { order: CustomerOrder }) {
 function CustomerChat() {
   const session = useContext(SessionContext);
   const notify = useToast();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const productId = searchParams.get("produto") || "";
   const productName = (searchParams.get("nome") || "")
@@ -1455,6 +1456,24 @@ function CustomerChat() {
     );
   return (
     <div className="page chat-page">
+      <button
+        className="chat-back-button"
+        type="button"
+        onClick={() => {
+          const historyIndex = window.history.state?.idx;
+          if (typeof historyIndex === "number" && historyIndex > 0) {
+            navigate(-1);
+          } else {
+            navigate(
+              productId
+                ? `/produto/${encodeURIComponent(productId)}`
+                : "/loja",
+            );
+          }
+        }}
+      >
+        ← Voltar
+      </button>
       <div className="eyebrow">ATENDIMENTO HOSKEN BIOJOIAS</div>
       <h1>Fale com o ateliê</h1>
       <p className="lead">
