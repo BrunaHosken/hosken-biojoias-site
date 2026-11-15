@@ -2120,40 +2120,66 @@ footer > small {
     margin: 5px 0 0;
     font-size: 8px;
   }
-  header {
-    height: 85px;
-    flex-wrap: wrap;
-    position: relative;
-  }
-  .site-header.header-compact {
-    height: 72px;
+  .site-header {
+    height: 78px;
+    flex-wrap: nowrap;
+    position: sticky;
+    padding: 0 4%;
     gap: 7px;
   }
+  .site-header.header-compact {
+    height: 68px;
+    gap: 5px;
+  }
+  .site-header .wordmark {
+    order: 1;
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: clamp(15px, 4.5vw, 20px);
+    letter-spacing: 0.4px;
+  }
+  .site-header .wordmark small {
+    font-size: 6px;
+    letter-spacing: 1.4px;
+    margin-top: 4px;
+  }
   .site-header.header-compact .wordmark {
-    font-size: 19px;
-    letter-spacing: 0.7px;
+    font-size: clamp(15px, 4.2vw, 18px);
+    letter-spacing: 0.3px;
+  }
+  .site-header.header-compact .wordmark small {
+    display: none;
+  }
+  .site-header nav {
+    order: 4;
+    top: 77px;
   }
   .site-header.header-compact nav.open {
-    top: 71px;
+    top: 67px;
+  }
+  .site-header .header-actions {
+    order: 2;
+    flex: 0 0 auto;
+    gap: 4px;
+    margin-left: auto;
   }
   .site-header.header-compact .header-actions {
-    gap: 6px;
+    gap: 4px;
   }
-  .site-header.header-compact .mobile-menu {
-    padding: 6px;
-  }
-  .wordmark {
-    font-size: 22px;
-    letter-spacing: 1.2px;
-  }
-  .mobile-menu {
+  .site-header .mobile-menu {
+    order: 3;
     display: flex;
-    margin-left: auto;
+    flex: 0 0 auto;
+    margin-left: 0;
+    padding: 5px;
+  }
+  .site-header .mobile-menu svg {
+    width: 21px;
+    height: 21px;
   }
   nav {
     display: none;
     position: absolute;
-    top: 84px;
     left: 0;
     right: 0;
     background: #fffdf9;
@@ -2171,24 +2197,37 @@ footer > small {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 6px;
+    padding: 3px;
   }
   .account-link span {
     display: none;
   }
   .header-actions .account-icon {
     display: block;
-    width: 21px;
-    height: 21px;
+    width: 19px;
+    height: 19px;
   }
-  .header-actions {
-    gap: 9px;
+  .header-actions .notification-bell-button {
+    width: 30px;
+    height: 30px;
+    padding: 3px;
+  }
+  .site-header .bag {
+    gap: 4px;
+  }
+  .site-header .bag svg {
+    width: 19px;
+    height: 19px;
   }
   .header-logout {
-    padding: 6px;
+    padding: 3px 1px;
   }
   .header-logout span {
     display: none;
+  }
+  .site-header .header-logout svg {
+    width: 15px;
+    height: 15px;
   }
   .hero {
     grid-template-columns: 1fr;
@@ -2473,18 +2512,42 @@ footer > small {
   .admin-navigation {
     grid-template-columns: 1fr;
   }
-  header {
-    gap: 8px;
-  }
-  .wordmark {
-    font-size: 19px;
-    letter-spacing: 0.7px;
-  }
-  .header-actions {
+  .site-header {
     gap: 4px;
+    padding: 0 3%;
   }
-  .mobile-menu {
-    padding: 6px;
+  .site-header .wordmark {
+    font-size: 15px;
+    letter-spacing: 0.15px;
+  }
+  .site-header.header-compact .wordmark {
+    font-size: 14px;
+  }
+  .site-header .header-actions {
+    gap: 2px;
+  }
+  .site-header .header-actions .account-icon {
+    width: 17px;
+    height: 17px;
+  }
+  .site-header .header-actions .notification-bell-button {
+    width: 26px;
+    height: 26px;
+  }
+  .site-header .header-actions .bag svg {
+    width: 17px;
+    height: 17px;
+  }
+  .site-header .header-logout svg {
+    width: 14px;
+    height: 14px;
+  }
+  .site-header .mobile-menu {
+    padding: 3px;
+  }
+  .site-header .mobile-menu svg {
+    width: 19px;
+    height: 19px;
   }
   .report-filters,
   .report-metrics {
