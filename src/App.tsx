@@ -165,7 +165,10 @@ export default function App() {
     }
   }, [items]);
   useEffect(() => {
-    const updateHeaderSize = () => setCompactHeader(window.scrollY > 48);
+    const updateHeaderSize = () =>
+      setCompactHeader((isCompact) =>
+        isCompact ? window.scrollY > 32 : window.scrollY > 72,
+      );
     updateHeaderSize();
     window.addEventListener("scroll", updateHeaderSize, { passive: true });
     return () => window.removeEventListener("scroll", updateHeaderSize);
