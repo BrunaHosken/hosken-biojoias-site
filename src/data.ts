@@ -28,6 +28,7 @@ export type Product = {
   description: string;
   priceCents: number;
   stock: number;
+  lowStockThreshold?: number;
   categoryId: string;
   collectionId: string;
   status: string;

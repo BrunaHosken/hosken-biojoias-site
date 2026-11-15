@@ -1352,6 +1352,11 @@ textarea {
   padding: 28px;
   border: 1px solid var(--border);
 }
+.field-hint {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
 .admin-form h2,
 .admin-layout section > h2 {
   font-size: 30px;
@@ -1382,6 +1387,251 @@ textarea {
 .admin-row > div:last-child {
   display: flex;
   flex-wrap: wrap;
+}
+.admin-reports {
+  display: grid;
+  gap: 22px;
+}
+.report-heading,
+.report-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.report-heading h2,
+.report-heading p,
+.report-card-heading h3,
+.report-card-heading p {
+  margin: 0;
+}
+.report-heading h2 {
+  font-size: 36px;
+}
+.report-heading p,
+.report-card-heading p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.report-demo-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  color: #705333;
+  background: #fbf3e7;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.report-demo-note {
+  padding: 12px 15px;
+  border-left: 2px solid #b58b55;
+  background: #fbf7ee;
+  color: #705f49;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.report-filters {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  background: #fffdf9;
+}
+.report-filters label {
+  min-width: 0;
+  margin: 0;
+}
+.report-filters input,
+.report-filters select {
+  min-width: 0;
+  padding: 10px;
+  font-size: 11px;
+}
+.report-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.report-metrics article {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  background: #fffdf9;
+}
+.report-metrics small {
+  color: #8c7767;
+  font-size: 9px;
+  letter-spacing: 1.3px;
+}
+.report-metrics strong {
+  overflow-wrap: anywhere;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 27px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+.report-metrics span {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.report-chart-card {
+  padding: 22px;
+  border: 1px solid var(--border);
+  background: #fffdf9;
+}
+.report-card-heading {
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+.report-card-heading h3 {
+  font-size: 27px;
+}
+.report-card-heading > span {
+  color: var(--wine);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.report-donut-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 40px;
+  min-height: 250px;
+}
+.report-donut {
+  position: relative;
+  display: grid;
+  width: min(220px, 100%);
+  aspect-ratio: 1;
+  place-items: center;
+  justify-self: center;
+  border-radius: 50%;
+}
+.report-donut::before {
+  position: absolute;
+  inset: 20%;
+  border-radius: inherit;
+  background: #fffdf9;
+  content: "";
+}
+.report-donut > span {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+}
+.report-donut strong {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 35px;
+  font-weight: 500;
+  line-height: 1;
+}
+.report-donut small {
+  font-size: 9px;
+}
+.report-legend {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.report-legend li {
+  display: grid;
+  grid-template-columns: 11px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+.report-legend li > span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.report-legend li > strong {
+  font-weight: 500;
+}
+.report-legend li > small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.report-bars {
+  display: grid;
+  gap: 17px;
+  min-height: 190px;
+  align-content: center;
+}
+.report-bar-row {
+  display: grid;
+  gap: 7px;
+}
+.report-bar-row > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+}
+.report-bar-row strong {
+  font-weight: 500;
+}
+.report-bar-row > div:first-child > span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.report-bar-track {
+  height: 9px;
+  overflow: hidden;
+  background: #f0ebe5;
+}
+.report-bar-track > span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+.report-empty {
+  padding: 35px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.report-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+.report-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 11px;
+  text-align: left;
+}
+.report-table th,
+.report-table td {
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--border);
+}
+.report-table thead {
+  color: #8c7767;
+  background: #fbf8f2;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.report-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.report-table tbody th {
+  font-weight: 500;
+}
+.report-table tbody td:not(:first-child) {
+  font-variant-numeric: tabular-nums;
 }
 .contact-links {
   display: grid;
@@ -1583,6 +1833,9 @@ footer > small {
   }
   .admin-layout {
     gap: 25px;
+  }
+  .report-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 760px) {
@@ -1822,6 +2075,34 @@ footer > small {
   .admin-form {
     padding: 20px;
   }
+  .report-heading,
+  .report-card-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .report-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px;
+  }
+  .report-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-metrics article {
+    padding: 14px;
+  }
+  .report-donut-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 5px 0 10px;
+  }
+  .report-chart-card {
+    padding: 18px 14px;
+  }
+  .report-bar-row > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
   .about img {
     max-width: 360px;
     margin: auto;
@@ -1883,6 +2164,10 @@ footer > small {
   }
   .mobile-menu {
     padding: 6px;
+  }
+  .report-filters,
+  .report-metrics {
+    grid-template-columns: 1fr;
   }
 }
 @media (prefers-reduced-motion: reduce) {
