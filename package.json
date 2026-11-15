@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "emulators": "node scripts/emulators.mjs",
     "db:seed": "node scripts/seed.mjs",
+    "firebase:seed:production": "node scripts/seed-production.mjs",
+    "firebase:seed:production:clean": "node scripts/cleanup-production-seed.mjs",
     "test:rules": "node scripts/emulators.mjs --test",
     "test:browser": "node scripts/browser-check.mjs"
   },
