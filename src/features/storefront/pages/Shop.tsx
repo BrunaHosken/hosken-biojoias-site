@@ -1,0 +1,96 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Flower2 } from "lucide-react";
+import { Notice } from "../../../components/Feedback";
+import { money, useRecords, type Product, type Taxonomy } from "../../../data";
+import { PieceArt } from "./ProductVisuals";
+
+export function Shop() {
+  const products = useRecords<Product>("products");
+  const lines = useRecords<Taxonomy>("collections");
+  const cats = useRecords<Taxonomy>("categories");
+  const [line, setLine] = useState(
+    new URLSearchParams(location.search).get("linha") || "",
+  );
+  const [cat, setCat] = useState("");
+  const [search, setSearch] = useState("");
+  const filtered = products.data.filter(
+    (p) =>
+      (!line || p.collectionId === line) &&
+      (!cat || p.categoryId === cat) &&
+      p.name
+        .toLocaleLowerCase("pt-BR")
+        .includes(search.toLocaleLowerCase("pt-BR")),
+  );
+  return (
+    <div className="page">
+      <div className="eyebrow">FEITO À MÃO, PARA VOCÊ</div>
+      <h1>Peças que florescem.</h1>
+      <p className="lead">
+        Explore as criações e encontre uma flor para chamar de sua.
+      </p>
+      <div className="filters">
+        <label>
+          Linha
+          <select value={line} onChange={(e) => setLine(e.target.value)}>
+            <option value="">Todas as linhas</option>
+            {lines.data.map((c) => (
+              <option value={c.id} key={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Tipo de peça
+          <select value={cat} onChange={(e) => setCat(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            {cats.data.map((c) => (
+              <option value={c.id} key={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="search">
+          Buscar
+          <input
+            placeholder="O que você procura?"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+      </div>
+      <Notice {...products} />
+      <div className="product-grid">
+        {filtered.map((p) => (
+          <Link to={`/produto/${p.id}`} className="product-card" key={p.id}>
+            <PieceArt product={p} />
+            <small>
+              {lines.data.find((l) => l.id === p.collectionId)?.name}
+            </small>
+            <h3>{p.name}</h3>
+            <p>{money(p.priceCents)}</p>
+          </Link>
+        ))}
+      </div>
+      {!products.loading && !products.error && !filtered.length && (
+        <div className="empty">
+          <Flower2 />
+          <h2>Novas flores estão a caminho.</h2>
+          <p>Ainda não há peças publicadas nesta seleção.</p>
+          <button
+            className="button secondary"
+            onClick={() => {
+              setCat("");
+              setLine("");
+              setSearch("");
+            }}
+          >
+            Ver todas as peças
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

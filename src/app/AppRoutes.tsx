@@ -1,12 +1,10 @@
 import { Link, Route, Routes } from "react-router-dom";
-import {
-  Home,
-  Shop,
-  ProductPage,
-  ContentPage,
-  PoliciesPage,
-  About,
-} from "../features/storefront/Pages";
+import { Home } from "../features/storefront/pages/Home";
+import { Shop } from "../features/storefront/pages/Shop";
+import { ProductPage } from "../features/storefront/pages/ProductPage";
+import { ContentPage } from "../features/storefront/pages/ContentPage";
+import { PoliciesPage } from "../features/storefront/pages/PoliciesPage";
+import { About } from "../features/storefront/pages/About";
 import { Contact } from "../features/storefront/Contact";
 import { Account } from "../features/account/Account";
 import { OrdersPage } from "../features/account/Orders";

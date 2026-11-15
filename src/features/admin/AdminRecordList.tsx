@@ -9,8 +9,8 @@ type AdminRecordListProps = {
   records: { data: AdminRecord[]; loading: boolean; error: string };
   uploadingImages: boolean;
   onEdit: (record: AdminRecord) => void;
-  onToggleProduct: (product: Product) => void;
-  onToggleCollection: (collection: Taxonomy) => void;
+  onToggleProduct?: (product: Product) => void;
+  onToggleCollection?: (collection: Taxonomy) => void;
   onRequestDelete: (record: AdminRecord) => void;
 };
 
@@ -77,7 +77,7 @@ export function AdminRecordList({
                 <button
                   className="text-button"
                   disabled={uploadingImages}
-                  onClick={() => onToggleProduct(record)}
+                  onClick={() => onToggleProduct?.(record)}
                 >
                   {record.status === "published" ? "Ocultar" : "Publicar"}
                 </button>
@@ -94,7 +94,7 @@ export function AdminRecordList({
                 </button>
                 <button
                   className="text-button"
-                  onClick={() => onToggleCollection(record)}
+                  onClick={() => onToggleCollection?.(record)}
                 >
                   {record.status === "published" ? "Ocultar" : "Publicar"}
                 </button>
