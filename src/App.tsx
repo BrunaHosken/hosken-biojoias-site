@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, NavLink, Route, Routes } from "react-router-dom";
-import { onIdTokenChanged, signOut } from "firebase/auth";
-import { LogOut, Menu, ShoppingBag, X } from "lucide-react";
+import { Link, Route, Routes } from "react-router-dom";
+import { onIdTokenChanged } from "firebase/auth";
 import {
   BasketContext,
   SessionContext,
@@ -12,6 +11,8 @@ import {
 } from "./app/contexts";
 import { auth, localMode } from "./firebase";
 import { ToastNotice } from "./components/Feedback";
+import { SiteFooter } from "./components/SiteFooter";
+import { SiteHeader } from "./components/SiteHeader";
 import {
   Home,
   Shop,
@@ -27,8 +28,6 @@ import { Cart } from "./features/account/Cart";
 import { CustomerChat } from "./features/chat/CustomerChat";
 import { Admin } from "./features/admin/AdminPanel";
 import {
-  AdminHeaderNotificationBell,
-  CustomerHeaderNotificationBell,
   AdminNotificationBridge,
   CustomerNotificationBridge,
   FloatingChatButton,
@@ -57,8 +56,6 @@ export default function App() {
     ready: false,
   });
   const [items, setItems] = useState(readBasket);
-  const [menu, setMenu] = useState(false);
-  const [compactHeader, setCompactHeader] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastId = useRef(0);
   const notify = useCallback((message: string, kind: ToastKind = "success") => {
@@ -93,15 +90,6 @@ export default function App() {
       /* O carrinho continua funcionando em memória. */
     }
   }, [items]);
-  useEffect(() => {
-    const updateHeaderSize = () =>
-      setCompactHeader((isCompact) =>
-        isCompact ? window.scrollY > 4 : window.scrollY > 72,
-      );
-    updateHeaderSize();
-    window.addEventListener("scroll", updateHeaderSize, { passive: true });
-    return () => window.removeEventListener("scroll", updateHeaderSize);
-  }, []);
   const change = (id: string, delta: number) =>
     setItems((previous) => {
       const next = { ...previous };
@@ -125,62 +113,7 @@ export default function App() {
           {toast && (
             <ToastNotice toast={toast} onDismiss={() => setToast(null)} />
           )}
-          <header
-            className={`site-header ${compactHeader ? "header-compact" : ""}`}
-          >
-            <Link to="/" className="wordmark">
-              <span>HOSKEN BIOJOIAS</span>
-              <small>FEITO À MÃO</small>
-            </Link>
-            <button
-              className="icon mobile-menu"
-              aria-label="Abrir menu"
-              onClick={() => setMenu(!menu)}
-            >
-              {menu ? <X /> : <Menu />}
-            </button>
-            <nav className={menu ? "open" : ""} onClick={() => setMenu(false)}>
-              {[
-                ["/loja", "Loja"],
-                ["/novidades", "Novidades"],
-                ["/eventos", "Eventos"],
-                ["/onde-encontrar", "Onde encontrar"],
-                ["/sobre", "Nossa história"],
-                ["/contato", "Contato"],
-              ].map(([path, label]) => (
-                <NavLink key={path} to={path}>
-                  {label}
-                </NavLink>
-              ))}
-            </nav>
-            <div className="header-actions">
-              <Link to="/conta">{session.user ? "Minha conta" : "Entrar"}</Link>
-              {session.admin && <AdminHeaderNotificationBell />}
-              {session.user && !session.admin && (
-                <CustomerHeaderNotificationBell uid={session.user.uid} />
-              )}
-              {session.user && (
-                <button
-                  className="header-logout"
-                  type="button"
-                  aria-label="Sair da conta"
-                  title="Sair da conta"
-                  onClick={() => signOut(auth)}
-                >
-                  <LogOut size={17} />
-                  <span>Sair</span>
-                </button>
-              )}
-              <Link
-                to="/carrinho"
-                className="bag"
-                aria-label={`Carrinho com ${Object.values(items).reduce((a, b) => a + b, 0)} itens`}
-              >
-                <ShoppingBag size={21} />
-                <span>{Object.values(items).reduce((a, b) => a + b, 0)}</span>
-              </Link>
-            </div>
-          </header>
+          <SiteHeader />
           <main>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -240,34 +173,7 @@ export default function App() {
             <CustomerNotificationBridge uid={session.user.uid} />
           )}
           <FloatingChatButton />
-          <footer>
-            <div className="wordmark">
-              <span>HOSKEN BIOJOIAS</span>
-              <small>NATUREZA QUE ACOMPANHA VOCÊ.</small>
-            </div>
-            <p>Flores naturais. Histórias únicas. Feito à mão.</p>
-            <div>
-              <a
-                href="https://www.instagram.com/hosken.biojoias/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Instagram ↗
-              </a>
-              <a
-                href="https://wa.me/5522992339779"
-                target="_blank"
-                rel="noreferrer"
-              >
-                WhatsApp ↗
-              </a>
-              <a href="mailto:nil2martins@gmail.com">E-mail</a>
-              <Link to="/contato">Contato</Link>
-              <Link to="/politicas">Políticas da loja</Link>
-              {session.admin && <Link to="/admin">Administrar</Link>}
-            </div>
-            <small>© {new Date().getFullYear()} Hosken Biojoias</small>
-          </footer>
+          <SiteFooter />
         </BasketContext.Provider>
       </SessionContext.Provider>
     </ToastContext.Provider>
