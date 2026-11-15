@@ -12,23 +12,30 @@ const projectId = localMode
 const storageBucket = localMode
   ? `${projectId}.firebasestorage.app`
   : import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
+const authDomain = localMode
+  ? "demo-hosken.firebaseapp.com"
+  : import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
+const appId = localMode
+  ? "1:000000000000:web:demo-hosken"
+  : import.meta.env.VITE_FIREBASE_APP_ID;
 if (
   !localMode &&
   (!projectId ||
     projectId.startsWith("demo-") ||
     !import.meta.env.VITE_FIREBASE_API_KEY ||
-    !storageBucket)
+    !authDomain ||
+    !storageBucket ||
+    !appId)
 )
   throw new Error(
-    "Configure o projeto Firebase e o bucket do Storage antes de desativar os emuladores.",
+    "Configure os dados do app Firebase antes de desativar os emuladores.",
   );
 const app = initializeApp({
   projectId,
   storageBucket,
   apiKey: localMode ? "demo-key" : import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: localMode
-    ? "demo-hosken.firebaseapp.com"
-    : import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  authDomain,
+  appId,
 });
 export const auth = getAuth(app);
 export const db = getFirestore(app);
