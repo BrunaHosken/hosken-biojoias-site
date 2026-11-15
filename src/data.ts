@@ -45,11 +45,13 @@ export type Content = {
   title: string;
   body: string;
   status: string;
+  eventSchedule?: { date: string; time: string }[];
   eventDate?: string;
   eventTime?: string;
   location?: string;
   address?: string;
   mapUrl?: string;
+  policyType?: string;
 };
 export type OrderItem = {
   productId: string;

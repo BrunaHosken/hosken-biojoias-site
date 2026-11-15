@@ -1293,6 +1293,10 @@ nav a.active {
   color: var(--muted);
   font-size: 12px;
 }
+.event-details .event-schedule-public {
+  color: #50443e;
+  font-weight: 600;
+}
 .event-details a {
   display: inline-flex;
   align-items: center;
@@ -1303,6 +1307,16 @@ nav a.active {
 }
 .policy-card p {
   white-space: pre-wrap;
+}
+.policy-type {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  color: #806545;
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
 }
 .about {
   display: grid;
@@ -1481,6 +1495,51 @@ textarea {
 }
 .form-pair label {
   width: 50%;
+}
+.event-schedule-editor {
+  margin: 4px 0 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+.event-schedule-heading,
+.event-schedule-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.7fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 410px;
+}
+.event-schedule-heading {
+  padding: 0 0 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.event-schedule-row {
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+}
+.event-schedule-row input {
+  min-width: 0;
+  padding: 10px 8px;
+  font-size: 11px;
+}
+.event-schedule-remove {
+  white-space: nowrap;
+  font-size: 10px;
+}
+.event-schedule-footer {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+.event-schedule-add {
+  margin: 0;
+  font-size: 11px;
+}
+.event-schedule-hint {
+  display: block;
+  margin: -2px 0 18px;
 }
 .admin-row {
   padding: 18px 0;
@@ -2161,6 +2220,14 @@ footer > small {
   }
   .form-pair label {
     width: 100%;
+  }
+  .event-schedule-editor {
+    padding: 10px;
+  }
+  .event-schedule-heading,
+  .event-schedule-row {
+    min-width: 360px;
+    grid-template-columns: minmax(135px, 1fr) minmax(110px, 0.8fr) auto;
   }
   .admin-product-images {
     grid-template-columns: repeat(2, minmax(0, 1fr));

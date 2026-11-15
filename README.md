@@ -33,8 +33,8 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - Cadastro e edição de produtos, preços em centavos, estoque, disponibilidade, visibilidade, materiais, medidas e cuidados.
 - Upload de até seis fotos por produto pelo Firebase Storage; a página de cada peça mostra uma galeria. O emulador de Storage é iniciado junto dos demais em `npm run emulators`.
 - Cadastro e edição de linhas, tipos de peça, novidades, eventos, lojas parceiras e políticas; exclusão e consulta em tempo real.
-- Eventos podem incluir data, horário, local, endereço e link de mapa. A página pública organiza os eventos por data.
-- A página Políticas da loja é alimentada pelo painel administrativo. O ateliê cadastra e publica os próprios textos antes de abrir a loja.
+- Eventos podem incluir várias datas e horários, além de local, endereço e link de mapa. A página pública organiza os eventos pela primeira data.
+- A página Políticas da loja é alimentada pelo painel administrativo. Cada texto pode ser classificado como entrega, reenvio, cancelamento, trocas e devoluções, pagamento, privacidade ou geral; o ateliê publica os textos quando estiverem prontos.
 - Histórico de pedidos com leitura em tempo real, status, itens, valores e rastreio. Três registros fictícios aparecem na conta administrativa do emulador.
 - Chat de texto em tempo real: clientes abrem o chat diretamente pela bolinha flutuante; a equipe acessa pela mesma bolinha ou por `/admin` → Atendimento. O painel abre primeiro em Pedidos e tem um sino com atalhos para pedidos novos e mensagens/atendimentos não lidos. Cada pessoa pode editar ou excluir somente as próprias mensagens por até uma hora. A conversa continua salva. Conversas e mensagens são privadas ao cliente e à equipe autorizada.
 - WhatsApp, Instagram e e-mail na página de contato. O e-mail informado é pessoal e ficará público no site.
@@ -49,7 +49,7 @@ Produtos e preços do seed são demonstrativos. O carrinho confere disponibilida
 | `collections`                     | name, slug, status                                                                                   | Público: publicados; admin: escrita                                                   |
 | `categories`                      | name, slug, status                                                                                   | Público: publicados; admin: escrita                                                   |
 | `products`                        | name, description, priceCents, stock, categoryId, collectionId, availability, status, imageUrls, imagePaths, materials, dimensions, careInstructions | Público: publicados; admin: escrita                                                   |
-| `news`, `events`, `partnerStores`, `policies` | title, body, status; eventos também podem ter eventDate, eventTime, location, address, mapUrl | Público: publicados; admin: escrita                                                   |
+| `news`, `events`, `partnerStores`, `policies` | title, body, status; eventos também têm eventSchedule (lista de data/horário), local, endereço e mapa; políticas têm policyType | Público: publicados; admin: escrita                                                   |
 | `users`                           | displayName                                                                                          | Dono pode escrever campos permitidos; admin pode ler                                  |
 | `orders`                          | orderNumber, userId, customerName, customerEmail, items, totalCents, status, createdAt, trackingCode | Dono pode ler; admin lê e atualiza status/rastreio; backend cria e confirma pagamento |
 | `conversations/{uid}`             | customerId, customerName, customerEmail, lastMessage, unread counters, timestamps                    | Cliente dono e admin autorizado; criação pelo próprio cliente                         |

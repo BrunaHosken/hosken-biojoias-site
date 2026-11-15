@@ -115,6 +115,15 @@ const availability: Record<string, string> = {
   prelaunch: "Em breve",
   "made-to-order": "Sob encomenda",
 };
+const POLICY_TYPES = [
+  { id: "delivery", label: "Entrega e frete" },
+  { id: "reshipment", label: "Reenvio" },
+  { id: "cancellation", label: "Cancelamento" },
+  { id: "returns", label: "Trocas e devoluções" },
+  { id: "payment", label: "Pagamento" },
+  { id: "privacy", label: "Privacidade" },
+  { id: "general", label: "Geral" },
+];
 const DEFAULT_LOW_STOCK_THRESHOLD = 2;
 function readBasket(): Record<string, number> {
   try {
@@ -870,8 +879,8 @@ function ContentPage({
   const displayedRecords =
     name === "events"
       ? [...records.data].sort((a, b) =>
-          (a.eventDate || "9999-12-31").localeCompare(
-            b.eventDate || "9999-12-31",
+          (getEventSchedule(a)[0]?.date || a.eventDate || "9999-12-31").localeCompare(
+            getEventSchedule(b)[0]?.date || b.eventDate || "9999-12-31",
           ),
         )
       : records.data;
@@ -887,15 +896,15 @@ function ContentPage({
             <Flower2 size={28} />
             <h2>{r.title}</h2>
             {name === "events" &&
-              (r.eventDate || r.eventTime || r.location || r.address || r.mapUrl) && (
+              (getEventSchedule(r).length || r.location || r.address || r.mapUrl) && (
                 <div className="event-details">
-                  {(r.eventDate || r.eventTime) && (
-                    <p>
-                      {r.eventDate && formatEventDate(r.eventDate)}
-                      {r.eventDate && r.eventTime && " · "}
-                      {r.eventTime}
+                  {getEventSchedule(r).map((entry, index) => (
+                    <p className="event-schedule-public" key={`${entry.date}-${entry.time}-${index}`}>
+                      {entry.date && formatEventDate(entry.date)}
+                      {entry.date && entry.time && " · "}
+                      {entry.time}
                     </p>
-                  )}
+                  ))}
                   {r.location && <p>{r.location}</p>}
                   {r.address && <p>{r.address}</p>}
                   {isHttpUrl(r.mapUrl) && (
@@ -918,6 +927,15 @@ function ContentPage({
       )}
     </div>
   );
+}
+function getEventSchedule(event: Content) {
+  const schedule = Array.isArray(event.eventSchedule)
+    ? event.eventSchedule.filter((entry) => entry.date || entry.time)
+    : [];
+  if (schedule.length) return schedule;
+  return event.eventDate || event.eventTime
+    ? [{ date: event.eventDate || "", time: event.eventTime || "" }]
+    : [];
 }
 function formatEventDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
@@ -947,6 +965,9 @@ function PoliciesPage() {
       <div className="content-grid">
         {policies.data.map((policy) => (
           <article className="content-card policy-card" key={policy.id}>
+            <span className="policy-type">
+              {POLICY_TYPES.find((type) => type.id === policy.policyType)?.label || "Geral"}
+            </span>
             <h2>{policy.title}</h2>
             <p>{policy.body}</p>
           </article>
@@ -2307,6 +2328,7 @@ function AdminPanel() {
   );
   const [editing, setEditing] = useState("");
   const [product, setProduct] = useState(blankProduct);
+  const [eventSchedule, setEventSchedule] = useState([{ date: "", time: "" }]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const uploadedImagePaths = useRef(new Set<string>());
   const removedImagePaths = useRef(new Set<string>());
@@ -2460,6 +2482,15 @@ function AdminPanel() {
         const name = String(f.get("name")).trim();
         const isTaxonomy = ["categories", "collections"].includes(tab);
         const isEvent = tab === "events";
+        const schedule = isEvent
+          ? eventSchedule.filter((entry) => entry.date || entry.time)
+          : [];
+        if (
+          isEvent &&
+          (schedule.some((entry) => !entry.date) ||
+            (f.get("status") === "published" && schedule.length === 0))
+        )
+          throw new Error("eventSchedule");
         const payload = isTaxonomy
           ? {
               name,
@@ -2480,12 +2511,16 @@ function AdminPanel() {
               status: String(f.get("status")),
               ...(isEvent
                 ? {
-                    eventDate: String(f.get("eventDate") || ""),
-                    eventTime: String(f.get("eventTime") || ""),
+                    eventSchedule: schedule,
+                    eventDate: schedule[0]?.date || "",
+                    eventTime: schedule[0]?.time || "",
                     location: String(f.get("location") || "").trim(),
                     address: String(f.get("address") || "").trim(),
                     mapUrl: String(f.get("mapUrl") || "").trim(),
                   }
+                : {}),
+              ...(tab === "policies"
+                ? { policyType: String(f.get("policyType") || "general") }
                 : {}),
             };
         if (editing) {
@@ -2495,14 +2530,17 @@ function AdminPanel() {
           await addDoc(collection(db, tab), payload);
         }
         form.reset();
+        if (isEvent) setEventSchedule([{ date: "", time: "" }]);
       }
       notify(
         wasEditing ? "Alterações salvas." : "Cadastro criado com sucesso.",
         "success",
       );
-    } catch {
+    } catch (error) {
       notify(
-        "Não foi possível salvar. Confira os campos, sua permissão e a conexão com o banco.",
+        error instanceof Error && error.message === "eventSchedule"
+          ? "Preencha a data de cada horário. Eventos publicados precisam ter pelo menos uma data."
+          : "Não foi possível salvar. Confira os campos, sua permissão e a conexão com o banco.",
         "error",
       );
     } finally {
@@ -2591,6 +2629,9 @@ function AdminPanel() {
             onClick={() => {
               void discardUnsavedProductImages();
               removedImagePaths.current.clear();
+              setEventSchedule(
+                id === "events" ? [{ date: "", time: "" }] : [],
+              );
               const next = new URLSearchParams(searchParams);
               next.set("tab", id);
               if (id !== "chat") next.delete("conversation");
@@ -2891,16 +2932,75 @@ function AdminPanel() {
                 )}
                 {tab === "events" && (
                   <>
-                    <div className="form-pair">
-                      <label>
-                        Data
-                        <input type="date" name="eventDate" defaultValue={editingContent?.eventDate || ""} />
-                      </label>
-                      <label>
-                        Horário
-                        <input type="time" name="eventTime" defaultValue={editingContent?.eventTime || ""} />
-                      </label>
+                    <div className="event-schedule-editor">
+                      <div className="event-schedule-heading">
+                        <span>Data</span>
+                        <span>Horário</span>
+                        <span>Ação</span>
+                      </div>
+                      {eventSchedule.map((entry, index) => (
+                        <div className="event-schedule-row" key={index}>
+                          <input
+                            type="date"
+                            aria-label={`Data do horário ${index + 1}`}
+                            value={entry.date}
+                            onChange={(e) =>
+                              setEventSchedule((current) =>
+                                current.map((item, rowIndex) =>
+                                  rowIndex === index
+                                    ? { ...item, date: e.target.value }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                          <input
+                            type="time"
+                            aria-label={`Horário da data ${index + 1}`}
+                            value={entry.time}
+                            onChange={(e) =>
+                              setEventSchedule((current) =>
+                                current.map((item, rowIndex) =>
+                                  rowIndex === index
+                                    ? { ...item, time: e.target.value }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                          <button
+                            className="text-button event-schedule-remove"
+                            type="button"
+                            aria-label={`Remover data ${index + 1}`}
+                            onClick={() =>
+                              setEventSchedule((current) =>
+                                current.filter((_, rowIndex) => rowIndex !== index),
+                              )
+                            }
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ))}
                     </div>
+                    <div className="event-schedule-footer">
+                      <button
+                        className="button secondary event-schedule-add"
+                        type="button"
+                        disabled={eventSchedule.length >= 30}
+                        onClick={() =>
+                          setEventSchedule((current) => [
+                            ...current,
+                            { date: "", time: "" },
+                          ])
+                        }
+                      >
+                        <Plus size={16} /> Adicionar data
+                      </button>
+                    </div>
+                    <small className="field-hint event-schedule-hint">
+                      Adicione uma linha para cada dia ou sessão. O horário é opcional.
+                    </small>
                     <label>
                       Local
                       <input name="location" maxLength={160} defaultValue={editingContent?.location || ""} />
@@ -2914,6 +3014,21 @@ function AdminPanel() {
                       <input type="url" name="mapUrl" maxLength={2000} defaultValue={editingContent?.mapUrl || ""} placeholder="https://…" />
                     </label>
                   </>
+                )}
+                {tab === "policies" && (
+                  <label>
+                    Tipo de política
+                    <select
+                      name="policyType"
+                      defaultValue={editingContent?.policyType || "general"}
+                    >
+                      {POLICY_TYPES.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 )}
                 <label>
                   Publicação
@@ -2945,6 +3060,9 @@ function AdminPanel() {
                   removedImagePaths.current.clear();
                   setEditing("");
                   setProduct(blankProduct);
+                  setEventSchedule(
+                    tab === "events" ? [{ date: "", time: "" }] : [],
+                  );
                 }}
               >
                 Cancelar edição
@@ -2960,6 +3078,9 @@ function AdminPanel() {
                   <strong>{"name" in r ? r.name : r.title}</strong>
                   <small>
                     {r.status === "published" ? "Publicado" : "Rascunho"}
+                    {"policyType" in r
+                      ? ` · ${POLICY_TYPES.find((type) => type.id === r.policyType)?.label || "Geral"}`
+                      : ""}
                     {"stock" in r
                       ? ` · Estoque: ${r.stock} · aviso em: ${r.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD}`
                       : ""}
@@ -3054,6 +3175,14 @@ function AdminPanel() {
                       disabled={uploadingImages}
                       onClick={() => {
                         setProduct(blankProduct);
+                        if (tab === "events") {
+                          const schedule = getEventSchedule(r as Content);
+                          setEventSchedule(
+                            schedule.length
+                              ? schedule
+                              : [{ date: "", time: "" }],
+                          );
+                        }
                         setEditing(r.id);
                       }}
                     >

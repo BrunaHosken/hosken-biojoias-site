@@ -50,19 +50,22 @@ service cloud.firestore {
       allow read: if contentCollection in ['news','events','partnerStores','policies'] && (resource.data.status == 'published' || admin());
       allow create, update: if admin()
         && (contentCollection == 'events'
-          ? request.resource.data.keys().hasOnly(['title','body','status','eventDate','eventTime','location','address','mapUrl'])
+          ? request.resource.data.keys().hasOnly(['title','body','status','eventSchedule','eventDate','eventTime','location','address','mapUrl'])
             && text(request.resource.data.title, 160)
             && text(request.resource.data.body, 5000)
             && request.resource.data.status in ['published','draft']
             && (!('eventDate' in request.resource.data) || (request.resource.data.eventDate is string && request.resource.data.eventDate.size() <= 10))
             && (!('eventTime' in request.resource.data) || (request.resource.data.eventTime is string && request.resource.data.eventTime.size() <= 20))
+            && (!('eventSchedule' in request.resource.data) || (request.resource.data.eventSchedule is list && request.resource.data.eventSchedule.size() <= 30))
             && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 160))
             && (!('address' in request.resource.data) || (request.resource.data.address is string && request.resource.data.address.size() <= 300))
             && (!('mapUrl' in request.resource.data) || (request.resource.data.mapUrl is string && request.resource.data.mapUrl.size() <= 2000))
           : contentCollection == 'policies'
-            ? request.resource.data.keys().hasOnly(['title','body','status'])
+            ? request.resource.data.keys().hasOnly(['title','body','status','policyType'])
+              && request.resource.data.keys().hasAll(['policyType'])
               && text(request.resource.data.title, 160)
               && text(request.resource.data.body, 12000)
+              && request.resource.data.policyType in ['delivery','reshipment','cancellation','returns','payment','privacy','general']
               && request.resource.data.status in ['published','draft']
             : contentCollection in ['news','partnerStores']
               && request.resource.data.keys().hasOnly(['title','body','status'])
