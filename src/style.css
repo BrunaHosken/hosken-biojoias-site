@@ -1355,6 +1355,110 @@ textarea {
   font-size: 14px;
   color: var(--wine);
 }
+.toast-notice {
+  position: fixed;
+  z-index: 1200;
+  top: 22px;
+  right: 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(430px, calc(100vw - 32px));
+  min-height: 64px;
+  padding: 14px 16px;
+  border: 1px solid var(--toast-border);
+  border-left: 4px solid var(--toast-accent);
+  background: #fffdf9;
+  color: #342e2d;
+  box-shadow: 0 12px 38px #342e2d24;
+  animation: toast-in 180ms ease-out;
+}
+.toast-notice > svg {
+  flex: 0 0 auto;
+  color: var(--toast-accent);
+}
+.toast-notice > span {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.toast-notice > button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.toast-success {
+  --toast-accent: #39744b;
+  --toast-border: #c7dacb;
+}
+.toast-error {
+  --toast-accent: #a52d3e;
+  --toast-border: #e8c6cb;
+}
+.toast-warning {
+  --toast-accent: #a16a1d;
+  --toast-border: #ead9b8;
+}
+.toast-info {
+  --toast-accent: #496d8a;
+  --toast-border: #cbd8e2;
+}
+.confirmation-backdrop {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: #251d20a6;
+}
+.confirmation-modal {
+  width: min(460px, 100%);
+  padding: 30px;
+  border: 1px solid var(--border);
+  background: #fffdf9;
+  box-shadow: 0 20px 65px #1b111633;
+  animation: modal-in 160ms ease-out;
+}
+.confirmation-modal h2 {
+  margin: 8px 0 12px;
+  font-size: 34px;
+}
+.confirmation-modal p {
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.confirmation-actions .button {
+  gap: 8px;
+}
+.danger-button {
+  border-color: #982d40;
+  background: #982d40;
+  color: #fff;
+}
+.danger-button:hover:not(:disabled) {
+  background: #741d2f;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 footer {
   border-top: 1px solid var(--border);
   padding: 46px 5% 25px;
@@ -1684,6 +1788,17 @@ footer > small {
   }
   .contact-links strong {
     font-size: 26px;
+  }
+  .toast-notice {
+    top: 12px;
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+  .confirmation-modal {
+    padding: 23px;
+  }
+  .confirmation-actions > button {
+    flex: 1;
   }
   .account-setting-card {
     padding: 19px;

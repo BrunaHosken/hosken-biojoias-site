@@ -1,4 +1,5 @@
 import {
+  useCallback,
   createContext,
   useContext,
   useEffect,
@@ -54,6 +55,10 @@ import {
   Bell,
   Eye,
   EyeOff,
+  CheckCircle2,
+  CircleX,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { auth, db, localMode } from "./firebase";
 import {
@@ -83,6 +88,14 @@ const SessionContext = createContext<Session>({
   admin: false,
   ready: false,
 });
+type ToastKind = "success" | "error" | "warning" | "info";
+type ToastMessage = { id: number; message: string; kind: ToastKind };
+const ToastContext = createContext<
+  (message: string, kind?: ToastKind) => void
+>(() => {});
+function useToast() {
+  return useContext(ToastContext);
+}
 type Basket = {
   items: Record<string, number>;
   change: (id: string, delta: number) => void;
@@ -114,6 +127,17 @@ export default function App() {
   });
   const [items, setItems] = useState(readBasket);
   const [menu, setMenu] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const toastId = useRef(0);
+  const notify = useCallback((message: string, kind: ToastKind = "success") => {
+    toastId.current += 1;
+    setToast({ id: toastId.current, message, kind });
+  }, []);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
   useEffect(
     () =>
       onIdTokenChanged(auth, async (user) => {
@@ -145,6 +169,7 @@ export default function App() {
       return next;
     });
   return (
+    <ToastContext.Provider value={notify}>
     <SessionContext.Provider value={session}>
       <BasketContext.Provider value={{ items, change }}>
         {localMode && (
@@ -156,6 +181,7 @@ export default function App() {
             </span>
           </div>
         )}
+        {toast && <ToastNotice toast={toast} onDismiss={() => setToast(null)} />}
         <header>
           <Link to="/" className="wordmark">
             <span>HOSKEN BIOJOIAS</span>
@@ -297,6 +323,99 @@ export default function App() {
         </footer>
       </BasketContext.Provider>
     </SessionContext.Provider>
+    </ToastContext.Provider>
+  );
+}
+function ToastNotice({
+  toast,
+  onDismiss,
+}: {
+  toast: ToastMessage;
+  onDismiss: () => void;
+}) {
+  const Icon =
+    toast.kind === "success"
+      ? CheckCircle2
+      : toast.kind === "error"
+        ? CircleX
+        : toast.kind === "warning"
+          ? AlertTriangle
+          : Info;
+  return (
+    <div
+      className={`toast-notice toast-${toast.kind}`}
+      role={toast.kind === "error" ? "alert" : "status"}
+      aria-live={toast.kind === "error" ? "assertive" : "polite"}
+      key={toast.id}
+    >
+      <Icon size={21} aria-hidden="true" />
+      <span>{toast.message}</span>
+      <button type="button" onClick={onDismiss} aria-label="Fechar aviso">
+        <X size={17} />
+      </button>
+    </div>
+  );
+}
+function ConfirmationModal({
+  title,
+  message,
+  confirmLabel = "Confirmar",
+  busy = false,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  busy?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onCancel();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [busy, onCancel]);
+  return (
+    <div
+      className="confirmation-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onCancel();
+      }}
+    >
+      <section
+        className="confirmation-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirmation-title"
+        aria-describedby="confirmation-message"
+      >
+        <div className="eyebrow">CONFIRMAÇÃO</div>
+        <h2 id="confirmation-title">{title}</h2>
+        <p id="confirmation-message">{message}</p>
+        <div className="confirmation-actions">
+          <button
+            className="button secondary"
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            autoFocus
+          >
+            Cancelar
+          </button>
+          <button
+            className="button danger-button"
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {busy ? "Excluindo…" : confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 function FloatingChatButton() {
@@ -715,17 +834,13 @@ function About() {
 }
 function Account() {
   const session = useContext(SessionContext);
+  const notify = useToast();
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
-  const [profileError, setProfileError] = useState("");
-  const [profileMessage, setProfileMessage] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordMessage, setPasswordMessage] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -737,8 +852,6 @@ function Account() {
     e.preventDefault();
     if (!session.user) return;
     setBusy(true);
-    setProfileError("");
-    setProfileMessage("");
     const name = profileName.trim();
     const email = profileEmail.trim();
     try {
@@ -747,11 +860,11 @@ function Account() {
         await updateProfile(session.user, { displayName: name });
       }
       await setDoc(doc(db, "users", session.user.uid), { displayName: name });
-      setProfileMessage("Seus dados foram atualizados.");
+      notify("Seus dados foram atualizados.", "success");
       setEditingProfile(false);
     } catch (cause) {
       const code = (cause as { code?: string }).code;
-      setProfileError(
+      notify(
         code === "auth/requires-recent-login"
           ? "Por segurança, entre novamente para alterar o e-mail."
           : code === "auth/email-already-in-use"
@@ -759,6 +872,7 @@ function Account() {
             : code === "auth/invalid-email"
               ? "Confira o formato do e-mail."
               : "Não foi possível atualizar os dados. Tente novamente.",
+        "error",
       );
     } finally {
       setBusy(false);
@@ -768,14 +882,12 @@ function Account() {
     e.preventDefault();
     if (!session.user?.email) return;
     setBusy(true);
-    setPasswordError("");
-    setPasswordMessage("");
     const form = new FormData(e.currentTarget);
     const currentPassword = String(form.get("currentPassword"));
     const newPassword = String(form.get("newPassword"));
     const confirmPassword = String(form.get("confirmPassword"));
     if (newPassword !== confirmPassword) {
-      setPasswordError("A confirmação não corresponde à nova senha.");
+      notify("A confirmação não corresponde à nova senha.", "warning");
       setBusy(false);
       return;
     }
@@ -786,14 +898,14 @@ function Account() {
       );
       await reauthenticateWithCredential(session.user, credential);
       await updatePassword(session.user, newPassword);
-      setPasswordMessage("Sua senha foi alterada.");
+      notify("Sua senha foi alterada.", "success");
       setChangingPassword(false);
       setShowCurrentPassword(false);
       setShowNewPassword(false);
       setShowConfirmPassword(false);
     } catch (cause) {
       const code = (cause as { code?: string }).code;
-      setPasswordError(
+      notify(
         code === "auth/wrong-password" || code === "auth/invalid-credential"
           ? "A senha atual está incorreta."
           : code === "auth/weak-password"
@@ -801,6 +913,7 @@ function Account() {
             : code === "auth/requires-recent-login"
               ? "Entre novamente antes de alterar sua senha."
               : "Não foi possível alterar a senha. Tente novamente.",
+        "error",
       );
     } finally {
       setBusy(false);
@@ -808,7 +921,6 @@ function Account() {
   }
   async function login(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError("");
     setBusy(true);
     const f = new FormData(e.currentTarget);
     try {
@@ -818,8 +930,9 @@ function Account() {
         String(f.get("password")),
       );
     } catch {
-      setError(
+      notify(
         "Não foi possível entrar. Confira os dados e se a autenticação está disponível.",
+        "error",
       );
     } finally {
       setBusy(false);
@@ -827,7 +940,6 @@ function Account() {
   }
   async function register(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError("");
     setBusy(true);
     const form = new FormData(e.currentTarget);
     const displayName = String(form.get("displayName")).trim();
@@ -839,14 +951,16 @@ function Account() {
       );
       await updateProfile(credential.user, { displayName });
       await setDoc(doc(db, "users", credential.user.uid), { displayName });
+      notify("Sua conta foi criada.", "success");
     } catch (cause) {
       const code = (cause as { code?: string }).code;
-      setError(
+      notify(
         code === "auth/email-already-in-use"
           ? "Já existe uma conta com esse e-mail. Entre ou use outro endereço."
           : code === "auth/weak-password"
             ? "Escolha uma senha com pelo menos 6 caracteres."
             : "Não foi possível criar a conta. Confira seus dados e tente novamente.",
+        "error",
       );
     } finally {
       setBusy(false);
@@ -901,8 +1015,6 @@ function Account() {
                       setProfileEmail(session.user?.email || "");
                     }
                     setEditingProfile((value) => !value);
-                    setProfileError("");
-                    setProfileMessage("");
                   }}
                 >
                   {editingProfile ? "Cancelar" : "Editar dados"}
@@ -932,7 +1044,6 @@ function Account() {
                       onChange={(event) => setProfileEmail(event.target.value)}
                     />
                   </label>
-                  {profileError && <p className="notice" role="alert">{profileError}</p>}
                   <button className="button" disabled={busy}>
                     {busy ? "Salvando…" : "Salvar dados"}
                   </button>
@@ -943,7 +1054,6 @@ function Account() {
                   <div><dt>E-mail</dt><dd>{session.user.email || "Não informado"}</dd></div>
                 </dl>
               )}
-              {profileMessage && <p className="account-success" role="status">{profileMessage}</p>}
             </section>
             <section className="account-setting-card">
               <header className="account-setting-header">
@@ -961,8 +1071,6 @@ function Account() {
                       setShowConfirmPassword(false);
                     }
                     setChangingPassword((value) => !value);
-                    setPasswordError("");
-                    setPasswordMessage("");
                   }}
                 >
                   {changingPassword ? "Cancelar" : "Alterar senha"}
@@ -1030,13 +1138,11 @@ function Account() {
                       </button>
                     </span>
                   </label>
-                  {passwordError && <p className="notice" role="alert">{passwordError}</p>}
                   <button className="button" disabled={busy}>
                     {busy ? "Atualizando…" : "Salvar nova senha"}
                   </button>
                 </form>
               )}
-              {passwordMessage && <p className="account-success" role="status">{passwordMessage}</p>}
             </section>
           </section>
         </>
@@ -1082,11 +1188,6 @@ function Account() {
                 required
               />
             </label>
-            {error && (
-              <p className="notice" role="alert">
-                {error}
-              </p>
-            )}
             <button className="button" disabled={busy}>
               {busy
                 ? mode === "login"
@@ -1106,7 +1207,6 @@ function Account() {
               className="text-button"
               onClick={() => {
                 setMode(mode === "login" ? "register" : "login");
-                setError("");
               }}
             >
               {mode === "login" ? "Criar conta" : "Entrar"}
@@ -1245,8 +1345,8 @@ function OrderCard({ order }: { order: CustomerOrder }) {
 }
 function CustomerChat() {
   const session = useContext(SessionContext);
+  const notify = useToast();
   const chat = useCustomerConversation(session.user?.uid);
-  const [message, setMessage] = useState("");
   const attemptedUsers = useRef(new Set<string>());
   useEffect(() => {
     const user = session.user;
@@ -1266,9 +1366,12 @@ function CustomerChat() {
       user.displayName || "Cliente",
       user.email || "",
     ).catch(() => {
-      setMessage("Não foi possível abrir o chat. Recarregue a página para tentar novamente.");
+      notify(
+        "Não foi possível abrir o chat. Recarregue a página para tentar novamente.",
+        "error",
+      );
     });
-  }, [session.ready, session.user, session.admin, chat.loading, chat.error, chat.conversation]);
+  }, [session.ready, session.user, session.admin, chat.loading, chat.error, chat.conversation, notify]);
   if (!session.ready) return <div className="page">Carregando sua conta…</div>;
   if (!session.user)
     return (
@@ -1310,7 +1413,6 @@ function CustomerChat() {
           <MessageCircle size={28} />
           <h2>Abrindo sua conversa…</h2>
           <p>Estamos preparando o atendimento com a Hosken Biojoias.</p>
-          {message && <p className="notice" role="alert">{message}</p>}
         </section>
       )}
       {chat.conversation && (
@@ -1474,10 +1576,11 @@ function ChatMessageBubble({
   previousMessage?: ChatMessage;
   now: number;
 }) {
+  const notify = useToast();
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const date = message.createdAt?.toDate();
   const withinEditWindow = Boolean(
     date && now >= date.getTime() && now - date.getTime() < 60 * 60 * 1000,
@@ -1485,29 +1588,28 @@ function ChatMessageBubble({
   async function saveEdit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
-    setError("");
     try {
       await editChatMessage(conversation.id, message, editText, isLatest);
       setEditing(false);
+      notify("Mensagem editada.", "success");
     } catch {
-      setError("Não foi possível editar. O prazo pode ter expirado.");
+      notify("Não foi possível editar. O prazo pode ter expirado.", "error");
     } finally {
       setBusy(false);
     }
   }
   async function remove() {
-    if (!window.confirm("Excluir esta mensagem? A conversa continuará salva."))
-      return;
     setBusy(true);
-    setError("");
     try {
       await deleteChatMessage(
         conversation,
         message,
         isLatest ? previousMessage : undefined,
       );
+      setConfirmDelete(false);
+      notify("Mensagem excluída.", "success");
     } catch {
-      setError("Não foi possível excluir. O prazo pode ter expirado.");
+      notify("Não foi possível excluir. O prazo pode ter expirado.", "error");
     } finally {
       setBusy(false);
     }
@@ -1545,12 +1647,21 @@ function ChatMessageBubble({
           <button type="button" onClick={() => { setEditText(message.text); setEditing(true); }} disabled={busy}>
             Editar
           </button>
-          <button type="button" onClick={remove} disabled={busy}>
+          <button type="button" onClick={() => setConfirmDelete(true)} disabled={busy}>
             Excluir
           </button>
         </div>
       )}
-      {error && <span className="chat-message-error" role="alert">{error}</span>}
+      {confirmDelete && (
+        <ConfirmationModal
+          title="Excluir mensagem?"
+          message="A conversa continuará salva, mas esta mensagem será removida."
+          confirmLabel="Excluir mensagem"
+          busy={busy}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => void remove()}
+        />
+      )}
     </article>
   );
 }
@@ -1703,7 +1814,12 @@ function AdminPanel() {
   );
   const [editing, setEditing] = useState("");
   const [product, setProduct] = useState(blankProduct);
-  const [message, setMessage] = useState("");
+  const notify = useToast();
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     document.title = unreadCount
@@ -1735,7 +1851,7 @@ function AdminPanel() {
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
-    setMessage("");
+    const wasEditing = Boolean(editing);
     const form = e.currentTarget;
     const f = new FormData(form);
     try {
@@ -1776,17 +1892,19 @@ function AdminPanel() {
         if (tab === "collections" && editing) {
           await updateDoc(doc(db, tab, editing), payload);
           setEditing("");
-          setMessage("Linha atualizada no banco.");
         } else {
           await addDoc(collection(db, tab), payload);
-          setMessage("Cadastro salvo no banco.");
         }
         form.reset();
       }
-      if (tab === "products") setMessage("Cadastro salvo no banco.");
+      notify(
+        wasEditing ? "Alterações salvas." : "Cadastro criado com sucesso.",
+        "success",
+      );
     } catch {
-      setMessage(
+      notify(
         "Não foi possível salvar. Confira os campos, sua permissão e a conexão com o banco.",
+        "error",
       );
     } finally {
       setBusy(false);
@@ -1797,9 +1915,9 @@ function AdminPanel() {
       await updateDoc(doc(db, "products", p.id), {
         status: p.status === "published" ? "draft" : "published",
       });
-      setMessage("Visibilidade atualizada.");
+      notify("Visibilidade atualizada.", "success");
     } catch {
-      setMessage("Não foi possível alterar a visibilidade.");
+      notify("Não foi possível alterar a visibilidade.", "error");
     }
   }
   async function toggleCollection(line: Taxonomy) {
@@ -1807,27 +1925,26 @@ function AdminPanel() {
       await updateDoc(doc(db, "collections", line.id), {
         status: line.status === "published" ? "draft" : "published",
       });
-      setMessage(
+      notify(
         line.status === "published"
           ? "Linha ocultada da vitrine."
           : "Linha publicada na vitrine.",
+        "success",
       );
     } catch {
-      setMessage("Não foi possível alterar a publicação da linha.");
+      notify("Não foi possível alterar a publicação da linha.", "error");
     }
   }
   async function remove(id: string) {
-    if (
-      !window.confirm(
-        "Excluir este cadastro? Para produtos com histórico, prefira ocultar.",
-      )
-    )
-      return;
+    setDeleteBusy(true);
     try {
       await deleteDoc(doc(db, tab, id));
-      setMessage("Cadastro excluído.");
+      notify("Cadastro excluído.", "success");
+      setPendingDelete(null);
     } catch {
-      setMessage("Não foi possível excluir.");
+      notify("Não foi possível excluir este cadastro.", "error");
+    } finally {
+      setDeleteBusy(false);
     }
   }
   const records =
@@ -1862,7 +1979,6 @@ function AdminPanel() {
               setSearchParams(next);
               setEditing("");
               setProduct(blankProduct);
-              setMessage("");
             }}
             key={id}
           >
@@ -2102,11 +2218,6 @@ function AdminPanel() {
                 Cancelar edição
               </button>
             )}
-            {message && (
-              <p role="status" className="notice">
-                {message}
-              </p>
-            )}
           </form>
           <section>
             <h2>Cadastros existentes</h2>
@@ -2130,7 +2241,6 @@ function AdminPanel() {
                           const { id, ...data } = p;
                           setProduct(data);
                           setEditing(id);
-                          setMessage("");
                         }}
                       >
                         Editar
@@ -2149,7 +2259,6 @@ function AdminPanel() {
                         className="text-button"
                         onClick={() => {
                           setEditing(r.id);
-                          setMessage("");
                         }}
                       >
                         Editar
@@ -2162,7 +2271,15 @@ function AdminPanel() {
                       </button>
                     </>
                   )}
-                  <button className="text-button" onClick={() => remove(r.id)}>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      setPendingDelete({
+                        id: r.id,
+                        label: "name" in r ? r.name : r.title,
+                      })
+                    }
+                  >
                     Excluir
                   </button>
                 </div>
@@ -2173,6 +2290,16 @@ function AdminPanel() {
             )}
           </section>
         </div>
+      )}
+      {pendingDelete && (
+        <ConfirmationModal
+          title="Excluir cadastro?"
+          message={`Tem certeza que deseja excluir “${pendingDelete.label}”? Essa ação não pode ser desfeita.`}
+          confirmLabel="Excluir"
+          busy={deleteBusy}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => void remove(pendingDelete.id)}
+        />
       )}
     </div>
   );
@@ -2662,24 +2789,23 @@ function AdminOrders({
 }
 
 function AdminOrderCard({ order }: { order: CustomerOrder }) {
+  const notify = useToast();
   const [status, setStatus] = useState(order.status);
   const [trackingCode, setTrackingCode] = useState(order.trackingCode || "");
-  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const createdAt = order.createdAt?.toDate();
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
-    setMessage("");
     try {
       await updateDoc(doc(db, "orders", order.id), {
         status,
         trackingCode: trackingCode.trim(),
         updatedAt: serverTimestamp(),
       });
-      setMessage("Status e rastreio atualizados.");
+      notify("Status e rastreio atualizados.", "success");
     } catch {
-      setMessage("Não foi possível atualizar este pedido. Tente novamente.");
+      notify("Não foi possível atualizar este pedido. Tente novamente.", "error");
     } finally {
       setBusy(false);
     }
@@ -2742,11 +2868,6 @@ function AdminOrderCard({ order }: { order: CustomerOrder }) {
         <button className="button" disabled={busy}>
           {busy ? "Salvando…" : "Atualizar pedido"}
         </button>
-        {message && (
-          <p role="status" className="notice">
-            {message}
-          </p>
-        )}
       </form>
     </article>
   );
