@@ -1,0 +1,200 @@
+import type { Dispatch, SetStateAction } from "react";
+import { Plus } from "lucide-react";
+import { POLICY_TYPES } from "../../app/constants";
+import type { Content, EventScheduleEntry, Taxonomy } from "../../data";
+
+export function AdminContentFields({
+  tab,
+  editingCategory,
+  editingLine,
+  editingContent,
+  eventSchedule,
+  setEventSchedule,
+}: {
+  tab: string;
+  editingCategory?: Taxonomy;
+  editingLine?: Taxonomy;
+  editingContent?: Content;
+  eventSchedule: EventScheduleEntry[];
+  setEventSchedule: Dispatch<SetStateAction<EventScheduleEntry[]>>;
+}) {
+  return (
+    <>
+      <label>
+        {["categories", "collections"].includes(tab) ? "Nome" : "Título"}
+        <input
+          name="name"
+          required
+          defaultValue={
+            editingCategory?.name ||
+            editingLine?.name ||
+            editingContent?.title ||
+            ""
+          }
+          maxLength={["categories", "collections"].includes(tab) ? 80 : 160}
+        />
+      </label>
+      {tab === "collections" && (
+        <label>
+          Descrição curta para a vitrine (opcional)
+          <textarea
+            name="description"
+            maxLength={220}
+            defaultValue={editingLine?.description || ""}
+          />
+        </label>
+      )}
+      {!["categories", "collections"].includes(tab) && (
+        <label>
+          {tab === "policies" ? "Texto da política" : "Texto"}
+          <textarea
+            name="body"
+            required
+            maxLength={tab === "policies" ? 12000 : 5000}
+            defaultValue={editingContent?.body || ""}
+            placeholder={
+              tab === "policies"
+                ? "Insira o texto revisado pelo ateliê."
+                : undefined
+            }
+          />
+          {tab === "policies" && (
+            <small className="field-hint">
+              Cadastre cada assunto em um item separado e publique quando
+              estiver pronto.
+            </small>
+          )}
+        </label>
+      )}
+      {tab === "events" && (
+        <>
+          <div className="event-schedule-editor">
+            <div className="event-schedule-heading">
+              <span>Data</span>
+              <span>Horário</span>
+              <span>Ação</span>
+            </div>
+            {eventSchedule.map((entry, index) => (
+              <div className="event-schedule-row" key={index}>
+                <input
+                  type="date"
+                  aria-label={`Data do horário ${index + 1}`}
+                  value={entry.date}
+                  onChange={(e) =>
+                    setEventSchedule((current) =>
+                      current.map((item, rowIndex) =>
+                        rowIndex === index
+                          ? { ...item, date: e.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                />
+                <input
+                  type="time"
+                  aria-label={`Horário da data ${index + 1}`}
+                  value={entry.time}
+                  onChange={(e) =>
+                    setEventSchedule((current) =>
+                      current.map((item, rowIndex) =>
+                        rowIndex === index
+                          ? { ...item, time: e.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                />
+                <button
+                  className="text-button event-schedule-remove"
+                  type="button"
+                  aria-label={`Remover data ${index + 1}`}
+                  onClick={() =>
+                    setEventSchedule((current) =>
+                      current.filter((_, rowIndex) => rowIndex !== index),
+                    )
+                  }
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="event-schedule-footer">
+            <button
+              className="button secondary event-schedule-add"
+              type="button"
+              disabled={eventSchedule.length >= 30}
+              onClick={() =>
+                setEventSchedule((current) => [
+                  ...current,
+                  { date: "", time: "" },
+                ])
+              }
+            >
+              <Plus size={16} /> Adicionar data
+            </button>
+          </div>
+          <small className="field-hint event-schedule-hint">
+            Adicione uma linha para cada dia ou sessão. O horário é opcional.
+          </small>
+          <label>
+            Local
+            <input
+              name="location"
+              maxLength={160}
+              defaultValue={editingContent?.location || ""}
+            />
+          </label>
+          <label>
+            Endereço
+            <input
+              name="address"
+              maxLength={300}
+              defaultValue={editingContent?.address || ""}
+            />
+          </label>
+          <label>
+            Link do mapa (opcional)
+            <input
+              type="url"
+              name="mapUrl"
+              maxLength={2000}
+              defaultValue={editingContent?.mapUrl || ""}
+              placeholder="https://…"
+            />
+          </label>
+        </>
+      )}
+      {tab === "policies" && (
+        <label>
+          Tipo de política
+          <select
+            name="policyType"
+            defaultValue={editingContent?.policyType || "general"}
+          >
+            {POLICY_TYPES.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <label>
+        Publicação
+        <select
+          name="status"
+          defaultValue={
+            editingCategory?.status ||
+            editingLine?.status ||
+            editingContent?.status ||
+            "draft"
+          }
+        >
+          <option value="draft">Rascunho</option>
+          <option value="published">Publicado</option>
+        </select>
+      </label>
+    </>
+  );
+}
