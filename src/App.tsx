@@ -16,6 +16,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -718,6 +719,7 @@ function Shop() {
 }
 function ProductPage() {
   const { id } = useParams();
+  const session = useContext(SessionContext);
   const products = useRecords<Product>("products");
   const { items, change } = useContext(BasketContext);
   const product = products.data.find((p) => p.id === id);
@@ -738,16 +740,38 @@ function ProductPage() {
             <p>
               {availability[product.availability]} · {product.stock} unidade(s)
             </p>
-            <button
-              className="button"
-              disabled={
-                product.availability !== "available" ||
-                product.stock <= (items[product.id] || 0)
-              }
-              onClick={() => change(product.id, 1)}
-            >
-              Adicionar à sacola <ShoppingBag size={18} />
-            </button>
+            <div className="product-actions">
+              <button
+                className="button"
+                disabled={
+                  product.availability !== "available" ||
+                  product.stock <= (items[product.id] || 0)
+                }
+                onClick={() => change(product.id, 1)}
+              >
+                Adicionar à sacola <ShoppingBag size={18} />
+              </button>
+              {!session.admin && (
+                <Link
+                  className="button secondary product-chat-link"
+                  to={
+                    session.user
+                      ? `/chat?${new URLSearchParams({
+                          produto: product.id,
+                          nome: product.name,
+                        }).toString()}`
+                      : `/conta?returnTo=${encodeURIComponent(
+                          `/chat?${new URLSearchParams({
+                            produto: product.id,
+                            nome: product.name,
+                          }).toString()}`,
+                        )}`
+                  }
+                >
+                  Tirar dúvidas sobre esta peça <MessageCircle size={18} />
+                </Link>
+              )}
+            </div>
             {!!items[product.id] && (
               <p role="status">
                 {items[product.id]} na sacola.{" "}
@@ -835,6 +859,14 @@ function About() {
 function Account() {
   const session = useContext(SessionContext);
   const notify = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedReturnTo = searchParams.get("returnTo") || "";
+  const returnTo =
+    requestedReturnTo.startsWith("/") && !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : "";
+  const authActionInProgress = useRef(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [busy, setBusy] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -844,6 +876,11 @@ function Account() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  useEffect(() => {
+    if (session.ready && session.user && returnTo && !authActionInProgress.current) {
+      navigate(returnTo, { replace: true });
+    }
+  }, [session.ready, session.user, returnTo, navigate]);
   useEffect(() => {
     setProfileName(session.user?.displayName || "");
     setProfileEmail(session.user?.email || "");
@@ -922,6 +959,7 @@ function Account() {
   async function login(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
+    authActionInProgress.current = true;
     const f = new FormData(e.currentTarget);
     try {
       await signInWithEmailAndPassword(
@@ -929,7 +967,9 @@ function Account() {
         String(f.get("email")),
         String(f.get("password")),
       );
+      if (returnTo) navigate(returnTo, { replace: true });
     } catch {
+      authActionInProgress.current = false;
       notify(
         "Não foi possível entrar. Confira os dados e se a autenticação está disponível.",
         "error",
@@ -952,7 +992,9 @@ function Account() {
       await updateProfile(credential.user, { displayName });
       await setDoc(doc(db, "users", credential.user.uid), { displayName });
       notify("Sua conta foi criada.", "success");
+      if (returnTo) navigate(returnTo, { replace: true });
     } catch (cause) {
+      authActionInProgress.current = false;
       const code = (cause as { code?: string }).code;
       notify(
         code === "auth/email-already-in-use"
@@ -1346,6 +1388,19 @@ function OrderCard({ order }: { order: CustomerOrder }) {
 function CustomerChat() {
   const session = useContext(SessionContext);
   const notify = useToast();
+  const [searchParams] = useSearchParams();
+  const productId = searchParams.get("produto") || "";
+  const productName = (searchParams.get("nome") || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+  const productContext = productId && productName ? productName : "";
+  const initialDraft = productContext
+    ? `Olá! Tenho uma dúvida sobre a peça ${productContext}.`
+    : "";
+  const chatPath = searchParams.size
+    ? `/chat?${searchParams.toString()}`
+    : "/chat";
   const chat = useCustomerConversation(session.user?.uid);
   const attemptedUsers = useRef(new Set<string>());
   useEffect(() => {
@@ -1379,7 +1434,10 @@ function CustomerChat() {
         <div className="eyebrow">ATENDIMENTO HOSKEN BIOJOIAS</div>
         <h1>Fale com o ateliê</h1>
         <p className="lead">Entre na sua conta para iniciar uma conversa.</p>
-        <Link className="button" to="/conta">
+        <Link
+          className="button"
+          to={`/conta?returnTo=${encodeURIComponent(chatPath)}`}
+        >
           Entrar ou criar conta <ArrowRight size={18} />
         </Link>
       </div>
@@ -1402,6 +1460,15 @@ function CustomerChat() {
       <p className="lead">
         Envie sua mensagem. Nossa equipe responderá por aqui.
       </p>
+      {productContext && (
+        <div className="chat-product-context">
+          <span className="eyebrow">PEÇA EM FOCO</span>
+          <Link to={`/produto/${encodeURIComponent(productId)}`}>
+            {productContext} <ArrowRight size={16} />
+          </Link>
+          <small>Deixamos uma mensagem sobre esta peça pronta para você revisar.</small>
+        </div>
+      )}
       {chat.loading && <p role="status">Carregando conversa…</p>}
       {chat.error && (
         <p className="notice" role="alert">
@@ -1421,6 +1488,7 @@ function CustomerChat() {
           senderId={session.user.uid}
           senderRole="customer"
           otherPartyName="Hosken Biojoias"
+          initialDraft={initialDraft}
         />
       )}
     </div>
@@ -1431,11 +1499,13 @@ function ChatThread({
   senderId,
   senderRole,
   otherPartyName,
+  initialDraft = "",
 }: {
   conversation: ChatConversation;
   senderId: string;
   senderRole: ChatMessage["senderRole"];
   otherPartyName: string;
+  initialDraft?: string;
 }) {
   const conversationId = conversation.id;
   const unreadCount = senderRole === "admin"
@@ -1447,6 +1517,11 @@ function ChatThread({
   const [sendError, setSendError] = useState("");
   const [now, setNow] = useState(Date.now());
   const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (initialDraft) {
+      setText((current) => (current.trim() ? current : initialDraft));
+    }
+  }, [initialDraft]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30000);
     return () => window.clearInterval(timer);
