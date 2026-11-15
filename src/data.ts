@@ -34,12 +34,22 @@ export type Product = {
   status: string;
   availability: string;
   imageUrl: string;
+  imageUrls?: string[];
+  imagePaths?: string[];
+  materials?: string;
+  dimensions?: string;
+  careInstructions?: string;
 };
 export type Content = {
   id: string;
   title: string;
   body: string;
   status: string;
+  eventDate?: string;
+  eventTime?: string;
+  location?: string;
+  address?: string;
+  mapUrl?: string;
 };
 export type OrderItem = {
   productId: string;

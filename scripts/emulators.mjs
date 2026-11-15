@@ -16,7 +16,7 @@ const args = test
       "--project",
       "demo-hosken",
       "--only",
-      "auth,firestore",
+      "auth,firestore,storage",
       "--export-on-exit=.emulator-data",
     ];
 if (!test && existsSync(".emulator-data/firebase-export-metadata.json"))

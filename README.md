@@ -1,6 +1,6 @@
 # Hosken Biojoias
 
-Loja em React + TypeScript + Vite, com Firebase Authentication e Firestore locais. O chat de texto funciona em tempo real; checkout, frete e notificações push ainda serão implementados. O PWA será preparado em uma etapa posterior.
+Loja em React + TypeScript + Vite, com Firebase Authentication, Firestore e Storage locais. O chat de texto funciona em tempo real; checkout, frete e notificações push ainda serão implementados. O PWA será preparado em uma etapa posterior.
 
 ## Começar sem conta Firebase
 
@@ -30,14 +30,17 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - Layout responsivo, filtros por linha e tipo cadastrados no banco.
 - Login e autorização administrativa com custom claim `admin: true`.
 - Clientes podem criar contas em `/conta` com nome, e-mail e senha. A página `/pedidos` mostra, em tempo real, os pedidos associados à conta, com status, itens, valores e código de rastreio.
-- Cadastro e edição de produtos, preços em centavos, estoque, disponibilidade e visibilidade.
-- Cadastro de linhas, tipos de peça e conteúdo; exclusão e consulta em tempo real.
+- Cadastro e edição de produtos, preços em centavos, estoque, disponibilidade, visibilidade, materiais, medidas e cuidados.
+- Upload de até seis fotos por produto pelo Firebase Storage; a página de cada peça mostra uma galeria. O emulador de Storage é iniciado junto dos demais em `npm run emulators`.
+- Cadastro e edição de linhas, tipos de peça, novidades, eventos, lojas parceiras e políticas; exclusão e consulta em tempo real.
+- Eventos podem incluir data, horário, local, endereço e link de mapa. A página pública organiza os eventos por data.
+- A página Políticas da loja é alimentada pelo painel administrativo. O ateliê cadastra e publica os próprios textos antes de abrir a loja.
 - Histórico de pedidos com leitura em tempo real, status, itens, valores e rastreio. Três registros fictícios aparecem na conta administrativa do emulador.
 - Chat de texto em tempo real: clientes abrem o chat diretamente pela bolinha flutuante; a equipe acessa pela mesma bolinha ou por `/admin` → Atendimento. O painel abre primeiro em Pedidos e tem um sino com atalhos para pedidos novos e mensagens/atendimentos não lidos. Cada pessoa pode editar ou excluir somente as próprias mensagens por até uma hora. A conversa continua salva. Conversas e mensagens são privadas ao cliente e à equipe autorizada.
 - WhatsApp, Instagram e e-mail na página de contato. O e-mail informado é pessoal e ficará público no site.
 - Logo fornecida pela família; produtos de exemplo usam ilustrações provisórias. Fotos são cadastradas por URL nesta etapa. Upload será implementado com Storage.
 
-Produtos e preços do seed são demonstrativos. Eventos e lojas parceiras têm título e texto nesta base; campos próprios de data, localização e mapa serão acrescentados antes do lançamento. Conteúdo ainda não tem editor de atualização. O carrinho confere disponibilidade para exibição; o checkout deverá revalidar todos os dados no servidor.
+Produtos e preços do seed são demonstrativos. O carrinho confere disponibilidade para exibição; o checkout deverá revalidar todos os dados no servidor.
 
 ## Estrutura do banco
 
@@ -45,8 +48,8 @@ Produtos e preços do seed são demonstrativos. Eventos e lojas parceiras têm t
 | --------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `collections`                     | name, slug, status                                                                                   | Público: publicados; admin: escrita                                                   |
 | `categories`                      | name, slug, status                                                                                   | Público: publicados; admin: escrita                                                   |
-| `products`                        | name, description, priceCents, stock, categoryId, collectionId, availability, status, imageUrl       | Público: publicados; admin: escrita                                                   |
-| `news`, `events`, `partnerStores` | title, body, status                                                                                  | Público: publicados; admin: escrita                                                   |
+| `products`                        | name, description, priceCents, stock, categoryId, collectionId, availability, status, imageUrls, imagePaths, materials, dimensions, careInstructions | Público: publicados; admin: escrita                                                   |
+| `news`, `events`, `partnerStores`, `policies` | title, body, status; eventos também podem ter eventDate, eventTime, location, address, mapUrl | Público: publicados; admin: escrita                                                   |
 | `users`                           | displayName                                                                                          | Dono pode escrever campos permitidos; admin pode ler                                  |
 | `orders`                          | orderNumber, userId, customerName, customerEmail, items, totalCents, status, createdAt, trackingCode | Dono pode ler; admin lê e atualiza status/rastreio; backend cria e confirma pagamento |
 | `conversations/{uid}`             | customerId, customerName, customerEmail, lastMessage, unread counters, timestamps                    | Cliente dono e admin autorizado; criação pelo próprio cliente                         |
@@ -83,7 +86,7 @@ Os testes usam um Firestore temporário no projeto `demo-hosken`, sem login Goog
 3. Criar sua conta real. Atribuir `admin: true` ao seu UID via Admin SDK em um ambiente confiável. Nenhum cliente pode atribuir essa permissão. Não reutilizar a senha local.
 4. Revisar e publicar `firestore.rules` e índices no projeto real, explicitando `--project SEU_PROJECT_ID`. O projeto padrão continua sendo `demo-hosken` para evitar ações acidentais.
 5. Migrar os cadastros reais com script controlado. O seed é deliberadamente limitado aos emuladores e não faz essa migração.
-6. Configurar Storage e suas regras para uploads; integrar checkout/backend antes de aceitar pedidos.
+6. Habilitar Firebase Storage, configurar `VITE_FIREBASE_STORAGE_BUCKET` e publicar também `storage.rules`; integrar checkout/backend antes de aceitar pedidos.
 
 O projeto real começa separado do banco local. Nunca colocar chaves do Admin SDK, tokens ou contas de serviço no frontend/Git. Os identificadores públicos de configuração web não substituem regras de autorização.
 

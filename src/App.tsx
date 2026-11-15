@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type ChangeEvent,
   type FormEvent,
   type RefObject,
   type SetStateAction,
@@ -42,6 +43,12 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import {
+  deleteObject,
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytes,
+} from "firebase/storage";
+import {
   ArrowRight,
   ShoppingBag,
   Flower2,
@@ -61,7 +68,7 @@ import {
   AlertTriangle,
   Info,
 } from "lucide-react";
-import { auth, db, localMode } from "./firebase";
+import { auth, db, localMode, storage } from "./firebase";
 import {
   money,
   useCustomerOrders,
@@ -287,6 +294,7 @@ export default function App() {
             />
             <Route path="/sobre" element={<About />} />
             <Route path="/contato" element={<Contact />} />
+            <Route path="/politicas" element={<PoliciesPage />} />
             <Route path="/conta" element={<Account />} />
             <Route path="/pedidos" element={<OrdersPage />} />
             <Route path="/chat" element={<CustomerChat />} />
@@ -331,6 +339,7 @@ export default function App() {
             </a>
             <a href="mailto:nil2martins@gmail.com">E-mail</a>
             <Link to="/contato">Contato</Link>
+            <Link to="/politicas">Políticas da loja</Link>
             {session.admin && <Link to="/admin">Administrar</Link>}
           </div>
           <small>© {new Date().getFullYear()} Hosken Biojoias</small>
@@ -626,11 +635,17 @@ function Notice({ loading, error }: { loading: boolean; error: string }) {
     </p>
   ) : null;
 }
-function PieceArt({ product }: { product: Product }) {
+function getProductImages(product: Pick<Product, "imageUrls" | "imageUrl">) {
+  return Array.from(
+    new Set([...(product.imageUrls || []), product.imageUrl || ""].filter(Boolean)),
+  ).slice(0, 6);
+}
+function PieceArt({ product, imageUrl }: { product: Product; imageUrl?: string }) {
+  const image = imageUrl ?? getProductImages(product)[0] ?? "";
   return (
     <div className="piece-art">
-      {product.imageUrl ? (
-        <img src={product.imageUrl} alt={product.name} />
+      {image ? (
+        <img src={image} alt={product.name} decoding="async" />
       ) : (
         <>
           <Flower2 strokeWidth={0.65} />
@@ -638,6 +653,32 @@ function PieceArt({ product }: { product: Product }) {
         </>
       )}
       <span className="tag">{availability[product.availability]}</span>
+    </div>
+  );
+}
+function ProductGallery({ product }: { product: Product }) {
+  const images = getProductImages(product);
+  const [selectedImage, setSelectedImage] = useState(0);
+  useEffect(() => setSelectedImage(0), [product.id]);
+  return (
+    <div className="product-gallery">
+      <PieceArt product={product} imageUrl={images[selectedImage]} />
+      {images.length > 1 && (
+        <div className="product-thumbnails" aria-label="Fotos do produto">
+          {images.map((image, index) => (
+            <button
+              type="button"
+              key={`${image}-${index}`}
+              className={selectedImage === index ? "selected" : ""}
+              aria-label={`Ver foto ${index + 1} de ${images.length}`}
+              aria-pressed={selectedImage === index}
+              onClick={() => setSelectedImage(index)}
+            >
+              <img src={image} alt="" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -744,12 +785,29 @@ function ProductPage() {
       <Notice {...products} />
       {product ? (
         <div className="product-detail">
-          <PieceArt product={product} />
+          <ProductGallery product={product} />
           <div>
             <div className="eyebrow">UM ENCONTRO COM A NATUREZA</div>
             <h1>{product.name}</h1>
             <p className="price">{money(product.priceCents)}</p>
             <p className="description">{product.description}</p>
+            {(product.materials || product.dimensions || product.careInstructions) ? (
+              <dl className="product-specs">
+                {product.materials && (
+                  <div><dt>Materiais</dt><dd>{product.materials}</dd></div>
+                )}
+                {product.dimensions && (
+                  <div><dt>Medidas</dt><dd>{product.dimensions}</dd></div>
+                )}
+                {product.careInstructions && (
+                  <div><dt>Cuidados</dt><dd>{product.careInstructions}</dd></div>
+                )}
+              </dl>
+            ) : (
+              <p className="muted product-details-pending">
+                Mais detalhes sobre materiais, medidas e cuidados serão adicionados em breve.
+              </p>
+            )}
             <p>
               {availability[product.availability]} · {product.stock} unidade(s)
             </p>
@@ -791,10 +849,6 @@ function ProductPage() {
                 <Link to="/carrinho">Ver carrinho →</Link>
               </p>
             )}
-            <p className="muted">
-              Materiais, medidas e cuidados serão informados em cada cadastro
-              real.
-            </p>
           </div>
         </div>
       ) : (
@@ -813,6 +867,14 @@ function ContentPage({
   subtitle: string;
 }) {
   const records = useRecords<Content>(name);
+  const displayedRecords =
+    name === "events"
+      ? [...records.data].sort((a, b) =>
+          (a.eventDate || "9999-12-31").localeCompare(
+            b.eventDate || "9999-12-31",
+          ),
+        )
+      : records.data;
   return (
     <div className="page">
       <div className="eyebrow">UNIVERSO HOSKEN BIOJOIAS</div>
@@ -820,10 +882,29 @@ function ContentPage({
       <p className="lead">{subtitle}</p>
       <Notice {...records} />
       <div className="content-grid">
-        {records.data.map((r) => (
+        {displayedRecords.map((r) => (
           <article className="content-card" key={r.id}>
             <Flower2 size={28} />
             <h2>{r.title}</h2>
+            {name === "events" &&
+              (r.eventDate || r.eventTime || r.location || r.address || r.mapUrl) && (
+                <div className="event-details">
+                  {(r.eventDate || r.eventTime) && (
+                    <p>
+                      {r.eventDate && formatEventDate(r.eventDate)}
+                      {r.eventDate && r.eventTime && " · "}
+                      {r.eventTime}
+                    </p>
+                  )}
+                  {r.location && <p>{r.location}</p>}
+                  {r.address && <p>{r.address}</p>}
+                  {isHttpUrl(r.mapUrl) && (
+                    <a href={r.mapUrl} target="_blank" rel="noreferrer">
+                      Como chegar <ArrowRight size={15} />
+                    </a>
+                  )}
+                </div>
+              )}
             <p>{r.body}</p>
           </article>
         ))}
@@ -833,6 +914,52 @@ function ContentPage({
           <Leaf />
           <h2>Em breve, novidades por aqui.</h2>
           <p>Os próximos anúncios aparecerão nesta página.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+function formatEventDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "long",
+  }).format(new Date(year, month - 1, day));
+}
+function isHttpUrl(value?: string) {
+  if (!value) return false;
+  try {
+    return ["http:", "https:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
+function PoliciesPage() {
+  const policies = useRecords<Content>("policies");
+  return (
+    <div className="page">
+      <div className="eyebrow">INFORMAÇÕES DA LOJA</div>
+      <h1>Políticas da loja</h1>
+      <p className="lead">
+        Consulte as informações sobre compras, entregas, trocas e privacidade.
+      </p>
+      <Notice {...policies} />
+      <div className="content-grid">
+        {policies.data.map((policy) => (
+          <article className="content-card policy-card" key={policy.id}>
+            <h2>{policy.title}</h2>
+            <p>{policy.body}</p>
+          </article>
+        ))}
+      </div>
+      {!policies.loading && !policies.error && !policies.data.length && (
+        <div className="empty">
+          <Leaf />
+          <h2>Estamos preparando estas informações.</h2>
+          <p>
+            As políticas de entrega, trocas e privacidade serão publicadas pelo
+            ateliê antes da abertura da loja.
+          </p>
         </div>
       )}
     </div>
@@ -1892,6 +2019,11 @@ const blankProduct = {
   status: "draft",
   availability: "available",
   imageUrl: "",
+  imageUrls: [] as string[],
+  imagePaths: [] as string[],
+  materials: "",
+  dimensions: "",
+  careInstructions: "",
 };
 type DemoReportSale = {
   orderNumber: string;
@@ -2154,6 +2286,7 @@ function AdminPanel() {
     "news",
     "events",
     "partnerStores",
+    "policies",
   ];
   const requestedTab = searchParams.get("tab");
   const tab = requestedTab && validTabs.includes(requestedTab) ? requestedTab : "orders";
@@ -2167,11 +2300,16 @@ function AdminPanel() {
   const cats = useRecords<Taxonomy>("categories", true);
   const lines = useRecords<Taxonomy>("collections", true);
   const content = useRecords<Content>(
-    ["news", "events", "partnerStores"].includes(tab) ? tab : "news",
+    ["news", "events", "partnerStores", "policies"].includes(tab)
+      ? tab
+      : "news",
     true,
   );
   const [editing, setEditing] = useState("");
   const [product, setProduct] = useState(blankProduct);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const uploadedImagePaths = useRef(new Set<string>());
+  const removedImagePaths = useRef(new Set<string>());
   const notify = useToast();
   const [pendingDelete, setPendingDelete] = useState<{
     id: string;
@@ -2206,7 +2344,81 @@ function AdminPanel() {
     ["news", "Novidades"],
     ["events", "Eventos"],
     ["partnerStores", "Lojas parceiras"],
+    ["policies", "Políticas"],
   ];
+  async function discardUnsavedProductImages() {
+    const paths = Array.from(uploadedImagePaths.current);
+    uploadedImagePaths.current.clear();
+    await Promise.allSettled(
+      paths.map((path) => deleteObject(storageRef(storage, path))),
+    );
+  }
+  function removeProductImage(index: number) {
+    const images = product.imageUrls || getProductImages(product);
+    const paths = product.imagePaths || images.map(() => "");
+    const removedPath = paths[index];
+    if (removedPath) removedImagePaths.current.add(removedPath);
+    setProduct({
+      ...product,
+      imageUrls: images.filter((_, imageIndex) => imageIndex !== index),
+      imagePaths: paths.filter((_, imageIndex) => imageIndex !== index),
+      imageUrl: "",
+    });
+  }
+  async function uploadProductImages(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const files = Array.from(input.files || []);
+    input.value = "";
+    if (!files.length) return;
+    if (getProductImages(product).length + files.length > 6) {
+      notify("Cada produto pode ter até 6 fotos.", "warning");
+      return;
+    }
+    if (
+      files.some(
+        (file) =>
+          !file.type.startsWith("image/") || file.size > 10 * 1024 * 1024,
+      )
+    ) {
+      notify("Escolha imagens de até 10 MB cada.", "warning");
+      return;
+    }
+    const user = auth.currentUser;
+    if (!user) {
+      notify("Entre com a conta administradora para enviar fotos.", "error");
+      return;
+    }
+    setUploadingImages(true);
+    const uploaded: { path: string; url: string }[] = [];
+    try {
+      for (const file of files) {
+        const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-80);
+        const path = `products/${user.uid}/${crypto.randomUUID()}-${fileName}`;
+        const target = storageRef(storage, path);
+        await uploadBytes(target, file, { contentType: file.type });
+        uploaded.push({ path, url: "" });
+        uploaded[uploaded.length - 1].url = await getDownloadURL(target);
+      }
+      uploaded.forEach(({ path }) => uploadedImagePaths.current.add(path));
+      setProduct((current) => ({
+        ...current,
+        imageUrls: [...getProductImages(current), ...uploaded.map(({ url }) => url)],
+        imagePaths: [
+          ...(current.imagePaths || getProductImages(current).map(() => "")),
+          ...uploaded.map(({ path }) => path),
+        ],
+        imageUrl: "",
+      }));
+      notify("Fotos carregadas. Salve o produto para confirmar as alterações.", "success");
+    } catch {
+      await Promise.allSettled(
+        uploaded.map(({ path }) => deleteObject(storageRef(storage, path))),
+      );
+      notify("Não foi possível enviar as fotos. Confira o Firebase Storage.", "error");
+    } finally {
+      setUploadingImages(false);
+    }
+  }
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -2219,22 +2431,35 @@ function AdminPanel() {
           !Number.isSafeInteger(product.priceCents) ||
           product.priceCents < 0 ||
           !Number.isSafeInteger(product.stock) ||
-          product.stock < 0
+          product.stock < 0 ||
+          !Number.isSafeInteger(product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD) ||
+          (product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD) < 0
         )
           throw new Error("invalid");
         const productToSave = {
           ...product,
+          imageUrls: product.imageUrls || getProductImages(product),
+          imagePaths: product.imagePaths || [],
+          imageUrl:
+            product.imageUrls?.[0] || product.imageUrl || "",
           lowStockThreshold:
             product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
         };
         if (editing)
           await updateDoc(doc(db, "products", editing), productToSave);
         else await addDoc(collection(db, "products"), productToSave);
+        const removedPaths = Array.from(removedImagePaths.current);
+        removedImagePaths.current.clear();
+        await Promise.allSettled(
+          removedPaths.map((path) => deleteObject(storageRef(storage, path))),
+        );
+        uploadedImagePaths.current.clear();
         setProduct(blankProduct);
         setEditing("");
       } else {
         const name = String(f.get("name")).trim();
         const isTaxonomy = ["categories", "collections"].includes(tab);
+        const isEvent = tab === "events";
         const payload = isTaxonomy
           ? {
               name,
@@ -2253,8 +2478,17 @@ function AdminPanel() {
               title: name,
               body: String(f.get("body")).trim(),
               status: String(f.get("status")),
+              ...(isEvent
+                ? {
+                    eventDate: String(f.get("eventDate") || ""),
+                    eventTime: String(f.get("eventTime") || ""),
+                    location: String(f.get("location") || "").trim(),
+                    address: String(f.get("address") || "").trim(),
+                    mapUrl: String(f.get("mapUrl") || "").trim(),
+                  }
+                : {}),
             };
-        if (tab === "collections" && editing) {
+        if (editing) {
           await updateDoc(doc(db, tab, editing), payload);
           setEditing("");
         } else {
@@ -2303,7 +2537,16 @@ function AdminPanel() {
   async function remove(id: string) {
     setDeleteBusy(true);
     try {
+      const removedProduct =
+        tab === "products" ? products.data.find((item) => item.id === id) : undefined;
       await deleteDoc(doc(db, tab, id));
+      if (removedProduct?.imagePaths?.length) {
+        await Promise.allSettled(
+          removedProduct.imagePaths.filter(Boolean).map((path) =>
+            deleteObject(storageRef(storage, path)),
+          ),
+        );
+      }
       notify("Cadastro excluído.", "success");
       setPendingDelete(null);
     } catch {
@@ -2324,6 +2567,14 @@ function AdminPanel() {
     tab === "collections"
       ? lines.data.find((line) => line.id === editing)
       : undefined;
+  const editingCategory =
+    tab === "categories"
+      ? cats.data.find((category) => category.id === editing)
+      : undefined;
+  const editingContent =
+    ["news", "events", "partnerStores", "policies"].includes(tab)
+      ? content.data.find((record) => record.id === editing)
+      : undefined;
   return (
     <div className="page">
       <div className="eyebrow">ÁREA RESTRITA</div>
@@ -2336,7 +2587,10 @@ function AdminPanel() {
         {tabs.map(([id, label]) => (
           <button
             className={tab === id ? "selected" : ""}
+            disabled={uploadingImages}
             onClick={() => {
+              void discardUnsavedProductImages();
+              removedImagePaths.current.clear();
               const next = new URLSearchParams(searchParams);
               next.set("tab", id);
               if (id !== "chat") next.delete("conversation");
@@ -2387,7 +2641,11 @@ function AdminPanel() {
               {editing
                 ? tab === "products"
                   ? "Editar peça"
-                  : "Editar linha"
+                  : tab === "categories"
+                    ? "Editar tipo de peça"
+                    : tab === "collections"
+                      ? "Editar linha"
+                      : "Editar conteúdo"
                 : "Novo cadastro"}
             </h2>
             {tab === "products" ? (
@@ -2520,15 +2778,60 @@ function AdminPanel() {
                   </select>
                 </label>
                 <label>
-                  URL da foto (opcional)
+                  Fotos da peça
                   <input
-                    type="url"
-                    maxLength={2000}
-                    value={product.imageUrl}
-                    onChange={(e) =>
-                      setProduct({ ...product, imageUrl: e.target.value })
-                    }
-                    placeholder="https://…"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploadingImages || getProductImages(product).length >= 6}
+                    onChange={(e) => void uploadProductImages(e)}
+                  />
+                  <small className="field-hint">
+                    Envie até 6 imagens, com no máximo 10 MB cada.
+                    {uploadingImages ? " Enviando fotos…" : ""}
+                  </small>
+                </label>
+                {getProductImages(product).length > 0 && (
+                  <div className="admin-product-images" aria-label="Fotos cadastradas">
+                    {getProductImages(product).map((image, index) => (
+                      <div className="admin-product-image" key={`${image}-${index}`}>
+                        <img src={image} alt={`Foto ${index + 1} de ${product.name || "produto"}`} />
+                        <button
+                          type="button"
+                          className="text-button"
+                          disabled={uploadingImages}
+                          onClick={() => removeProductImage(index)}
+                        >
+                          Remover foto
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label>
+                  Materiais (opcional)
+                  <input
+                    maxLength={500}
+                    value={product.materials || ""}
+                    onChange={(e) => setProduct({ ...product, materials: e.target.value })}
+                    placeholder="Ex.: orquídea natural, resina e metal"
+                  />
+                </label>
+                <label>
+                  Medidas (opcional)
+                  <input
+                    maxLength={300}
+                    value={product.dimensions || ""}
+                    onChange={(e) => setProduct({ ...product, dimensions: e.target.value })}
+                    placeholder="Ex.: pingente com 3 cm"
+                  />
+                </label>
+                <label>
+                  Cuidados com a peça (opcional)
+                  <textarea
+                    maxLength={1500}
+                    value={product.careInstructions || ""}
+                    onChange={(e) => setProduct({ ...product, careInstructions: e.target.value })}
                   />
                 </label>
                 <label>
@@ -2553,7 +2856,7 @@ function AdminPanel() {
                   <input
                     name="name"
                     required
-                    defaultValue={editingLine?.name || ""}
+                    defaultValue={editingCategory?.name || editingLine?.name || editingContent?.title || ""}
                     maxLength={
                       ["categories", "collections"].includes(tab) ? 80 : 160
                     }
@@ -2571,15 +2874,52 @@ function AdminPanel() {
                 )}
                 {!["categories", "collections"].includes(tab) && (
                   <label>
-                    Texto
-                    <textarea name="body" required maxLength={5000} />
+                    {tab === "policies" ? "Texto da política" : "Texto"}
+                    <textarea
+                      name="body"
+                      required
+                      maxLength={tab === "policies" ? 12000 : 5000}
+                      defaultValue={editingContent?.body || ""}
+                      placeholder={tab === "policies" ? "Insira o texto revisado pelo ateliê." : undefined}
+                    />
+                    {tab === "policies" && (
+                      <small className="field-hint">
+                        Cadastre cada assunto em um item separado e publique quando estiver pronto.
+                      </small>
+                    )}
                   </label>
+                )}
+                {tab === "events" && (
+                  <>
+                    <div className="form-pair">
+                      <label>
+                        Data
+                        <input type="date" name="eventDate" defaultValue={editingContent?.eventDate || ""} />
+                      </label>
+                      <label>
+                        Horário
+                        <input type="time" name="eventTime" defaultValue={editingContent?.eventTime || ""} />
+                      </label>
+                    </div>
+                    <label>
+                      Local
+                      <input name="location" maxLength={160} defaultValue={editingContent?.location || ""} />
+                    </label>
+                    <label>
+                      Endereço
+                      <input name="address" maxLength={300} defaultValue={editingContent?.address || ""} />
+                    </label>
+                    <label>
+                      Link do mapa (opcional)
+                      <input type="url" name="mapUrl" maxLength={2000} defaultValue={editingContent?.mapUrl || ""} placeholder="https://…" />
+                    </label>
+                  </>
                 )}
                 <label>
                   Publicação
                   <select
                     name="status"
-                    defaultValue={editingLine?.status || "draft"}
+                    defaultValue={editingCategory?.status || editingLine?.status || editingContent?.status || "draft"}
                   >
                     <option value="draft">Rascunho</option>
                     <option value="published">Publicado</option>
@@ -2587,7 +2927,7 @@ function AdminPanel() {
                 </label>
               </>
             )}
-            <button className="button" disabled={busy}>
+            <button className="button" disabled={busy || uploadingImages}>
               {busy
                 ? "Salvando…"
                 : editing
@@ -2599,7 +2939,10 @@ function AdminPanel() {
               <button
                 type="button"
                 className="text-button"
+                disabled={uploadingImages}
                 onClick={() => {
+                  void discardUnsavedProductImages();
+                  removedImagePaths.current.clear();
                   setEditing("");
                   setProduct(blankProduct);
                 }}
@@ -2650,11 +2993,24 @@ function AdminPanel() {
                     <>
                       <button
                         className="text-button"
+                        disabled={uploadingImages}
                         onClick={() => {
+                          void discardUnsavedProductImages();
+                          removedImagePaths.current.clear();
                           const p = r as Product;
                           const { id, ...data } = p;
+                          const imageUrls = data.imageUrls?.length
+                            ? data.imageUrls
+                            : data.imageUrl
+                              ? [data.imageUrl]
+                              : [];
                           setProduct({
+                            ...blankProduct,
                             ...data,
+                            imageUrls,
+                            imagePaths: data.imagePaths?.length
+                              ? data.imagePaths
+                              : imageUrls.map(() => ""),
                             lowStockThreshold:
                               data.lowStockThreshold ??
                               DEFAULT_LOW_STOCK_THRESHOLD,
@@ -2666,6 +3022,7 @@ function AdminPanel() {
                       </button>
                       <button
                         className="text-button"
+                        disabled={uploadingImages}
                         onClick={() => toggleProduct(r as Product)}
                       >
                         {r.status === "published" ? "Ocultar" : "Publicar"}
@@ -2676,6 +3033,7 @@ function AdminPanel() {
                     <>
                       <button
                         className="text-button"
+                        disabled={uploadingImages}
                         onClick={() => {
                           setEditing(r.id);
                         }}
@@ -2690,8 +3048,21 @@ function AdminPanel() {
                       </button>
                     </>
                   )}
+                  {["categories", "news", "events", "partnerStores", "policies"].includes(tab) && (
+                    <button
+                      className="text-button"
+                      disabled={uploadingImages}
+                      onClick={() => {
+                        setProduct(blankProduct);
+                        setEditing(r.id);
+                      }}
+                    >
+                      Editar
+                    </button>
+                  )}
                   <button
                     className="text-button"
+                    disabled={uploadingImages}
                     onClick={() =>
                       setPendingDelete({
                         id: r.id,

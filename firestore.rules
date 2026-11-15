@@ -22,13 +22,23 @@ service cloud.firestore {
     match /products/{id} {
       allow read: if resource.data.status == 'published' || admin();
       allow create, update: if admin()
-        && request.resource.data.keys().hasOnly(['name','description','priceCents','stock','lowStockThreshold','categoryId','collectionId','status','availability','imageUrl'])
+        && request.resource.data.keys().hasOnly(['name','description','priceCents','stock','lowStockThreshold','categoryId','collectionId','status','availability','imageUrl','imageUrls','imagePaths','materials','dimensions','careInstructions'])
         && text(request.resource.data.name, 120)
         && text(request.resource.data.description, 3000)
         && request.resource.data.priceCents is int && request.resource.data.priceCents >= 0
         && request.resource.data.stock is int && request.resource.data.stock >= 0
         && (!('lowStockThreshold' in request.resource.data)
           || (request.resource.data.lowStockThreshold is int && request.resource.data.lowStockThreshold >= 0 && request.resource.data.lowStockThreshold <= 10000))
+        && (!('imageUrls' in request.resource.data)
+          || (request.resource.data.imageUrls is list && request.resource.data.imageUrls.size() <= 6))
+        && (!('imagePaths' in request.resource.data)
+          || (request.resource.data.imagePaths is list && request.resource.data.imagePaths.size() <= 6))
+        && (!('materials' in request.resource.data)
+          || (request.resource.data.materials is string && request.resource.data.materials.size() <= 500))
+        && (!('dimensions' in request.resource.data)
+          || (request.resource.data.dimensions is string && request.resource.data.dimensions.size() <= 300))
+        && (!('careInstructions' in request.resource.data)
+          || (request.resource.data.careInstructions is string && request.resource.data.careInstructions.size() <= 1500))
         && request.resource.data.status in ['published','draft']
         && request.resource.data.availability in ['available','soldout','prelaunch','made-to-order']
         && request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 2000
@@ -37,12 +47,29 @@ service cloud.firestore {
       allow delete: if admin();
     }
     match /{contentCollection}/{id} {
-      allow read: if contentCollection in ['news','events','partnerStores'] && (resource.data.status == 'published' || admin());
-      allow create, update: if contentCollection in ['news','events','partnerStores'] && admin()
-        && request.resource.data.keys().hasOnly(['title','body','status'])
-        && text(request.resource.data.title, 160) && text(request.resource.data.body, 5000)
-        && request.resource.data.status in ['published','draft'];
-      allow delete: if contentCollection in ['news','events','partnerStores'] && admin();
+      allow read: if contentCollection in ['news','events','partnerStores','policies'] && (resource.data.status == 'published' || admin());
+      allow create, update: if admin()
+        && (contentCollection == 'events'
+          ? request.resource.data.keys().hasOnly(['title','body','status','eventDate','eventTime','location','address','mapUrl'])
+            && text(request.resource.data.title, 160)
+            && text(request.resource.data.body, 5000)
+            && request.resource.data.status in ['published','draft']
+            && (!('eventDate' in request.resource.data) || (request.resource.data.eventDate is string && request.resource.data.eventDate.size() <= 10))
+            && (!('eventTime' in request.resource.data) || (request.resource.data.eventTime is string && request.resource.data.eventTime.size() <= 20))
+            && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 160))
+            && (!('address' in request.resource.data) || (request.resource.data.address is string && request.resource.data.address.size() <= 300))
+            && (!('mapUrl' in request.resource.data) || (request.resource.data.mapUrl is string && request.resource.data.mapUrl.size() <= 2000))
+          : contentCollection == 'policies'
+            ? request.resource.data.keys().hasOnly(['title','body','status'])
+              && text(request.resource.data.title, 160)
+              && text(request.resource.data.body, 12000)
+              && request.resource.data.status in ['published','draft']
+            : contentCollection in ['news','partnerStores']
+              && request.resource.data.keys().hasOnly(['title','body','status'])
+              && text(request.resource.data.title, 160)
+              && text(request.resource.data.body, 5000)
+              && request.resource.data.status in ['published','draft']);
+      allow delete: if contentCollection in ['news','events','partnerStores','policies'] && admin();
     }
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || admin());
