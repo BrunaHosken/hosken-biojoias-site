@@ -129,6 +129,7 @@ export default function App() {
   });
   const [items, setItems] = useState(readBasket);
   const [menu, setMenu] = useState(false);
+  const [compactHeader, setCompactHeader] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastId = useRef(0);
   const notify = useCallback((message: string, kind: ToastKind = "success") => {
@@ -163,6 +164,12 @@ export default function App() {
       /* O carrinho continua funcionando em memória. */
     }
   }, [items]);
+  useEffect(() => {
+    const updateHeaderSize = () => setCompactHeader(window.scrollY > 48);
+    updateHeaderSize();
+    window.addEventListener("scroll", updateHeaderSize, { passive: true });
+    return () => window.removeEventListener("scroll", updateHeaderSize);
+  }, []);
   const change = (id: string, delta: number) =>
     setItems((previous) => {
       const next = { ...previous };
@@ -184,7 +191,9 @@ export default function App() {
           </div>
         )}
         {toast && <ToastNotice toast={toast} onDismiss={() => setToast(null)} />}
-        <header>
+        <header
+          className={`site-header ${compactHeader ? "header-compact" : ""}`}
+        >
           <Link to="/" className="wordmark">
             <span>HOSKEN BIOJOIAS</span>
             <small>FEITO À MÃO</small>

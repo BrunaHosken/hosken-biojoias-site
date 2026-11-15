@@ -102,6 +102,33 @@ header {
   gap: 24px;
   background: #fffdf9;
 }
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: height 180ms ease, padding 180ms ease, box-shadow 180ms ease;
+}
+.site-header.header-compact {
+  height: 76px;
+  box-shadow: 0 6px 18px #342e2d14;
+}
+.site-header.header-compact .wordmark {
+  font-size: 24px;
+  letter-spacing: 1.4px;
+}
+.site-header.header-compact .wordmark small {
+  display: none;
+}
+.site-header.header-compact nav {
+  gap: 17px;
+  font-size: 11px;
+}
+.site-header.header-compact nav a {
+  padding: 9px 0;
+}
+.site-header.header-compact .header-actions {
+  gap: 16px;
+}
 .wordmark {
   font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 32px;
@@ -1877,6 +1904,23 @@ footer > small {
     height: 85px;
     flex-wrap: wrap;
     position: relative;
+  }
+  .site-header.header-compact {
+    height: 72px;
+    gap: 7px;
+  }
+  .site-header.header-compact .wordmark {
+    font-size: 19px;
+    letter-spacing: 0.7px;
+  }
+  .site-header.header-compact nav.open {
+    top: 71px;
+  }
+  .site-header.header-compact .header-actions {
+    gap: 6px;
+  }
+  .site-header.header-compact .mobile-menu {
+    padding: 6px;
   }
   .wordmark {
     font-size: 22px;
