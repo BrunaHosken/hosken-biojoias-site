@@ -155,7 +155,7 @@
     top: 67px;
   }
   .site-header .header-actions {
-    order: 3;
+    order: 2;
     flex: 0 0 auto;
     gap: 4px;
     margin-left: auto;
@@ -164,7 +164,7 @@
     gap: 4px;
   }
   .site-header .mobile-menu {
-    order: 2;
+    order: 1;
     display: flex;
     flex: 0 0 auto;
     margin-left: 0;
@@ -191,6 +191,7 @@
     gap: 5px;
   }
   .header-actions .account-link {
+    order: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -209,6 +210,15 @@
     height: 30px;
     padding: 3px;
   }
+  .header-actions .notification-bell {
+    order: 3;
+  }
+  .header-actions .bag {
+    order: 4;
+  }
+  .header-actions .header-logout {
+    order: 5;
+  }
   .site-header .notification-panel {
     position: fixed;
     top: calc(var(--notification-panel-top, 86px) + env(safe-area-inset-top));
@@ -218,7 +228,10 @@
     max-width: 370px;
     max-height: min(
       520px,
-      calc(100dvh - var(--notification-panel-top, 86px) - env(safe-area-inset-top) - 16px)
+      calc(
+        100dvh - var(--notification-panel-top, 86px) -
+          env(safe-area-inset-top) - 16px
+      )
     );
     margin-left: auto;
     z-index: 110;

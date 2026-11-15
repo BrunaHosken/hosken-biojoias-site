@@ -44,14 +44,6 @@ export function SiteHeader() {
         <span>HOSKEN BIOJOIAS</span>
         <small>FEITO À MÃO</small>
       </Link>
-      <button
-        className="icon mobile-menu"
-        aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen((open) => !open)}
-      >
-        {menuOpen ? <X /> : <Menu />}
-      </button>
       <nav
         className={menuOpen ? "open" : ""}
         onClick={() => setMenuOpen(false)}
@@ -98,6 +90,14 @@ export function SiteHeader() {
             <span>Sair</span>
           </button>
         )}
+        <button
+          className="icon mobile-menu"
+          aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X /> : <Menu />}
+        </button>
       </div>
     </header>
   );
