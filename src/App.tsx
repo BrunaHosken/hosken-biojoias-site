@@ -2609,6 +2609,29 @@ function AdminPanel() {
                       ? ` · Estoque: ${r.stock} · aviso em: ${r.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD}`
                       : ""}
                   </small>
+                  {"stock" in r &&
+                    (r.availability === "available" ||
+                      r.availability === "soldout") && (
+                      <span
+                        className={`admin-stock-badge ${
+                          r.stock === 0
+                            ? "admin-stock-empty"
+                            : r.stock <=
+                                (r.lowStockThreshold ??
+                                  DEFAULT_LOW_STOCK_THRESHOLD)
+                              ? "admin-stock-low"
+                              : "admin-stock-ok"
+                        }`}
+                      >
+                        {r.stock === 0
+                          ? "Estoque vazio"
+                          : r.stock <=
+                              (r.lowStockThreshold ??
+                                DEFAULT_LOW_STOCK_THRESHOLD)
+                            ? "Estoque baixo"
+                            : "Em estoque"}
+                      </span>
+                    )}
                 </div>
                 <div>
                   {tab === "products" && (
