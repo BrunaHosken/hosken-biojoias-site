@@ -66,18 +66,18 @@ export function ProductPage() {
               {availability[getProductAvailability(product)]} · {product.stock}{" "}
               unidade(s)
             </p>
-            <div className="product-actions">
-              <button
-                className="button"
-                disabled={
-                  !isProductAvailable(product) ||
-                  product.stock <= (items[product.id] || 0)
-                }
-                onClick={() => change(product.id, 1)}
-              >
-                Adicionar à sacola <ShoppingBag size={18} />
-              </button>
-              {!session.admin && (
+            {!session.admin && (
+              <div className="product-actions">
+                <button
+                  className="button"
+                  disabled={
+                    !isProductAvailable(product) ||
+                    product.stock <= (items[product.id] || 0)
+                  }
+                  onClick={() => change(product.id, 1)}
+                >
+                  Adicionar à sacola <ShoppingBag size={18} />
+                </button>
                 <Link
                   className="button secondary product-chat-link"
                   to={
@@ -96,9 +96,9 @@ export function ProductPage() {
                 >
                   Tirar dúvidas sobre esta peça <MessageCircle size={18} />
                 </Link>
-              )}
-            </div>
-            {!!items[product.id] && (
+              </div>
+            )}
+            {!session.admin && !!items[product.id] && (
               <p role="status">
                 {items[product.id]} na sacola.{" "}
                 <Link to="/carrinho">Ver carrinho →</Link>

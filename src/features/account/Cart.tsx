@@ -1,7 +1,7 @@
 import { useContext } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { ArrowRight, ShoppingBag, Plus, Minus } from "lucide-react";
-import { BasketContext } from "../../app/contexts";
+import { BasketContext, SessionContext } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
 import {
   isProductAvailable,
@@ -11,8 +11,10 @@ import {
 } from "../../data";
 
 export function Cart() {
+  const session = useContext(SessionContext);
   const { items, change } = useContext(BasketContext);
   const products = useRecords<Product>("products");
+  if (session.admin) return <Navigate to="/admin" replace />;
   const entries = Object.entries(items);
   const total = entries.reduce(
     (sum, [id, q]) =>

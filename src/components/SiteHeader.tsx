@@ -76,6 +76,16 @@ export function SiteHeader() {
         {session.user && !session.admin && (
           <CustomerHeaderNotificationBell uid={session.user.uid} />
         )}
+        {!session.admin && (
+          <Link
+            to="/carrinho"
+            className="bag"
+            aria-label={`Carrinho com ${itemCount} itens`}
+          >
+            <ShoppingBag size={21} />
+            <span>{itemCount}</span>
+          </Link>
+        )}
         {session.user && (
           <button
             className="header-logout"
@@ -88,14 +98,6 @@ export function SiteHeader() {
             <span>Sair</span>
           </button>
         )}
-        <Link
-          to="/carrinho"
-          className="bag"
-          aria-label={`Carrinho com ${itemCount} itens`}
-        >
-          <ShoppingBag size={21} />
-          <span>{itemCount}</span>
-        </Link>
       </div>
     </header>
   );
