@@ -14,20 +14,40 @@ import type { AdminContentTab } from "./catalogTypes";
 import { AdminOrders } from "./AdminOrders";
 import { AdminReports } from "./Reports";
 
-const tabs = [
-  ["orders", "Pedidos"],
-  ["reports", "Relatórios"],
-  ["chat", "Atendimento"],
-  ["products", "Produtos"],
-  ["categories", "Tipos de peça"],
-  ["collections", "Linhas"],
-  ["news", "Novidades"],
-  ["events", "Eventos"],
-  ["partnerStores", "Lojas parceiras"],
-  ["policies", "Políticas"],
+const moduleGroups = [
+  {
+    label: "Operação",
+    items: [
+      ["orders", "Pedidos"],
+      ["chat", "Atendimento"],
+    ],
+  },
+  {
+    label: "Catálogo",
+    items: [
+      ["products", "Produtos"],
+      ["categories", "Tipos de peça"],
+      ["collections", "Linhas"],
+    ],
+  },
+  {
+    label: "Conteúdo",
+    items: [
+      ["news", "Novidades"],
+      ["events", "Eventos"],
+      ["partnerStores", "Lojas parceiras"],
+      ["policies", "Políticas"],
+    ],
+  },
+  {
+    label: "Análise",
+    items: [["reports", "Relatórios"]],
+  },
 ];
 
-const validTabs = tabs.map(([id]) => id);
+const validTabs = moduleGroups.flatMap((group) =>
+  group.items.map(([id]) => id),
+);
 
 export function Admin() {
   const session = useContext(SessionContext);
@@ -101,62 +121,74 @@ export function AdminPanel() {
         Cadastros conectados ao {localMode ? "Firestore local" : "Firestore"} em
         tempo real.
       </p>
-      <div className="tabs">
-        {tabs.map(([id, label]) => (
-          <button
-            type="button"
-            className={tab === id ? "selected" : ""}
-            disabled={catalogUploadBusy}
-            onClick={() => selectTab(id)}
-            key={id}
-          >
-            {label}
-            {id === "chat" && unreadCount > 0 && (
-              <span
-                className="unread-badge"
-                aria-label={`${unreadCount} mensagens não lidas`}
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </button>
-        ))}
+      <div className="admin-workspace">
+        <nav className="admin-navigation" aria-label="Seções administrativas">
+          {moduleGroups.map((group) => (
+            <section className="admin-nav-group" key={group.label}>
+              <h2>{group.label}</h2>
+              <div className="admin-nav-items">
+                {group.items.map(([id, label]) => (
+                  <button
+                    type="button"
+                    className={`admin-nav-item ${tab === id ? "selected" : ""}`}
+                    disabled={catalogUploadBusy}
+                    aria-current={tab === id ? "page" : undefined}
+                    onClick={() => selectTab(id)}
+                    key={id}
+                  >
+                    <span>{label}</span>
+                    {id === "chat" && unreadCount > 0 && (
+                      <span
+                        className="unread-badge"
+                        aria-label={`${unreadCount} mensagens não lidas`}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </nav>
+        <div className="admin-content">
+          {tab === "orders" ? (
+            <AdminOrders
+              orders={adminOrders}
+              focusOrderId={searchParams.get("order") || ""}
+            />
+          ) : tab === "chat" ? (
+            <AdminChatInbox
+              conversations={conversations.data}
+              loading={conversations.loading}
+              error={conversations.error}
+              unreadCount={unreadCount}
+              adminId={auth.currentUser?.uid || ""}
+              selectedConversationId={searchParams.get("conversation") || ""}
+              onSelectConversation={(id) => {
+                const next = new URLSearchParams(searchParams);
+                next.set("tab", "chat");
+                next.set("conversation", id);
+                next.delete("order");
+                setSearchParams(next);
+                markAdminNotificationSeen(ADMIN_SEEN_CONVERSATIONS, id);
+              }}
+            />
+          ) : tab === "reports" ? (
+            <AdminReports />
+          ) : tab === "products" ? (
+            <AdminProductManager
+              key={`products-${catalogVersion}`}
+              onImageUploadStateChange={setCatalogUploadBusy}
+            />
+          ) : (
+            <AdminContentManager
+              key={`${tab}-${catalogVersion}`}
+              tab={tab as AdminContentTab}
+            />
+          )}
+        </div>
       </div>
-      {tab === "orders" ? (
-        <AdminOrders
-          orders={adminOrders}
-          focusOrderId={searchParams.get("order") || ""}
-        />
-      ) : tab === "chat" ? (
-        <AdminChatInbox
-          conversations={conversations.data}
-          loading={conversations.loading}
-          error={conversations.error}
-          unreadCount={unreadCount}
-          adminId={auth.currentUser?.uid || ""}
-          selectedConversationId={searchParams.get("conversation") || ""}
-          onSelectConversation={(id) => {
-            const next = new URLSearchParams(searchParams);
-            next.set("tab", "chat");
-            next.set("conversation", id);
-            next.delete("order");
-            setSearchParams(next);
-            markAdminNotificationSeen(ADMIN_SEEN_CONVERSATIONS, id);
-          }}
-        />
-      ) : tab === "reports" ? (
-        <AdminReports />
-      ) : tab === "products" ? (
-        <AdminProductManager
-          key={`products-${catalogVersion}`}
-          onImageUploadStateChange={setCatalogUploadBusy}
-        />
-      ) : (
-        <AdminContentManager
-          key={`${tab}-${catalogVersion}`}
-          tab={tab as AdminContentTab}
-        />
-      )}
     </div>
   );
 }

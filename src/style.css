@@ -1432,25 +1432,73 @@ textarea {
 .cart-summary .button {
   width: 100%;
 }
-.tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 20px;
-  margin-bottom: 35px;
+.admin-workspace {
+  display: grid;
+  grid-template-columns: 215px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
 }
-.tabs button {
+.admin-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 14px;
   border: 1px solid var(--border);
+  background: #fbf7f1;
+}
+.admin-nav-group + .admin-nav-group {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.admin-nav-group h2 {
+  margin: 0 0 9px;
+  color: #806c5a;
+  font-family: "DM Sans", sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+.admin-nav-items {
+  display: grid;
+  gap: 3px;
+}
+.admin-nav-item {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid transparent;
   background: transparent;
   color: #6b5e56;
-  padding: 12px 16px;
   font-size: 12px;
+  text-align: left;
+  transition: background 140ms ease, color 140ms ease;
 }
-.tabs button.selected {
-  color: white;
-  background: var(--wine);
+.admin-nav-item:hover:not(:disabled):not(.selected) {
+  border-color: var(--border);
+  background: #fffdf9;
+  color: var(--wine);
+}
+.admin-nav-item.selected {
   border-color: var(--wine);
+  background: var(--wine);
+  color: white;
+}
+.admin-nav-item .unread-badge {
+  flex: 0 0 auto;
+  background: #fffdf9;
+  color: var(--wine);
+}
+.admin-content {
+  min-width: 0;
+}
+.admin-content > .admin-layout {
+  margin-top: 0;
 }
 .admin-layout {
   grid-template-columns: 1fr 1.1fr;
@@ -2032,11 +2080,34 @@ footer > small {
   .admin-layout {
     gap: 25px;
   }
+  .admin-workspace {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 22px;
+  }
   .report-filters {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 760px) {
+  .admin-workspace {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .admin-navigation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 10px;
+    padding: 11px;
+  }
+  .admin-nav-group,
+  .admin-nav-group + .admin-nav-group {
+    min-width: 0;
+    margin: 0;
+    padding: 11px;
+    border: 1px solid var(--border);
+    background: #fffdf9;
+  }
   .local-banner {
     font-size: 8px;
     letter-spacing: 1px;
@@ -2385,6 +2456,9 @@ footer > small {
   }
 }
 @media (max-width: 380px) {
+  .admin-navigation {
+    grid-template-columns: 1fr;
+  }
   header {
     gap: 8px;
   }
