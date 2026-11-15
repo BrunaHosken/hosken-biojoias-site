@@ -28,7 +28,10 @@ export function About() {
           Conheça as peças <ArrowRight size={18} />
         </Link>
       </div>
-      <img src="/hosken-logo.png" alt="Logo Hosken com orquídeas" />
+      <img
+        src={`${import.meta.env.BASE_URL}hosken-logo.png`}
+        alt="Logo Hosken com orquídeas"
+      />
     </div>
   );
 }

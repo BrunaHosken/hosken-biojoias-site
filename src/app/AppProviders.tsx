@@ -17,6 +17,8 @@ import {
 import { auth, localMode } from "../firebase";
 import { ToastNotice } from "../components/Feedback";
 
+const publicPreview = import.meta.env.VITE_PUBLIC_PREVIEW === "true";
+
 function readBasket(): Record<string, number> {
   try {
     const value = JSON.parse(localStorage.getItem("hosken-cart") || "{}");
@@ -91,12 +93,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={notify}>
       <SessionContext.Provider value={session}>
         <BasketContext.Provider value={{ items, change }}>
-          {localMode && (
+          {(localMode || publicPreview) && (
             <div className="local-banner">
-              ATELIÊ EM CONSTRUÇÃO{" "}
+              {publicPreview ? "PRÉVIA DO ATELIÊ" : "ATELIÊ EM CONSTRUÇÃO"}{" "}
               <span>
-                Ambiente local · produtos e valores de exemplo · compras
-                desativadas
+                {publicPreview
+                  ? "Versão de demonstração · dados ilustrativos · compras desativadas"
+                  : "Ambiente local · produtos e valores de exemplo · compras desativadas"}
               </span>
             </div>
           )}

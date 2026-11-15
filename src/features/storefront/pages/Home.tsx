@@ -33,7 +33,7 @@ export function Home() {
         <div className="hero-art">
           <span className="art-label">O UNIVERSO HOSKEN BIOJOIAS</span>
           <img
-            src="/hosken-logo.png"
+            src={`${import.meta.env.BASE_URL}hosken-logo.png`}
             alt="Hosken Biojoias, logo com orquídeas rosas e folhagens"
           />
           <span className="art-bottom">Florescer. Preservar. Encantar.</span>
