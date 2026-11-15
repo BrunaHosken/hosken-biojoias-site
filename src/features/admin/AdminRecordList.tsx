@@ -1,6 +1,15 @@
-import { DEFAULT_LOW_STOCK_THRESHOLD, POLICY_TYPES } from "../../app/constants";
+import {
+  availability,
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  POLICY_TYPES,
+} from "../../app/constants";
 import { Notice } from "../../components/Feedback";
-import type { Content, Product, Taxonomy } from "../../data";
+import {
+  getProductAvailability,
+  type Content,
+  type Product,
+  type Taxonomy,
+} from "../../data";
 
 export type AdminRecord = Product | Taxonomy | Content;
 
@@ -37,12 +46,13 @@ export function AdminRecordList({
                 ? ` · ${POLICY_TYPES.find((type) => type.id === record.policyType)?.label || "Geral"}`
                 : ""}
               {"stock" in record
-                ? ` · Estoque: ${record.stock} · aviso em: ${record.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD}`
+                ? ` · Estoque: ${record.stock} · aviso em: ${record.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD} · Disponibilidade: ${availability[getProductAvailability(record)]}`
                 : ""}
             </small>
             {"stock" in record &&
               (record.availability === "available" ||
-                record.availability === "soldout") && (
+                record.availability === "soldout" ||
+                record.availability === "paused") && (
                 <span
                   className={`admin-stock-badge ${
                     record.stock === 0

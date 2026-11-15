@@ -25,6 +25,7 @@ import { ConfirmationModal } from "../../components/Feedback";
 import { useRecords, type Product, type Taxonomy } from "../../data";
 import { auth, db, storage } from "../../firebase";
 import { getProductImages } from "../storefront/productImages";
+import { availabilityFromStock } from "../../data/productAvailability";
 import { AdminRecordList } from "./AdminRecordList";
 import { AdminProductFields } from "./ProductFields";
 import { blankProduct } from "./productModel";
@@ -185,6 +186,11 @@ export function AdminProductManager({
     try {
       const productToSave = {
         ...product,
+        availability:
+          product.availability === "available" ||
+          product.availability === "soldout"
+            ? availabilityFromStock(product.stock)
+            : product.availability,
         imageUrls: product.imageUrls || getProductImages(product),
         imagePaths: product.imagePaths || [],
         imageUrl: product.imageUrls?.[0] || product.imageUrl || "",

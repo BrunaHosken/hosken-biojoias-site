@@ -40,7 +40,10 @@ service cloud.firestore {
         && (!('careInstructions' in request.resource.data)
           || (request.resource.data.careInstructions is string && request.resource.data.careInstructions.size() <= 1500))
         && request.resource.data.status in ['published','draft']
-        && request.resource.data.availability in ['available','soldout','prelaunch','made-to-order']
+        && request.resource.data.availability in ['available','soldout','paused','prelaunch','made-to-order']
+        && ((request.resource.data.availability == 'available' && request.resource.data.stock > 0)
+          || (request.resource.data.availability == 'soldout' && request.resource.data.stock == 0)
+          || request.resource.data.availability in ['paused','prelaunch','made-to-order'])
         && request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 2000
         && exists(/databases/$(database)/documents/categories/$(request.resource.data.categoryId))
         && exists(/databases/$(database)/documents/collections/$(request.resource.data.collectionId));

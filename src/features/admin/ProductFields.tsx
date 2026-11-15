@@ -12,6 +12,7 @@ import type {
   Content,
 } from "../../data";
 import type { ProductDraft } from "./productModel";
+import { availabilityFromStock } from "../../data/productAvailability";
 
 type ProductFieldsProps = {
   product: ProductDraft;
@@ -79,12 +80,18 @@ export function AdminProductFields({
             min="0"
             step="1"
             value={product.stock}
-            onChange={(e) =>
-              setProduct({
-                ...product,
-                stock: Number(e.target.value),
-              })
-            }
+            onChange={(e) => {
+              const stock = Number(e.target.value);
+              setProduct((current) => ({
+                ...current,
+                stock,
+                availability:
+                  current.availability === "available" ||
+                  current.availability === "soldout"
+                    ? availabilityFromStock(stock)
+                    : current.availability,
+              }));
+            }}
           />
         </label>
       </div>
@@ -145,17 +152,36 @@ export function AdminProductFields({
       <label>
         Disponibilidade
         <select
-          value={product.availability}
-          onChange={(e) =>
-            setProduct({ ...product, availability: e.target.value })
+          value={
+            product.availability === "available" ||
+            product.availability === "soldout"
+              ? "automatic"
+              : product.availability
           }
+          onChange={(e) => {
+            const value = e.target.value;
+            setProduct((current) => ({
+              ...current,
+              availability:
+                value === "automatic"
+                  ? availabilityFromStock(current.stock)
+                  : value,
+            }));
+          }}
         >
-          {Object.entries(availability).map(([id, label]) => (
-            <option key={id} value={id}>
-              {label}
-            </option>
-          ))}
+          <option value="automatic">
+            Automática pelo estoque (
+            {availability[availabilityFromStock(product.stock)]})
+          </option>
+          <option value="paused">Indisponível (pausar vendas)</option>
+          <option value="prelaunch">Em breve</option>
+          <option value="made-to-order">Sob encomenda</option>
         </select>
+        <small className="field-hint">
+          No modo automático, estoque acima de zero fica disponível e estoque
+          zerado fica esgotado. Você também pode pausar vendas sem alterar a
+          quantidade física.
+        </small>
       </label>
       <label>
         Fotos da peça

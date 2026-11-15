@@ -4,7 +4,13 @@ import { MessageCircle, ShoppingBag } from "lucide-react";
 import { BasketContext, SessionContext } from "../../../app/contexts";
 import { availability } from "../../../app/constants";
 import { Notice } from "../../../components/Feedback";
-import { money, useRecords, type Product } from "../../../data";
+import {
+  getProductAvailability,
+  isProductAvailable,
+  money,
+  useRecords,
+  type Product,
+} from "../../../data";
 import { ProductGallery } from "./ProductVisuals";
 
 export function ProductPage() {
@@ -57,13 +63,14 @@ export function ProductPage() {
               </p>
             )}
             <p>
-              {availability[product.availability]} · {product.stock} unidade(s)
+              {availability[getProductAvailability(product)]} · {product.stock}{" "}
+              unidade(s)
             </p>
             <div className="product-actions">
               <button
                 className="button"
                 disabled={
-                  product.availability !== "available" ||
+                  !isProductAvailable(product) ||
                   product.stock <= (items[product.id] || 0)
                 }
                 onClick={() => change(product.id, 1)}

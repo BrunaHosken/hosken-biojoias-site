@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Flower2 } from "lucide-react";
 import { availability } from "../../../app/constants";
 import type { Product } from "../../../data";
+import { getProductAvailability } from "../../../data";
 import { getProductImages } from "../productImages";
 
 export function PieceArt({
@@ -22,7 +23,9 @@ export function PieceArt({
           <small>FOTOGRAFIA EM BREVE</small>
         </>
       )}
-      <span className="tag">{availability[product.availability]}</span>
+      <span className="tag">
+        {availability[getProductAvailability(product)]}
+      </span>
     </div>
   );
 }

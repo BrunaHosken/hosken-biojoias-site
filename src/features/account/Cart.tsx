@@ -3,7 +3,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, ShoppingBag, Plus, Minus } from "lucide-react";
 import { BasketContext } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
-import { money, useRecords, type Product } from "../../data";
+import {
+  isProductAvailable,
+  money,
+  useRecords,
+  type Product,
+} from "../../data";
 
 export function Cart() {
   const { items, change } = useContext(BasketContext);
@@ -37,7 +42,7 @@ export function Cart() {
                   <div>
                     <h3>{p?.name || "Peça indisponível"}</h3>
                     <p>{p ? money(p.priceCents) : "—"}</p>
-                    {p && (q > p.stock || p.availability !== "available") && (
+                    {p && (q > p.stock || !isProductAvailable(p)) && (
                       <p role="alert" className="notice">
                         Disponibilidade alterada. Ajuste ou remova este item.
                       </p>
@@ -55,9 +60,7 @@ export function Cart() {
                     <button
                       className="icon"
                       aria-label="Aumentar quantidade"
-                      disabled={
-                        !p || p.availability !== "available" || q >= p.stock
-                      }
+                      disabled={!p || !isProductAvailable(p) || q >= p.stock}
                       onClick={() => change(id, 1)}
                     >
                       <Plus size={16} />

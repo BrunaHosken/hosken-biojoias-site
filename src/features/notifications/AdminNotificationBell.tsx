@@ -70,7 +70,8 @@ function AdminNotificationBell({
       product.stock <=
         (product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD) &&
       (product.availability === "available" ||
-        product.availability === "soldout"),
+        product.availability === "soldout" ||
+        product.availability === "paused"),
   );
   const unreadMessages = newConversations.reduce(
     (total, conversation) => total + (conversation.unreadForAdmin || 0),

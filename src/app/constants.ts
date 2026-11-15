@@ -1,6 +1,7 @@
 export const availability: Record<string, string> = {
   available: "Disponível",
   soldout: "Esgotado",
+  paused: "Indisponível",
   prelaunch: "Em breve",
   "made-to-order": "Sob encomenda",
 };

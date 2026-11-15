@@ -12,7 +12,7 @@ export const blankProduct: ProductDraft = {
   categoryId: "",
   collectionId: "",
   status: "draft",
-  availability: "available",
+  availability: "soldout",
   imageUrl: "",
   imageUrls: [] as string[],
   imagePaths: [] as string[],
