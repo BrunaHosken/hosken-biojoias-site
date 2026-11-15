@@ -37,7 +37,7 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - A página Políticas da loja é alimentada pelo painel administrativo. Cada texto pode ser classificado como entrega, reenvio, cancelamento, trocas e devoluções, pagamento, privacidade ou geral; o ateliê publica os textos quando estiverem prontos.
 - Histórico de pedidos com leitura em tempo real, status, itens, valores e rastreio. Três registros fictícios aparecem na conta administrativa do emulador.
 - Chat de texto em tempo real: clientes abrem o chat diretamente pela bolinha flutuante; a equipe acessa pela mesma bolinha ou por `/admin` → Atendimento. O painel abre primeiro em Pedidos e tem um sino com atalhos para pedidos novos e mensagens/atendimentos não lidos. Cada pessoa pode editar ou excluir somente as próprias mensagens por até uma hora. A conversa continua salva. Conversas e mensagens são privadas ao cliente e à equipe autorizada.
-- WhatsApp, Instagram e e-mail na página de contato. O e-mail informado é pessoal e ficará público no site.
+- WhatsApp, Instagram e e-mail da loja na página de contato.
 - Logo fornecida pela família; produtos de exemplo usam ilustrações provisórias. Fotos são cadastradas por URL nesta etapa. Upload será implementado com Storage.
 
 Produtos e preços do seed são demonstrativos. O carrinho confere disponibilidade para exibição; o checkout deverá revalidar todos os dados no servidor.

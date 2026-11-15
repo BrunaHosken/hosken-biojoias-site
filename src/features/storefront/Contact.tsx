@@ -22,9 +22,9 @@ export function Contact() {
           <span>@hosken.biojoias</span>
           <p>Acompanhe as criações e o dia a dia do ateliê.</p>
         </a>
-        <a href="mailto:nil2martins@gmail.com">
+        <a href="mailto:hoskenbiojoias2026@gmail.com">
           <strong>E-mail</strong>
-          <span>nil2martins@gmail.com</span>
+          <span>hoskenbiojoias2026@gmail.com</span>
           <p>Escreva para conversar sobre uma peça ou encomenda.</p>
         </a>
       </div>
