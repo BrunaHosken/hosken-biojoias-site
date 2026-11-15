@@ -90,7 +90,11 @@ Os testes usam um Firestore temporário no projeto `demo-hosken`, sem login Goog
 
 O projeto real começa separado do banco local. Nunca colocar chaves do Admin SDK, tokens ou contas de serviço no frontend/Git. Os identificadores públicos de configuração web não substituem regras de autorização.
 
-O código pode ficar no GitHub. A hospedagem comercial será configurada depois (por exemplo Firebase Hosting); não usar GitHub Pages para a loja. Nenhuma publicação é feita automaticamente nesta base.
+## Prévia pública no GitHub Pages
+
+O workflow `.github/workflows/deploy-pages.yml` publica automaticamente a prévia a cada push na branch `main`. Na primeira configuração do repositório, selecione **GitHub Actions** em **Settings → Pages → Build and deployment → Source**. O endereço esperado é `https://brunahosken.github.io/hosken-biojoias-site/`.
+
+A prévia usa registros demonstrativos definidos no frontend. Login, atendimento, estoque real e compras não ficam disponíveis até conectar um projeto Firebase de produção e finalizar o checkout. Não cadastrar dados reais nessa prévia. O domínio próprio será configurado depois.
 
 ## Dependências
 
