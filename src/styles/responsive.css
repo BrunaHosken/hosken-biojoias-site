@@ -155,7 +155,7 @@
     top: 67px;
   }
   .site-header .header-actions {
-    order: 2;
+    order: 3;
     flex: 0 0 auto;
     gap: 4px;
     margin-left: auto;
@@ -164,7 +164,7 @@
     gap: 4px;
   }
   .site-header .mobile-menu {
-    order: 3;
+    order: 2;
     display: flex;
     flex: 0 0 auto;
     margin-left: 0;
