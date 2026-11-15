@@ -167,7 +167,7 @@ export default function App() {
   useEffect(() => {
     const updateHeaderSize = () =>
       setCompactHeader((isCompact) =>
-        isCompact ? window.scrollY > 32 : window.scrollY > 72,
+        isCompact ? window.scrollY > 4 : window.scrollY > 72,
       );
     updateHeaderSize();
     window.addEventListener("scroll", updateHeaderSize, { passive: true });
