@@ -414,7 +414,10 @@
 }
 .product-option-radio {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  width: 100%;
+  min-width: 0;
   gap: 9px;
   margin: 0;
   font-size: 12px;
