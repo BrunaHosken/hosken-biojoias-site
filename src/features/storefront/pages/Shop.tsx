@@ -2,7 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Flower2 } from "lucide-react";
 import { Notice } from "../../../components/Feedback";
-import { money, useRecords, type Product, type Taxonomy } from "../../../data";
+import {
+  getProductAvailability,
+  money,
+  useRecords,
+  type Product,
+  type Taxonomy,
+} from "../../../data";
+import { availability } from "../../../app/constants";
+import { getProductStock } from "../../../data/productAvailability";
 import { PieceArt } from "./ProductVisuals";
 
 export function Shop() {
@@ -70,7 +78,14 @@ export function Shop() {
               {lines.data.find((l) => l.id === p.collectionId)?.name}
             </small>
             <h3>{p.name}</h3>
-            <p>{money(p.priceCents)}</p>
+            <p>
+              {p.withChainPriceCents !== undefined ? "A partir de " : ""}
+              {money(p.priceCents)}
+            </p>
+            <small className="product-card-stock">
+              {availability[getProductAvailability(p)]} · {getProductStock(p)}{" "}
+              unidade(s)
+            </small>
           </Link>
         ))}
       </div>

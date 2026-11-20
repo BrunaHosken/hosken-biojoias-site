@@ -4,11 +4,14 @@ import { ArrowRight, ShoppingBag, Plus, Minus } from "lucide-react";
 import { BasketContext, SessionContext } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
 import {
+  getBasketQuantityForVariant,
   isProductAvailable,
   money,
+  parseBasketItemId,
   useRecords,
   type Product,
 } from "../../data";
+import { getProductStock } from "../../data/productAvailability";
 
 export function Cart() {
   const session = useContext(SessionContext);
@@ -17,19 +20,46 @@ export function Cart() {
   const products = useRecords<Product>("products");
   if (session.admin) return <Navigate to="/admin" replace />;
   const entries = Object.entries(items);
-  const total = entries.reduce(
-    (sum, [id, q]) =>
-      sum + (products.data.find((p) => p.id === id)?.priceCents || 0) * q,
-    0,
-  );
+  const total = entries.reduce((sum, [id, quantity]) => {
+    const selection = parseBasketItemId(id);
+    const product = products.data.find(
+      (item) => item.id === selection.productId,
+    );
+    const unitPrice =
+      selection.withChain && product?.withChainPriceCents !== undefined
+        ? product.withChainPriceCents
+        : product?.priceCents || 0;
+    return sum + unitPrice * quantity;
+  }, 0);
   const canCheckout =
     entries.length > 0 &&
     !products.loading &&
     !products.error &&
-    entries.every(([id, quantity]) => {
-      const product = products.data.find((item) => item.id === id);
+    entries.every(([id]) => {
+      const selection = parseBasketItemId(id);
+      const product = products.data.find(
+        (item) => item.id === selection.productId,
+      );
+      if (!product) return false;
+      const variant = product.colorVariants?.find(
+        (item) => item.colorId === selection.variantId,
+      );
+      const variantRequired = Boolean(product.colorVariants?.length);
+      const variantStock = variantRequired
+        ? (variant?.stock ?? -1)
+        : selection.variantId
+          ? -1
+          : getProductStock(product);
+      const quantity = getBasketQuantityForVariant(
+        items,
+        product.id,
+        selection.variantId,
+      );
       return Boolean(
-        product && isProductAvailable(product) && quantity <= product.stock,
+        isProductAvailable(product) &&
+        (!variantRequired || variant) &&
+        (!selection.withChain || product.withChainPriceCents !== undefined) &&
+        quantity <= variantStock,
       );
     });
   return (
@@ -49,15 +79,53 @@ export function Cart() {
         <div className="cart-layout">
           <div>
             {entries.map(([id, q]) => {
-              const p = products.data.find((p) => p.id === id);
+              const selection = parseBasketItemId(id);
+              const p = products.data.find(
+                (product) => product.id === selection.productId,
+              );
+              const variant = p?.colorVariants?.find(
+                (item) => item.colorId === selection.variantId,
+              );
+              const variantRequired = Boolean(p?.colorVariants?.length);
+              const variantStock = variantRequired
+                ? (variant?.stock ?? 0)
+                : (p?.stock ?? 0);
+              const quantityForVariant = p
+                ? getBasketQuantityForVariant(items, p.id, selection.variantId)
+                : q;
+              const itemAvailable = Boolean(
+                p &&
+                isProductAvailable(p) &&
+                (!variantRequired || variant) &&
+                (!selection.withChain || p.withChainPriceCents !== undefined) &&
+                quantityForVariant <= variantStock,
+              );
+              const itemPrice =
+                selection.withChain && p?.withChainPriceCents !== undefined
+                  ? p.withChainPriceCents
+                  : (p?.priceCents ?? 0);
               return (
                 <article className="cart-row" key={id}>
                   <div>
                     <h3>{p?.name || "Peça indisponível"}</h3>
-                    <p>{p ? money(p.priceCents) : "—"}</p>
-                    {p && (q > p.stock || !isProductAvailable(p)) && (
+                    <p>{p ? money(itemPrice) : "—"}</p>
+                    {variantRequired && (
+                      <p className="cart-variant-detail">
+                        Cor: {variant?.colorName || "não selecionada"}
+                      </p>
+                    )}
+                    {p?.withChainPriceCents !== undefined && (
+                      <p className="cart-variant-detail">
+                        {selection.withChain
+                          ? "Com corrente"
+                          : "Somente o pingente"}
+                      </p>
+                    )}
+                    {!itemAvailable && (
                       <p role="alert" className="notice">
-                        Disponibilidade alterada. Ajuste ou remova este item.
+                        {variantRequired && !variant
+                          ? "Escolha novamente uma cor para esta peça."
+                          : "Disponibilidade alterada. Ajuste ou remova este item."}
                       </p>
                     )}
                   </div>
@@ -73,7 +141,14 @@ export function Cart() {
                     <button
                       className="icon"
                       aria-label="Aumentar quantidade"
-                      disabled={!p || !isProductAvailable(p) || q >= p.stock}
+                      disabled={
+                        !p ||
+                        !isProductAvailable(p) ||
+                        (variantRequired && !variant) ||
+                        (selection.withChain &&
+                          p.withChainPriceCents === undefined) ||
+                        quantityForVariant >= variantStock
+                      }
                       onClick={() => change(id, 1)}
                     >
                       <Plus size={16} />

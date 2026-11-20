@@ -112,6 +112,7 @@ export function AdminRecordList({
             )}
             {[
               "categories",
+              "colors",
               "news",
               "events",
               "partnerStores",

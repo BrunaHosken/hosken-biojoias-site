@@ -129,10 +129,10 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
             ? "Uma foto convertida passou de 10 MB. Escolha uma imagem menor."
             : cause instanceof Error && cause.message === "file-upload-timeout"
               ? "O envio demorou demais e foi cancelado. Confira sua conexão e tente novamente."
-            : cause instanceof Error &&
-                cause.message === "webp-encoding-unsupported"
-              ? "Este navegador não conseguiu converter a foto para WebP. Tente outro navegador."
-              : "Não foi possível enviar as fotos. Você pode continuar usando o painel; confira sua conexão e o Firebase Storage.",
+              : cause instanceof Error &&
+                  cause.message === "webp-encoding-unsupported"
+                ? "Este navegador não conseguiu converter a foto para WebP. Tente outro navegador."
+                : "Não foi possível enviar as fotos. Você pode continuar usando o painel; confira sua conexão e o Firebase Storage.",
           "error",
         );
     } finally {
@@ -176,7 +176,7 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
     const fields = new FormData(form);
     try {
       const name = String(fields.get("name")).trim();
-      const isTaxonomy = ["categories", "collections"].includes(tab);
+      const isTaxonomy = ["categories", "collections", "colors"].includes(tab);
       const isEvent = tab === "events";
       const schedule = isEvent
         ? eventSchedule.filter((entry) => entry.date || entry.time)
@@ -317,7 +317,9 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
     tab === "collections" ? (editingRecord as Taxonomy | undefined) : undefined;
   const editingCategory =
     tab === "categories" ? (editingRecord as Taxonomy | undefined) : undefined;
-  const editingContent = !["categories", "collections"].includes(tab)
+  const editingColor =
+    tab === "colors" ? (editingRecord as Taxonomy | undefined) : undefined;
+  const editingContent = !["categories", "collections", "colors"].includes(tab)
     ? (editingRecord as Content | undefined)
     : undefined;
 
@@ -330,13 +332,16 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
               ? "Editar tipo de peça"
               : tab === "collections"
                 ? "Editar linha"
-                : "Editar conteúdo"
+                : tab === "colors"
+                  ? "Editar cor"
+                  : "Editar conteúdo"
             : "Novo cadastro"}
         </h2>
         <AdminContentFields
           tab={tab}
           editingCategory={editingCategory}
           editingLine={editingLine}
+          editingColor={editingColor}
           editingContent={editingContent}
           eventSchedule={eventSchedule}
           setEventSchedule={setEventSchedule}

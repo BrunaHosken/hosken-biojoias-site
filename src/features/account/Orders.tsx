@@ -145,6 +145,20 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
           <li key={`${order.id}-${item.productId}-${index}`}>
             <span>
               {item.name} <small>× {item.quantity}</small>
+              {(item.colorName || item.withChain !== undefined) && (
+                <small className="order-item-options">
+                  {[
+                    item.colorName ? `Cor: ${item.colorName}` : "",
+                    item.withChain === undefined
+                      ? ""
+                      : item.withChain
+                        ? "Com corrente"
+                        : "Somente o pingente",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              )}
             </span>
             <strong>{money(item.unitPriceCents * item.quantity)}</strong>
           </li>

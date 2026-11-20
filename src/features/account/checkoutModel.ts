@@ -1,4 +1,4 @@
-import type { Product } from "../../data/models";
+import type { AddressDetails, Product } from "../../data/models";
 
 export type DeliveryMethod = "sedex" | "pickup";
 export type CheckoutPaymentMethod = "credit_card" | "pix";
@@ -7,15 +7,7 @@ export type CheckoutContact = {
   email: string;
   phone: string;
 };
-export type CheckoutAddress = {
-  postalCode: string;
-  street: string;
-  number: string;
-  complement: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-};
+export type CheckoutAddress = AddressDetails;
 export type CheckoutDraft = {
   step: 1 | 2;
   orderId?: string;
@@ -25,12 +17,35 @@ export type CheckoutDraft = {
   address: CheckoutAddress;
 };
 export type CheckoutLine = {
+  basketItemId: string;
   productId: string;
+  variantId: string;
+  colorName?: string;
+  withChain: boolean;
+  unitPriceCents: number;
   quantity: number;
   product: Product | undefined;
 };
 
 export const DEMO_INSTALLMENT_RATE = 0.02;
+
+export function formatBrazilianMobile(value: string) {
+  const rawDigits = value.replace(/\D/g, "");
+  const digits = (
+    rawDigits.startsWith("55") && [12, 13].includes(rawDigits.length)
+      ? rawDigits.slice(2)
+      : rawDigits
+  ).slice(0, 11);
+  if (!digits) return "";
+
+  const areaCode = digits.slice(0, 2);
+  if (digits.length <= 2)
+    return digits.length === 2 ? `(${areaCode})` : `(${areaCode}`;
+
+  const number = digits.slice(2);
+  if (number.length <= 5) return `(${areaCode}) ${number}`;
+  return `(${areaCode}) ${number.slice(0, 5)}-${number.slice(5)}`;
+}
 
 export function emptyCheckoutDraft(name = "", email = ""): CheckoutDraft {
   return {
@@ -68,7 +83,11 @@ export function loadCheckoutDraft(
     return {
       ...emptyCheckoutDraft(name, email),
       ...saved,
-      contact: { ...emptyCheckoutDraft(name, email).contact, ...saved.contact },
+      contact: {
+        ...emptyCheckoutDraft(name, email).contact,
+        ...saved.contact,
+        phone: formatBrazilianMobile(saved.contact.phone || ""),
+      },
       address: { ...emptyCheckoutDraft(name, email).address, ...saved.address },
       step: saved.step === 2 ? 2 : 1,
       orderId:

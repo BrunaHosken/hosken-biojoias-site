@@ -96,6 +96,12 @@
   margin: 0;
   font-size: 32px;
 }
+.checkout-line-options {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
 .checkout-delivery-options {
   display: grid;
   gap: 10px;
@@ -178,6 +184,38 @@
   margin: 0 0 15px;
   color: #6b5e56;
   font-size: 11px;
+}
+.checkout-address-fields .checkout-checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+.checkout-address-fields .checkout-checkbox input {
+  margin-top: 0;
+}
+.checkout-save-address {
+  margin-top: 4px;
+}
+.checkout-save-address > label:not(.checkout-checkbox) {
+  max-width: 360px;
+  margin-top: 14px;
+}
+.checkout-save-address-button {
+  margin: -5px 0 15px;
+}
+.checkout-saved-address-note,
+.checkout-saved-address-error {
+  margin: -5px 0 14px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.checkout-saved-address-note {
+  color: var(--muted);
+}
+.checkout-saved-address-error {
+  color: var(--wine);
+}
+.checkout-delete-address {
+  margin: -5px 0 15px;
 }
 .checkout-field-pair {
   display: grid;

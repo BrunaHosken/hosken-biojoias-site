@@ -40,6 +40,7 @@ export function AdminProductManager() {
   const products = useRecords<Product>("products", true);
   const categories = useRecords<Taxonomy>("categories", true);
   const lines = useRecords<Taxonomy>("collections", true);
+  const colors = useRecords<Taxonomy>("colors", true);
   const [editing, setEditing] = useState("");
   const [product, setProduct] = useState(blankProduct);
   const [loadingShipping, setLoadingShipping] = useState(false);
@@ -162,10 +163,10 @@ export function AdminProductManager() {
             ? "Uma foto convertida passou de 10 MB. Escolha uma imagem menor."
             : cause instanceof Error && cause.message === "file-upload-timeout"
               ? "O envio demorou demais e foi cancelado. Confira sua conexão e tente novamente."
-            : cause instanceof Error &&
-                cause.message === "webp-encoding-unsupported"
-              ? "Este navegador não conseguiu converter a foto para WebP. Tente outro navegador."
-              : "Não foi possível enviar as fotos. Você pode continuar usando o painel; confira sua conexão e o Firebase Storage.",
+              : cause instanceof Error &&
+                  cause.message === "webp-encoding-unsupported"
+                ? "Este navegador não conseguiu converter a foto para WebP. Tente outro navegador."
+                : "Não foi possível enviar as fotos. Você pode continuar usando o painel; confira sua conexão e o Firebase Storage.",
           "error",
         );
     } finally {
@@ -180,11 +181,30 @@ export function AdminProductManager() {
     if (loadingShipping || shippingLoadError) return;
     setBusy(true);
     const wasEditing = Boolean(editing);
+    const colorVariants = product.colorVariants || [];
+    const variantStock = colorVariants.reduce(
+      (total, variant) => total + variant.stock,
+      0,
+    );
+    const totalStock = colorVariants.length ? variantStock : product.stock;
     if (
       !Number.isSafeInteger(product.priceCents) ||
       product.priceCents < 0 ||
-      !Number.isSafeInteger(product.stock) ||
-      product.stock < 0 ||
+      !Number.isSafeInteger(totalStock) ||
+      totalStock < 0 ||
+      colorVariants.length > 30 ||
+      new Set(colorVariants.map((variant) => variant.colorId)).size !==
+        colorVariants.length ||
+      colorVariants.some(
+        (variant) =>
+          !variant.colorId ||
+          !variant.colorName.trim() ||
+          !Number.isSafeInteger(variant.stock) ||
+          variant.stock < 0,
+      ) ||
+      (product.withChainPriceCents !== undefined &&
+        (!Number.isSafeInteger(product.withChainPriceCents) ||
+          product.withChainPriceCents < 0)) ||
       !Number.isSafeInteger(
         product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
       ) ||
@@ -227,14 +247,28 @@ export function AdminProductManager() {
         packageHeightCm,
         packageWeightGrams,
         pieceWeightGrams,
+        colorVariants: _colorVariants,
+        withChainPriceCents,
         ...productDetails
       } = product;
       const productToSave = {
         ...productDetails,
+        stock: totalStock,
+        ...(colorVariants.length
+          ? {
+              colorVariants: colorVariants.map((variant) => ({
+                ...variant,
+                colorName:
+                  colors.data.find((color) => color.id === variant.colorId)
+                    ?.name || variant.colorName,
+              })),
+            }
+          : {}),
+        ...(withChainPriceCents === undefined ? {} : { withChainPriceCents }),
         availability:
           productDetails.availability === "available" ||
           productDetails.availability === "soldout"
-            ? availabilityFromStock(productDetails.stock)
+            ? availabilityFromStock(totalStock)
             : productDetails.availability,
         imageUrls: product.imageUrls || getProductImages(product),
         imagePaths: product.imagePaths || [],
@@ -254,10 +288,7 @@ export function AdminProductManager() {
         : doc(collection(db, "products"));
       const batch = writeBatch(db);
       batch.set(productRef, productToSave);
-      batch.set(
-        doc(db, "productShipping", productRef.id),
-        shippingToSave,
-      );
+      batch.set(doc(db, "productShipping", productRef.id), shippingToSave);
       await batch.commit();
       const removedPaths = Array.from(removedImagePaths.current);
       removedImagePaths.current.clear();
@@ -317,13 +348,8 @@ export function AdminProductManager() {
     setLoadingShipping(true);
     setShippingLoadError(false);
     try {
-      const shippingSnapshot = await getDoc(
-        doc(db, "productShipping", id),
-      );
-      if (
-        !mounted.current ||
-        requestVersion !== shippingLoadVersion.current
-      )
+      const shippingSnapshot = await getDoc(doc(db, "productShipping", id));
+      if (!mounted.current || requestVersion !== shippingLoadVersion.current)
         return;
       const shipping = shippingSnapshot.exists()
         ? (shippingSnapshot.data() as ProductShippingData)
@@ -387,6 +413,7 @@ export function AdminProductManager() {
             setProduct={setProduct}
             lines={lines.data}
             categories={categories.data}
+            colors={colors.data}
             uploadingImages={uploadingImages}
             onUploadImages={uploadImages}
             onRemoveImage={removeImage}

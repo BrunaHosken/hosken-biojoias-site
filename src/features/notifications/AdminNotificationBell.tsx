@@ -56,7 +56,9 @@ function AdminNotificationBell({
     };
   }, []);
   const newOrders = orders.filter(
-    (order) => !order.isDemo && !seenOrders.has(order.id),
+    (order) =>
+      (!order.isDemo || order.notificationEligible === true) &&
+      !seenOrders.has(order.id),
   );
   const newConversations = conversations.filter(
     (conversation) =>
@@ -127,7 +129,7 @@ function AdminNotificationBell({
                   <span>
                     <strong>
                       {newOrders.length} pedido
-                      {newOrders.length === 1 ? "" : "s"} pendente
+                      {newOrders.length === 1 ? "" : "s"} novo
                       {newOrders.length === 1 ? "" : "s"}
                     </strong>
                   </span>

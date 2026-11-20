@@ -20,17 +20,21 @@ service cloud.firestore {
         && data.status in ['published','draft'];
     }
     match /{taxonomyCollection}/{id} {
-      allow read: if taxonomyCollection in ['categories','collections'] && (resource.data.status == 'published' || admin());
-      allow create, update: if taxonomyCollection in ['categories','collections'] && admin() && taxonomy(taxonomyCollection);
-      allow delete: if taxonomyCollection in ['categories','collections'] && admin();
+      allow read: if taxonomyCollection in ['categories','collections','colors'] && (resource.data.status == 'published' || admin());
+      allow create, update: if taxonomyCollection in ['categories','collections','colors'] && admin() && taxonomy(taxonomyCollection);
+      allow delete: if taxonomyCollection in ['categories','collections','colors'] && admin();
     }
     match /products/{id} {
       allow read: if resource.data.status == 'published' || admin();
       allow create, update: if admin()
-        && request.resource.data.keys().hasOnly(['name','description','priceCents','stock','lowStockThreshold','categoryId','collectionId','status','availability','imageUrl','imageUrls','imagePaths','materials','dimensions','careInstructions'])
+        && request.resource.data.keys().hasOnly(['name','description','priceCents','withChainPriceCents','colorVariants','stock','lowStockThreshold','categoryId','collectionId','status','availability','imageUrl','imageUrls','imagePaths','materials','dimensions','careInstructions'])
         && text(request.resource.data.name, 120)
         && text(request.resource.data.description, 3000)
         && request.resource.data.priceCents is int && request.resource.data.priceCents >= 0
+        && (!('withChainPriceCents' in request.resource.data)
+          || (request.resource.data.withChainPriceCents is int && request.resource.data.withChainPriceCents >= 0))
+        && (!('colorVariants' in request.resource.data)
+          || (request.resource.data.colorVariants is list && request.resource.data.colorVariants.size() <= 30))
         && request.resource.data.stock is int && request.resource.data.stock >= 0
         && (!('lowStockThreshold' in request.resource.data)
           || (request.resource.data.lowStockThreshold is int && request.resource.data.lowStockThreshold >= 0 && request.resource.data.lowStockThreshold <= 10000))
@@ -112,9 +116,32 @@ service cloud.firestore {
       allow delete: if contentCollection in ['news','events','partnerStores','policies'] && admin();
     }
     match /users/{uid} {
+      function validProfile(data) {
+        return data.keys().hasOnly(['displayName','phone'])
+          && text(data.displayName, 100)
+          && (!('phone' in data)
+            || (data.phone is string && data.phone.matches('^[0-9]{11}$')));
+      }
       allow read: if signedIn() && (request.auth.uid == uid || admin());
       allow create, update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['displayName']) && text(request.resource.data.displayName, 100);
+        && validProfile(request.resource.data);
+    }
+    match /users/{uid}/savedAddresses/{addressId} {
+      function validAddress(data) {
+        return data.keys().hasOnly(['label','postalCode','street','number','complement','neighborhood','city','state'])
+          && data.keys().hasAll(['label','postalCode','street','number','complement','neighborhood','city','state'])
+          && text(data.label, 50)
+          && data.postalCode is string && data.postalCode.matches('^[0-9]{5}-?[0-9]{3}$')
+          && text(data.street, 160)
+          && text(data.number, 20)
+          && data.complement is string && data.complement.size() <= 100
+          && text(data.neighborhood, 100)
+          && text(data.city, 100)
+          && data.state is string && data.state.matches('^[A-Z]{2}$');
+      }
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && validAddress(request.resource.data);
     }
     // O backend cria pedidos e confirma pagamentos. A administração só altera
     // o andamento logístico e o código de rastreio.

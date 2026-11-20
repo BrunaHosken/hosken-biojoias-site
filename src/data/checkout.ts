@@ -1,26 +1,21 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase";
-import type { CustomerOrder } from "./models";
-
-type CheckoutAddress = {
-  postalCode: string;
-  street: string;
-  number: string;
-  complement: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-};
+import type { AddressDetails, CustomerOrder } from "./models";
 
 export type CreateDemoOrderInput = {
   orderId: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  items: { productId: string; quantity: number }[];
+  items: {
+    productId: string;
+    variantId?: string;
+    withChain?: boolean;
+    quantity: number;
+  }[];
   deliveryMethod: "sedex" | "pickup";
   pickupAgreed: boolean;
-  address?: CheckoutAddress;
+  address?: AddressDetails;
   paymentMethod: "credit_card" | "pix";
   installments: number;
   paymentStatus: "simulated_paid" | "pending";
@@ -69,6 +64,15 @@ export function getCheckoutErrorMessage(error: unknown) {
       message.includes("product-unavailable")
     ) {
       return "O estoque mudou enquanto você finalizava. Confira a sacola e tente novamente.";
+    }
+    if (
+      message.includes("color-required") ||
+      message.includes("color-unavailable")
+    ) {
+      return "A cor escolhida não está mais disponível. Volte à peça e escolha outra cor.";
+    }
+    if (message.includes("chain-option-unavailable")) {
+      return "A opção com corrente não está disponível para esta peça. Confira a sacola e tente novamente.";
     }
     if (message.includes("price-changed")) {
       return "O preço de uma peça mudou durante a compra. Confira o novo total antes de continuar.";

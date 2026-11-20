@@ -9,12 +9,19 @@ export type Taxonomy = {
   imageUrls?: string[];
   imagePaths?: string[];
 };
+export type ProductColorVariant = {
+  colorId: string;
+  colorName: string;
+  stock: number;
+};
 export type Product = {
   id: string;
   name: string;
   description: string;
   priceCents: number;
   stock: number;
+  colorVariants?: ProductColorVariant[];
+  withChainPriceCents?: number;
   lowStockThreshold?: number;
   categoryId: string;
   collectionId: string;
@@ -34,6 +41,19 @@ export type ProductShippingData = {
   packageWeightGrams: number;
   pieceWeightGrams?: number;
 };
+export type AddressDetails = {
+  postalCode: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+};
+export type SavedAddress = AddressDetails & {
+  id: string;
+  label: string;
+};
 export type Content = {
   id: string;
   title: string;
@@ -50,6 +70,9 @@ export type Content = {
 export type EventScheduleEntry = { date: string; time: string };
 export type OrderItem = {
   productId: string;
+  variantId?: string;
+  colorName?: string;
+  withChain?: boolean;
   name: string;
   quantity: number;
   unitPriceCents: number;
@@ -65,6 +88,7 @@ export type CustomerOrder = {
   totalCents: number;
   status: string;
   paymentStatus?: string;
+  notificationEligible?: boolean;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
   trackingCode?: string;

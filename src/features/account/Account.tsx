@@ -12,10 +12,13 @@ import {
 import { doc, setDoc } from "firebase/firestore";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { SessionContext, useToast } from "../../app/contexts";
+import { useCustomerProfile } from "../../data";
 import { auth, db, localMode } from "../../firebase";
+import { formatBrazilianMobile } from "./checkoutModel";
 
 export function Account() {
   const session = useContext(SessionContext);
+  const customerProfile = useCustomerProfile(session.user?.uid);
   const notify = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -31,6 +34,8 @@ export function Account() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [registrationPhone, setRegistrationPhone] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -48,18 +53,25 @@ export function Account() {
     setProfileName(session.user?.displayName || "");
     setProfileEmail(session.user?.email || "");
   }, [session.user]);
+  useEffect(() => {
+    setProfilePhone(formatBrazilianMobile(customerProfile.profile.phone || ""));
+  }, [customerProfile.profile.phone]);
   async function saveProfile(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!session.user) return;
     setBusy(true);
     const name = profileName.trim();
     const email = profileEmail.trim();
+    const phone = formatBrazilianMobile(profilePhone).replace(/\D/g, "");
     try {
       if (email !== session.user.email) await updateEmail(session.user, email);
       if (name !== session.user.displayName) {
         await updateProfile(session.user, { displayName: name });
       }
-      await setDoc(doc(db, "users", session.user.uid), { displayName: name });
+      await setDoc(doc(db, "users", session.user.uid), {
+        displayName: name,
+        ...(phone ? { phone } : {}),
+      });
       notify("Seus dados foram atualizados.", "success");
       setEditingProfile(false);
     } catch (cause) {
@@ -146,6 +158,7 @@ export function Account() {
     setBusy(true);
     const form = new FormData(e.currentTarget);
     const displayName = String(form.get("displayName")).trim();
+    const phone = formatBrazilianMobile(registrationPhone).replace(/\D/g, "");
     try {
       const credential = await createUserWithEmailAndPassword(
         auth,
@@ -153,7 +166,10 @@ export function Account() {
         String(form.get("password")),
       );
       await updateProfile(credential.user, { displayName });
-      await setDoc(doc(db, "users", credential.user.uid), { displayName });
+      await setDoc(doc(db, "users", credential.user.uid), {
+        displayName,
+        ...(phone ? { phone } : {}),
+      });
       notify("Sua conta foi criada.", "success");
       if (returnTo) navigate(returnTo, { replace: true });
     } catch (cause) {
@@ -218,6 +234,11 @@ export function Account() {
                     if (editingProfile) {
                       setProfileName(session.user?.displayName || "");
                       setProfileEmail(session.user?.email || "");
+                      setProfilePhone(
+                        formatBrazilianMobile(
+                          customerProfile.profile.phone || "",
+                        ),
+                      );
                     }
                     setEditingProfile((value) => !value);
                   }}
@@ -249,6 +270,24 @@ export function Account() {
                       onChange={(event) => setProfileEmail(event.target.value)}
                     />
                   </label>
+                  <label>
+                    Celular
+                    <input
+                      type="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      maxLength={15}
+                      pattern="\([0-9]{2}\) [0-9]{5}-[0-9]{4}"
+                      title="Digite um celular com DDD, por exemplo (22) 99999-9999."
+                      placeholder="(22) 99999-9999"
+                      value={profilePhone}
+                      onChange={(event) =>
+                        setProfilePhone(
+                          formatBrazilianMobile(event.target.value),
+                        )
+                      }
+                    />
+                  </label>
                   <button className="button" disabled={busy}>
                     {busy ? "Salvando…" : "Salvar dados"}
                   </button>
@@ -262,6 +301,10 @@ export function Account() {
                   <div>
                     <dt>E-mail</dt>
                     <dd>{session.user.email || "Não informado"}</dd>
+                  </div>
+                  <div>
+                    <dt>Celular</dt>
+                    <dd>{profilePhone || "Não informado"}</dd>
                   </div>
                 </dl>
               )}
@@ -395,16 +438,37 @@ export function Account() {
           </p>
           <form onSubmit={mode === "login" ? login : register}>
             {mode === "register" && (
-              <label>
-                Nome
-                <input
-                  name="displayName"
-                  type="text"
-                  autoComplete="name"
-                  maxLength={100}
-                  required
-                />
-              </label>
+              <>
+                <label>
+                  Nome
+                  <input
+                    name="displayName"
+                    type="text"
+                    autoComplete="name"
+                    maxLength={100}
+                    required
+                  />
+                </label>
+                <label>
+                  Celular (opcional)
+                  <input
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    maxLength={15}
+                    pattern="\([0-9]{2}\) [0-9]{5}-[0-9]{4}"
+                    title="Digite um celular com DDD, por exemplo (22) 99999-9999."
+                    placeholder="(22) 99999-9999"
+                    value={registrationPhone}
+                    onChange={(event) =>
+                      setRegistrationPhone(
+                        formatBrazilianMobile(event.target.value),
+                      )
+                    }
+                  />
+                </label>
+              </>
             )}
             <label>
               E-mail
@@ -447,6 +511,7 @@ export function Account() {
               className="text-button"
               onClick={() => {
                 setMode(mode === "login" ? "register" : "login");
+                setRegistrationPhone("");
               }}
             >
               {mode === "login" ? "Criar conta" : "Entrar"}

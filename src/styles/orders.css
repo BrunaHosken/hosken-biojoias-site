@@ -95,6 +95,11 @@
 .order-items li small {
   color: var(--muted);
 }
+.order-item-options {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+}
 .order-items li strong,
 .order-total strong {
   font-weight: 500;

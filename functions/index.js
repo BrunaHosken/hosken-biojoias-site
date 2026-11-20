@@ -104,10 +104,22 @@ function validateCheckout(data) {
   const seen = new Set();
   const items = data.items.map((item) => {
     const productId = requireText(item?.productId, "productId", 150);
-    if (!/^[A-Za-z0-9_-]+$/.test(productId) || seen.has(productId)) {
+    const variantId = item?.variantId
+      ? requireText(item.variantId, "variantId", 150)
+      : "";
+    const withChain = item?.withChain === true;
+    if (
+      (item?.withChain !== undefined && typeof item.withChain !== "boolean") ||
+      !/^[A-Za-z0-9_-]+$/.test(productId) ||
+      (variantId && !/^[A-Za-z0-9_-]+$/.test(variantId))
+    ) {
       throw new HttpsError("invalid-argument", "Invalid or repeated product.");
     }
-    seen.add(productId);
+    const lineKey = `${productId}::${variantId}::${withChain ? "chain" : "pendant"}`;
+    if (seen.has(lineKey)) {
+      throw new HttpsError("invalid-argument", "Invalid or repeated product.");
+    }
+    seen.add(lineKey);
     if (
       !Number.isSafeInteger(item.quantity) ||
       item.quantity < 1 ||
@@ -115,7 +127,7 @@ function validateCheckout(data) {
     ) {
       throw new HttpsError("invalid-argument", "Invalid item quantity.");
     }
-    return { productId, quantity: item.quantity };
+    return { productId, variantId, withChain, quantity: item.quantity };
   });
 
   return {
@@ -171,28 +183,53 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         };
       }
 
-      const productSnapshots = [];
-      for (const item of checkout.items) {
-        const snapshot = await transaction.get(
-          db.collection("products").doc(item.productId),
+      const productSnapshots = new Map();
+      for (const productId of new Set(
+        checkout.items.map((item) => item.productId),
+      )) {
+        productSnapshots.set(
+          productId,
+          await transaction.get(db.collection("products").doc(productId)),
         );
-        productSnapshots.push(snapshot);
       }
 
       let subtotalCents = 0;
       const orderItems = [];
       const stockUpdates = [];
-      for (const [index, item] of checkout.items.entries()) {
-        const snapshot = productSnapshots[index];
+      for (const [productId, snapshot] of productSnapshots) {
         if (!snapshot.exists) {
           throw new HttpsError("failed-precondition", "product-unavailable");
         }
         const product = snapshot.data();
+        const productItems = checkout.items.filter(
+          (item) => item.productId === productId,
+        );
+        const colorVariants = Array.isArray(product.colorVariants)
+          ? product.colorVariants
+          : [];
+        if (
+          colorVariants.some(
+            (variant) =>
+              typeof variant.colorId !== "string" ||
+              !/^[A-Za-z0-9_-]+$/.test(variant.colorId) ||
+              typeof variant.colorName !== "string" ||
+              !variant.colorName.trim() ||
+              !Number.isSafeInteger(variant.stock) ||
+              variant.stock < 0,
+          )
+        ) {
+          throw new HttpsError("failed-precondition", "invalid-product-stock");
+        }
+        const variantsById = new Map(
+          colorVariants.map((variant) => [variant.colorId, variant]),
+        );
+        if (variantsById.size !== colorVariants.length) {
+          throw new HttpsError("failed-precondition", "invalid-product-stock");
+        }
         if (
           product.status !== "published" ||
           !["available", "soldout"].includes(product.availability) ||
-          !Number.isSafeInteger(product.stock) ||
-          product.stock < item.quantity
+          !Number.isSafeInteger(product.stock)
         ) {
           throw new HttpsError("failed-precondition", "stock-changed");
         }
@@ -202,20 +239,105 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         ) {
           throw new HttpsError("failed-precondition", "invalid-product-price");
         }
-        const lineTotal = product.priceCents * item.quantity;
-        subtotalCents += lineTotal;
-        if (!Number.isSafeInteger(subtotalCents)) {
-          throw new HttpsError("failed-precondition", "order-total-too-large");
+
+        const requestedByColor = new Map();
+        let scalarQuantity = 0;
+        for (const item of productItems) {
+          let variant;
+          if (colorVariants.length) {
+            if (!item.variantId) {
+              throw new HttpsError("failed-precondition", "color-required");
+            }
+            variant = variantsById.get(item.variantId);
+            if (!variant) {
+              throw new HttpsError("failed-precondition", "color-unavailable");
+            }
+            requestedByColor.set(
+              item.variantId,
+              (requestedByColor.get(item.variantId) || 0) + item.quantity,
+            );
+          } else {
+            if (item.variantId) {
+              throw new HttpsError("failed-precondition", "color-unavailable");
+            }
+            scalarQuantity += item.quantity;
+          }
+
+          if (item.withChain && product.withChainPriceCents === undefined) {
+            throw new HttpsError(
+              "failed-precondition",
+              "chain-option-unavailable",
+            );
+          }
+          const unitPriceCents = item.withChain
+            ? product.withChainPriceCents
+            : product.priceCents;
+          if (!Number.isSafeInteger(unitPriceCents) || unitPriceCents < 0) {
+            throw new HttpsError(
+              "failed-precondition",
+              "invalid-product-price",
+            );
+          }
+          subtotalCents += unitPriceCents * item.quantity;
+          if (!Number.isSafeInteger(subtotalCents)) {
+            throw new HttpsError(
+              "failed-precondition",
+              "order-total-too-large",
+            );
+          }
+          orderItems.push({
+            productId: snapshot.id,
+            ...(item.variantId
+              ? {
+                  variantId: item.variantId,
+                  colorName: variant.colorName,
+                }
+              : {}),
+            ...(product.withChainPriceCents === undefined
+              ? {}
+              : { withChain: item.withChain }),
+            name: product.name,
+            quantity: item.quantity,
+            unitPriceCents,
+          });
         }
-        orderItems.push({
-          productId: snapshot.id,
-          name: product.name,
-          quantity: item.quantity,
-          unitPriceCents: product.priceCents,
-        });
+
+        let updatedColorVariants;
+        let totalStock;
+        if (colorVariants.length) {
+          updatedColorVariants = colorVariants.map((variant) => {
+            if (
+              !Number.isSafeInteger(variant.stock) ||
+              variant.stock < 0 ||
+              typeof variant.colorName !== "string"
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "invalid-product-stock",
+              );
+            }
+            const requested = requestedByColor.get(variant.colorId) || 0;
+            if (variant.stock < requested) {
+              throw new HttpsError("failed-precondition", "stock-changed");
+            }
+            return { ...variant, stock: variant.stock - requested };
+          });
+          totalStock = updatedColorVariants.reduce(
+            (total, variant) => total + variant.stock,
+            0,
+          );
+        } else {
+          if (product.stock < scalarQuantity) {
+            throw new HttpsError("failed-precondition", "stock-changed");
+          }
+          totalStock = product.stock - scalarQuantity;
+        }
         stockUpdates.push({
           ref: snapshot.ref,
-          stock: product.stock - item.quantity,
+          stock: totalStock,
+          ...(updatedColorVariants
+            ? { colorVariants: updatedColorVariants }
+            : {}),
         });
       }
 
@@ -250,6 +372,9 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         transaction.update(update.ref, {
           stock: update.stock,
           availability: update.stock > 0 ? "available" : "soldout",
+          ...(update.colorVariants
+            ? { colorVariants: update.colorVariants }
+            : {}),
         });
       }
       transaction.create(orderRef, {
@@ -270,6 +395,7 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         deliveryMethod: checkout.deliveryMethod,
         ...(deliveryAddress ? { deliveryAddress } : {}),
         isDemo: true,
+        notificationEligible: true,
         stockReserved: true,
         reservationStatus: "active",
         checkoutFingerprint: fingerprint,
@@ -340,25 +466,90 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
         throw new HttpsError("failed-precondition", "Invalid saved order.");
       }
 
-      const productSnapshots = [];
+      const itemsByProduct = new Map();
       for (const item of order.items) {
-        productSnapshots.push(
-          await transaction.get(db.collection("products").doc(item.productId)),
+        if (
+          typeof item.productId !== "string" ||
+          !Number.isSafeInteger(item.quantity) ||
+          item.quantity < 1
+        ) {
+          throw new HttpsError("failed-precondition", "Invalid saved order.");
+        }
+        const items = itemsByProduct.get(item.productId) || [];
+        items.push(item);
+        itemsByProduct.set(item.productId, items);
+      }
+
+      const productSnapshots = new Map();
+      for (const productId of itemsByProduct.keys()) {
+        productSnapshots.set(
+          productId,
+          await transaction.get(db.collection("products").doc(productId)),
         );
       }
 
-      for (const [index, item] of order.items.entries()) {
-        const productSnapshot = productSnapshots[index];
+      for (const [productId, items] of itemsByProduct) {
+        const productSnapshot = productSnapshots.get(productId);
         if (!productSnapshot.exists) continue;
         const product = productSnapshot.data();
-        if (
-          !Number.isSafeInteger(item.quantity) ||
-          item.quantity < 1 ||
-          !Number.isSafeInteger(product.stock)
-        ) {
+        if (!Number.isSafeInteger(product.stock)) {
           throw new HttpsError("failed-precondition", "Invalid stock record.");
         }
-        const stock = product.stock + item.quantity;
+        const colorVariants = Array.isArray(product.colorVariants)
+          ? product.colorVariants
+          : [];
+        let stock;
+        let updatedColorVariants;
+        if (colorVariants.length) {
+          const requestedByColor = new Map();
+          for (const item of items) {
+            const variantId =
+              typeof item.variantId === "string" && item.variantId
+                ? item.variantId
+                : colorVariants[0].colorId;
+            requestedByColor.set(
+              variantId,
+              (requestedByColor.get(variantId) || 0) + item.quantity,
+            );
+          }
+          const variantsById = new Map(
+            colorVariants.map((variant) => [variant.colorId, variant]),
+          );
+          for (const variantId of requestedByColor.keys()) {
+            if (variantsById.has(variantId)) continue;
+            const sourceItem = items.find(
+              (item) => item.variantId === variantId,
+            );
+            variantsById.set(variantId, {
+              colorId: variantId,
+              colorName: sourceItem?.colorName || "Cor arquivada",
+              stock: 0,
+            });
+          }
+          updatedColorVariants = Array.from(variantsById.values()).map(
+            (variant) => {
+              if (!Number.isSafeInteger(variant.stock) || variant.stock < 0) {
+                throw new HttpsError(
+                  "failed-precondition",
+                  "Invalid stock record.",
+                );
+              }
+              return {
+                ...variant,
+                stock:
+                  variant.stock + (requestedByColor.get(variant.colorId) || 0),
+              };
+            },
+          );
+          stock = updatedColorVariants.reduce(
+            (total, variant) => total + variant.stock,
+            0,
+          );
+        } else {
+          stock =
+            product.stock +
+            items.reduce((total, item) => total + item.quantity, 0);
+        }
         transaction.update(productSnapshot.ref, {
           stock,
           availability: ["available", "soldout"].includes(product.availability)
@@ -366,6 +557,9 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
               ? "available"
               : "soldout"
             : product.availability,
+          ...(updatedColorVariants
+            ? { colorVariants: updatedColorVariants }
+            : {}),
         });
       }
 

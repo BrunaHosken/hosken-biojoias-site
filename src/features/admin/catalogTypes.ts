@@ -2,6 +2,7 @@ export type AdminCatalogTab =
   | "products"
   | "categories"
   | "collections"
+  | "colors"
   | "news"
   | "events"
   | "partnerStores"

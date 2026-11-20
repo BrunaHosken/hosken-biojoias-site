@@ -4,10 +4,11 @@ Loja em React + TypeScript + Vite, com Firebase Authentication, Firestore e Stor
 
 ## Começar sem conta Firebase
 
-Requisitos: Node.js 22+ e Java 21+. Nesta máquina, uma cópia local do Java foi baixada para `.tools/` (ignorada no Git). Os scripts detectam essa cópia automaticamente; em outro computador, instale Java 21+ normalmente.
+Requisitos: Node.js 22 e Java 21+. As Cloud Functions usam Node.js 22; versões diferentes podem gerar um aviso ou incompatibilidade no emulador. Nesta máquina, uma cópia local do Java foi baixada para `.tools/` (ignorada no Git). Os scripts detectam essa cópia automaticamente; em outro computador, instale Java 21+ normalmente.
 
 ```sh
 npm install
+npm install --prefix functions
 npm run emulators
 ```
 

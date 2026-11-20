@@ -9,6 +9,7 @@ export function AdminContentFields({
   tab,
   editingCategory,
   editingLine,
+  editingColor,
   editingContent,
   eventSchedule,
   setEventSchedule,
@@ -20,6 +21,7 @@ export function AdminContentFields({
   tab: string;
   editingCategory?: Taxonomy;
   editingLine?: Taxonomy;
+  editingColor?: Taxonomy;
   editingContent?: Content;
   eventSchedule: EventScheduleEntry[];
   setEventSchedule: Dispatch<SetStateAction<EventScheduleEntry[]>>;
@@ -31,17 +33,22 @@ export function AdminContentFields({
   return (
     <>
       <label>
-        {["categories", "collections"].includes(tab) ? "Nome" : "Título"}
+        {["categories", "collections", "colors"].includes(tab)
+          ? "Nome"
+          : "Título"}
         <input
           name="name"
           required
           defaultValue={
             editingCategory?.name ||
             editingLine?.name ||
+            editingColor?.name ||
             editingContent?.title ||
             ""
           }
-          maxLength={["categories", "collections"].includes(tab) ? 80 : 160}
+          maxLength={
+            ["categories", "collections", "colors"].includes(tab) ? 80 : 160
+          }
         />
       </label>
       {tab === "collections" && (
@@ -92,7 +99,7 @@ export function AdminContentFields({
           </div>
         </>
       )}
-      {!["categories", "collections"].includes(tab) && (
+      {!["categories", "collections", "colors"].includes(tab) && (
         <label>
           {tab === "policies" ? "Texto da política" : "Texto"}
           <textarea
@@ -235,6 +242,7 @@ export function AdminContentFields({
           defaultValue={
             editingCategory?.status ||
             editingLine?.status ||
+            editingColor?.status ||
             editingContent?.status ||
             "draft"
           }

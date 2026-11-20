@@ -45,14 +45,38 @@ export function CheckoutSummary({
     <aside className="checkout-summary">
       <h2>Resumo do pedido</h2>
       <ul>
-        {lines.map(({ product, productId, quantity }) => (
-          <li key={productId}>
-            <span>
-              {product?.name || "Peça indisponível"} <small>× {quantity}</small>
-            </span>
-            <strong>{money((product?.priceCents || 0) * quantity)}</strong>
-          </li>
-        ))}
+        {lines.map(
+          ({
+            product,
+            basketItemId,
+            quantity,
+            colorName,
+            withChain,
+            unitPriceCents,
+          }) => (
+            <li key={basketItemId}>
+              <span>
+                {product?.name || "Peça indisponível"}{" "}
+                <small>× {quantity}</small>
+                {(colorName || product?.withChainPriceCents !== undefined) && (
+                  <small className="checkout-line-options">
+                    {[
+                      colorName ? `Cor: ${colorName}` : "",
+                      product?.withChainPriceCents !== undefined
+                        ? withChain
+                          ? "Com corrente"
+                          : "Somente o pingente"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </small>
+                )}
+              </span>
+              <strong>{money(unitPriceCents * quantity)}</strong>
+            </li>
+          ),
+        )}
       </ul>
       <div className="checkout-summary-line">
         <span>Peças</span>

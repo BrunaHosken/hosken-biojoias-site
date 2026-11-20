@@ -27,6 +27,7 @@ const moduleGroups = [
     label: "Catálogo",
     items: [
       ["products", "Produtos"],
+      ["colors", "Cores"],
       ["categories", "Tipos de peça"],
       ["collections", "Linhas"],
     ],

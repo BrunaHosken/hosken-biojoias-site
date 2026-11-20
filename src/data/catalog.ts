@@ -25,6 +25,11 @@ const previewRecords: Record<string, unknown[]> = {
       status: "published",
     },
   ] satisfies Taxonomy[],
+  colors: [
+    { id: "ouro", name: "Ouro", slug: "ouro", status: "published" },
+    { id: "prata", name: "Prata", slug: "prata", status: "published" },
+    { id: "bronze", name: "Bronze", slug: "bronze", status: "published" },
+  ] satisfies Taxonomy[],
   products: [
     {
       id: "orquidea-exemplo",
@@ -46,6 +51,12 @@ const previewRecords: Record<string, unknown[]> = {
         "Peça de demonstração para conhecer a loja. Valores, materiais e disponibilidade são ilustrativos.",
       priceCents: 8900,
       stock: 2,
+      colorVariants: [
+        { colorId: "ouro", colorName: "Ouro", stock: 1 },
+        { colorId: "prata", colorName: "Prata", stock: 1 },
+        { colorId: "bronze", colorName: "Bronze", stock: 0 },
+      ],
+      withChainPriceCents: 11900,
       categoryId: "colar",
       collectionId: "biojoias",
       status: "published",

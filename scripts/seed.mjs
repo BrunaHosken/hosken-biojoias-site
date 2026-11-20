@@ -45,6 +45,11 @@ const groups = {
     brinco: { name: "Brincos", slug: "brincos", status: "published" },
     conjunto: { name: "Conjuntos", slug: "conjuntos", status: "published" },
   },
+  colors: {
+    ouro: { name: "Ouro", slug: "ouro", status: "published" },
+    prata: { name: "Prata", slug: "prata", status: "published" },
+    bronze: { name: "Bronze", slug: "bronze", status: "published" },
+  },
   products: {
     "orquidea-exemplo": {
       name: "Conjunto Orquídea",
@@ -64,6 +69,12 @@ const groups = {
         "Produto de demonstração para testar o catálogo e o carrinho. Substitua pelas informações reais da peça.",
       priceCents: 8900,
       stock: 2,
+      colorVariants: [
+        { colorId: "ouro", colorName: "Ouro", stock: 1 },
+        { colorId: "prata", colorName: "Prata", stock: 1 },
+        { colorId: "bronze", colorName: "Bronze", stock: 0 },
+      ],
+      withChainPriceCents: 11900,
       categoryId: "colar",
       collectionId: "biojoias",
       status: "published",

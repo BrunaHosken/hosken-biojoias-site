@@ -115,6 +115,20 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
             <li key={`${item.productId}-${index}`}>
               <span>
                 {item.name} <small>× {item.quantity}</small>
+                {(item.colorName || item.withChain !== undefined) && (
+                  <small className="order-item-options">
+                    {[
+                      item.colorName ? `Cor: ${item.colorName}` : "",
+                      item.withChain === undefined
+                        ? ""
+                        : item.withChain
+                          ? "Com corrente"
+                          : "Somente o pingente",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </small>
+                )}
               </span>
               <strong>{money(item.quantity * item.unitPriceCents)}</strong>
             </li>

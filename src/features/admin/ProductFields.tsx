@@ -7,6 +7,7 @@ import {
 import { getProductImages } from "../storefront/productImages";
 import type {
   Product,
+  ProductColorVariant,
   Taxonomy,
   EventScheduleEntry,
   Content,
@@ -19,6 +20,7 @@ type ProductFieldsProps = {
   setProduct: Dispatch<SetStateAction<ProductDraft>>;
   lines: Taxonomy[];
   categories: Taxonomy[];
+  colors: Taxonomy[];
   uploadingImages: boolean;
   onUploadImages: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (index: number) => void;
@@ -29,10 +31,44 @@ export function AdminProductFields({
   setProduct,
   lines,
   categories,
+  colors,
   uploadingImages,
   onUploadImages,
   onRemoveImage,
 }: ProductFieldsProps) {
+  const productColors = colors.filter(
+    (color) =>
+      color.status === "published" ||
+      product.colorVariants?.some((variant) => variant.colorId === color.id),
+  );
+  for (const variant of product.colorVariants || []) {
+    if (!productColors.some((color) => color.id === variant.colorId)) {
+      productColors.push({
+        id: variant.colorId,
+        name: variant.colorName,
+        slug: variant.colorId,
+        status: "published",
+      });
+    }
+  }
+
+  function updateColorVariants(colorVariants: ProductColorVariant[]) {
+    const stock = colorVariants.reduce(
+      (total, variant) => total + variant.stock,
+      0,
+    );
+    setProduct((current) => ({
+      ...current,
+      colorVariants,
+      stock,
+      availability:
+        current.availability === "available" ||
+        current.availability === "soldout"
+          ? availabilityFromStock(stock)
+          : current.availability,
+    }));
+  }
+
   return (
     <>
       <label>
@@ -57,7 +93,9 @@ export function AdminProductFields({
       </label>
       <div className="form-pair">
         <label>
-          Preço (R$)
+          {product.withChainPriceCents === undefined
+            ? "Preço (R$)"
+            : "Preço somente pingente (R$)"}
           <input
             required
             type="number"
@@ -72,29 +110,154 @@ export function AdminProductFields({
             }
           />
         </label>
-        <label>
-          Estoque
+      </div>
+      <fieldset className="admin-variant-fields">
+        <legend>Cores e estoque por cor</legend>
+        <p className="field-hint">
+          Cadastre as cores na seção Catálogo → Cores e marque aqui as opções
+          desta peça. A disponibilidade geral soma o estoque de todas as cores.
+        </p>
+        {productColors.length ? (
+          <div className="admin-color-stock-list">
+            {productColors.map((color) => {
+              const variant = product.colorVariants?.find(
+                (item) => item.colorId === color.id,
+              );
+              return (
+                <div className="admin-color-stock-row" key={color.id}>
+                  <label className="admin-color-choice">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(variant)}
+                      disabled={color.status !== "published" && !variant}
+                      onChange={(event) => {
+                        const current = product.colorVariants || [];
+                        const next = event.target.checked
+                          ? [
+                              ...current,
+                              {
+                                colorId: color.id,
+                                colorName: color.name,
+                                stock: 0,
+                              },
+                            ]
+                          : current.filter((item) => item.colorId !== color.id);
+                        updateColorVariants(next);
+                      }}
+                    />
+                    <span>{color.name}</span>
+                  </label>
+                  {variant ? (
+                    <label className="admin-color-stock-input">
+                      Estoque
+                      <input
+                        required
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={variant.stock}
+                        onChange={(event) =>
+                          updateColorVariants(
+                            (product.colorVariants || []).map((item) =>
+                              item.colorId === color.id
+                                ? {
+                                    ...item,
+                                    colorName: color.name,
+                                    stock: Number(event.target.value),
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  ) : (
+                    <span className="muted">Não oferecida</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="muted">
+            Cadastre uma cor antes de configurar variantes.
+          </p>
+        )}
+        {product.colorVariants?.length ? (
+          <p className="admin-variant-total">
+            Estoque total desta peça: <strong>{product.stock}</strong>
+          </p>
+        ) : (
+          <label>
+            Estoque
+            <input
+              required
+              type="number"
+              min="0"
+              step="1"
+              value={product.stock}
+              onChange={(event) => {
+                const stock = Number(event.target.value);
+                setProduct((current) => ({
+                  ...current,
+                  stock,
+                  availability:
+                    current.availability === "available" ||
+                    current.availability === "soldout"
+                      ? availabilityFromStock(stock)
+                      : current.availability,
+                }));
+              }}
+            />
+          </label>
+        )}
+      </fieldset>
+      <fieldset className="admin-variant-fields">
+        <legend>Opção de corrente</legend>
+        <p className="field-hint">
+          Use esta opção para peças vendidas como pingente de colar. O estoque
+          por cor continua representando o pingente.
+        </p>
+        <label className="admin-color-choice">
           <input
-            required
-            type="number"
-            min="0"
-            step="1"
-            value={product.stock}
-            onChange={(e) => {
-              const stock = Number(e.target.value);
+            type="checkbox"
+            checked={product.withChainPriceCents !== undefined}
+            onChange={(event) =>
               setProduct((current) => ({
                 ...current,
-                stock,
-                availability:
-                  current.availability === "available" ||
-                  current.availability === "soldout"
-                    ? availabilityFromStock(stock)
-                    : current.availability,
-              }));
-            }}
+                withChainPriceCents: event.target.checked
+                  ? (current.withChainPriceCents ?? current.priceCents)
+                  : undefined,
+              }))
+            }
           />
+          Oferecer também a opção com corrente
         </label>
-      </div>
+        {product.withChainPriceCents !== undefined && (
+          <label>
+            Preço total com corrente (R$)
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={product.withChainPriceCents / 100}
+              onChange={(event) =>
+                setProduct((current) => ({
+                  ...current,
+                  withChainPriceCents: Math.round(
+                    Number(event.target.value) * 100,
+                  ),
+                }))
+              }
+            />
+            <small className="field-hint">
+              O preço acima é somente do pingente; este é o valor final com
+              corrente.
+            </small>
+          </label>
+        )}
+      </fieldset>
       <label>
         Avisar quando o estoque chegar a
         <input

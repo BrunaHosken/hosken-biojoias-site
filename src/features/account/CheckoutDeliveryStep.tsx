@@ -1,18 +1,32 @@
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, MessageCircle } from "lucide-react";
+import type { SavedAddress } from "../../data/models";
 import type {
   CheckoutAddress,
   CheckoutContact,
   CheckoutDraft,
 } from "./checkoutModel";
+import { formatBrazilianMobile } from "./checkoutModel";
 
 type CheckoutDeliveryStepProps = {
   draft: CheckoutDraft;
   setDraft: Dispatch<SetStateAction<CheckoutDraft>>;
   cartIsValid: boolean;
+  savedAddresses: SavedAddress[];
+  savedAddressesLoading: boolean;
+  savedAddressesError: string;
+  selectedAddressId: string;
+  saveAddressForFuture: boolean;
+  addressLabel: string;
+  savingAddress: boolean;
   onUpdateContact: (field: keyof CheckoutContact, value: string) => void;
   onUpdateAddress: (field: keyof CheckoutAddress, value: string) => void;
+  onSelectSavedAddress: (id: string) => void;
+  onSaveAddressForFutureChange: (save: boolean) => void;
+  onAddressLabelChange: (label: string) => void;
+  onSaveAddress: () => void;
+  onDeleteSavedAddress: () => void;
   onContinue: (event: FormEvent<HTMLFormElement>) => void;
 };
 
@@ -20,8 +34,20 @@ export function CheckoutDeliveryStep({
   draft,
   setDraft,
   cartIsValid,
+  savedAddresses,
+  savedAddressesLoading,
+  savedAddressesError,
+  selectedAddressId,
+  saveAddressForFuture,
+  addressLabel,
+  savingAddress,
   onUpdateContact,
   onUpdateAddress,
+  onSelectSavedAddress,
+  onSaveAddressForFutureChange,
+  onAddressLabelChange,
+  onSaveAddress,
+  onDeleteSavedAddress,
   onContinue,
 }: CheckoutDeliveryStepProps) {
   return (
@@ -108,6 +134,41 @@ export function CheckoutDeliveryStep({
       {draft.deliveryMethod === "sedex" && (
         <div className="checkout-address-fields">
           <h3>Endereço para entrega</h3>
+          {(savedAddressesLoading || savedAddresses.length > 0) && (
+            <label>
+              Usar endereço salvo
+              <select
+                value={selectedAddressId}
+                onChange={(event) => onSelectSavedAddress(event.target.value)}
+              >
+                <option value="">Preencher um novo endereço</option>
+                {savedAddresses.map((address) => (
+                  <option key={address.id} value={address.id}>
+                    {address.label} · {address.city}/{address.state}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {savedAddressesLoading && (
+            <p className="checkout-saved-address-note" role="status">
+              Carregando seus endereços salvos…
+            </p>
+          )}
+          {savedAddressesError && (
+            <p className="checkout-saved-address-error" role="status">
+              {savedAddressesError} Você ainda pode preencher o endereço aqui.
+            </p>
+          )}
+          {selectedAddressId && (
+            <button
+              className="text-button checkout-delete-address"
+              type="button"
+              onClick={onDeleteSavedAddress}
+            >
+              Excluir endereço salvo
+            </button>
+          )}
           <div className="checkout-field-pair">
             <label>
               CEP
@@ -201,6 +262,45 @@ export function CheckoutDeliveryStep({
               />
             </label>
           </div>
+          {!selectedAddressId && (
+            <div className="checkout-save-address">
+              <label className="checkout-checkbox">
+                <input
+                  type="checkbox"
+                  checked={saveAddressForFuture}
+                  onChange={(event) =>
+                    onSaveAddressForFutureChange(event.target.checked)
+                  }
+                />
+                Salvar este endereço para as próximas compras
+              </label>
+              {saveAddressForFuture && (
+                <>
+                  <label>
+                    Identifique este endereço
+                    <input
+                      required
+                      maxLength={50}
+                      autoComplete="off"
+                      placeholder="Casa, trabalho..."
+                      value={addressLabel}
+                      onChange={(event) =>
+                        onAddressLabelChange(event.target.value)
+                      }
+                    />
+                  </label>
+                  <button
+                    className="text-button checkout-save-address-button"
+                    type="button"
+                    disabled={savingAddress}
+                    onClick={onSaveAddress}
+                  >
+                    {savingAddress ? "Salvando endereço…" : "Salvar endereço"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -235,10 +335,17 @@ export function CheckoutDeliveryStep({
               type="tel"
               autoComplete="tel"
               inputMode="tel"
-              maxLength={24}
+              maxLength={15}
+              pattern="\([0-9]{2}\) [0-9]{5}-[0-9]{4}"
+              title="Digite um celular com DDD, por exemplo (22) 99999-9999."
               placeholder="(22) 99999-9999"
               value={draft.contact.phone}
-              onChange={(event) => onUpdateContact("phone", event.target.value)}
+              onChange={(event) =>
+                onUpdateContact(
+                  "phone",
+                  formatBrazilianMobile(event.target.value),
+                )
+              }
             />
           </label>
         </div>
@@ -249,12 +356,15 @@ export function CheckoutDeliveryStep({
         </Link>
         <button
           className="button"
+          type="submit"
           disabled={
+            savingAddress ||
             !cartIsValid ||
             (draft.deliveryMethod === "pickup" && !draft.pickupAgreed)
           }
         >
-          Continuar para o pagamento <ArrowRight size={18} />
+          {savingAddress ? "Salvando endereço…" : "Continuar para o pagamento"}
+          {!savingAddress && <ArrowRight size={18} />}
         </button>
       </div>
     </form>

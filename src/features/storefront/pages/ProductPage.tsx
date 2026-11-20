@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { MessageCircle, ShoppingBag } from "lucide-react";
 import { BasketContext, SessionContext } from "../../../app/contexts";
@@ -8,9 +8,12 @@ import {
   getProductAvailability,
   isProductAvailable,
   money,
+  getBasketQuantityForVariant,
+  makeBasketItemId,
   useRecords,
   type Product,
 } from "../../../data";
+import { getProductStock } from "../../../data/productAvailability";
 import { ProductGallery } from "./ProductVisuals";
 
 export function ProductPage() {
@@ -18,7 +21,55 @@ export function ProductPage() {
   const session = useContext(SessionContext);
   const products = useRecords<Product>("products");
   const { items, change } = useContext(BasketContext);
+  const [selectedColorId, setSelectedColorId] = useState("");
+  const [withChain, setWithChain] = useState(false);
   const product = products.data.find((p) => p.id === id);
+  const colorVariants = product?.colorVariants || [];
+  const hasColorChoices = colorVariants.length > 0;
+  const selectedVariant = colorVariants.find(
+    (variant) => variant.colorId === selectedColorId,
+  );
+  const selectedStock = hasColorChoices
+    ? selectedVariant?.stock || 0
+    : (product?.stock ?? 0);
+  const basketItemId = product
+    ? makeBasketItemId(
+        product.id,
+        hasColorChoices ? selectedColorId : "",
+        withChain,
+      )
+    : "";
+  const selectedBasketQuantity = basketItemId ? items[basketItemId] || 0 : 0;
+  const basketQuantityForVariant = product
+    ? getBasketQuantityForVariant(
+        items,
+        product.id,
+        hasColorChoices ? selectedColorId : "",
+      )
+    : 0;
+  const hasChainOption = product?.withChainPriceCents !== undefined;
+  const selectedPrice =
+    withChain && hasChainOption
+      ? product!.withChainPriceCents!
+      : (product?.priceCents ?? 0);
+
+  useEffect(() => {
+    setSelectedColorId("");
+    setWithChain(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!hasColorChoices) {
+      setSelectedColorId("");
+      return;
+    }
+    setSelectedColorId((current) =>
+      colorVariants.some((variant) => variant.colorId === current)
+        ? current
+        : colorVariants.find((variant) => variant.stock > 0)?.colorId ||
+          colorVariants[0].colorId,
+    );
+  }, [product?.id, hasColorChoices, colorVariants]);
   return (
     <div className="page">
       <Link className="back" to="/loja">
@@ -31,8 +82,59 @@ export function ProductPage() {
           <div>
             <div className="eyebrow">UM ENCONTRO COM A NATUREZA</div>
             <h1>{product.name}</h1>
-            <p className="price">{money(product.priceCents)}</p>
+            <p className="price">
+              {money(selectedPrice)}
+              {hasChainOption && <small> · preço da opção selecionada</small>}
+            </p>
             <p className="description">{product.description}</p>
+            {hasColorChoices && (
+              <fieldset className="product-variant-picker">
+                <legend>Escolha a cor</legend>
+                <div className="product-color-options">
+                  {colorVariants.map((variant) => (
+                    <button
+                      type="button"
+                      key={variant.colorId}
+                      className={`product-color-option${selectedColorId === variant.colorId ? " is-selected" : ""}`}
+                      aria-pressed={selectedColorId === variant.colorId}
+                      onClick={() => setSelectedColorId(variant.colorId)}
+                    >
+                      <strong>{variant.colorName}</strong>
+                      <small>
+                        {variant.stock > 0
+                          ? `Disponível · ${variant.stock} unidade(s)`
+                          : "Esgotada"}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            {hasChainOption && (
+              <fieldset className="product-variant-picker">
+                <legend>Como prefere receber?</legend>
+                <label className="product-option-radio">
+                  <input
+                    type="radio"
+                    name={`chain-option-${product.id}`}
+                    checked={!withChain}
+                    onChange={() => setWithChain(false)}
+                  />
+                  Somente o pingente{" "}
+                  <strong>{money(product.priceCents)}</strong>
+                </label>
+                <label className="product-option-radio">
+                  <input
+                    type="radio"
+                    name={`chain-option-${product.id}`}
+                    checked={withChain}
+                    onChange={() => setWithChain(true)}
+                  />
+                  Com corrente{" "}
+                  <strong>{money(product.withChainPriceCents!)}</strong>
+                </label>
+              </fieldset>
+            )}
             {product.materials ||
             product.dimensions ||
             product.careInstructions ? (
@@ -62,9 +164,9 @@ export function ProductPage() {
                 adicionados em breve.
               </p>
             )}
-            <p>
-              {availability[getProductAvailability(product)]} · {product.stock}{" "}
-              unidade(s)
+            <p className="product-stock-summary">
+              {availability[getProductAvailability(product)]} ·{" "}
+              {getProductStock(product)} unidade(s) no total
             </p>
             {!session.admin && (
               <div className="product-actions">
@@ -72,9 +174,11 @@ export function ProductPage() {
                   className="button"
                   disabled={
                     !isProductAvailable(product) ||
-                    product.stock <= (items[product.id] || 0)
+                    selectedStock <= basketQuantityForVariant ||
+                    (hasColorChoices && !selectedVariant) ||
+                    (withChain && !hasChainOption)
                   }
-                  onClick={() => change(product.id, 1)}
+                  onClick={() => change(basketItemId, 1)}
                 >
                   Adicionar à sacola <ShoppingBag size={18} />
                 </button>
@@ -98,9 +202,9 @@ export function ProductPage() {
                 </Link>
               </div>
             )}
-            {!session.admin && !!items[product.id] && (
+            {!session.admin && !!selectedBasketQuantity && (
               <p role="status">
-                {items[product.id]} na sacola.{" "}
+                {selectedBasketQuantity} nesta opção na sacola.{" "}
                 <Link to="/carrinho">Ver carrinho →</Link>
               </p>
             )}
