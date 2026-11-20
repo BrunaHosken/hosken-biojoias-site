@@ -7,9 +7,14 @@ service cloud.firestore {
     function taxonomy(collectionName) {
       let data = request.resource.data;
       return (collectionName == 'collections'
-          ? data.keys().hasOnly(['name','slug','status','description'])
+          ? data.keys().hasOnly(['name','slug','status','description','imageUrls','imagePaths'])
             && (!('description' in data)
               || (data.description is string && data.description.size() <= 220))
+            && ((!('imageUrls' in data) && !('imagePaths' in data))
+              || (data.imageUrls is list
+                && data.imagePaths is list
+                && data.imageUrls.size() == data.imagePaths.size()
+                && data.imageUrls.size() <= 6))
           : data.keys().hasOnly(['name','slug','status']))
         && text(data.name, 80) && text(data.slug, 80)
         && data.status in ['published','draft'];
@@ -100,6 +105,26 @@ service cloud.firestore {
       function messagePath(id) {
         return /databases/$(database)/documents/conversations/$(conversationId)/messages/$(id);
       }
+      function messageHasValidImage(data) {
+        return ('imageUrl' in data)
+          && ('imagePath' in data)
+          && data.senderId is string
+          && text(data.imageUrl, 2048)
+          && data.imagePath is string
+          && data.imagePath.size() <= 500
+          && data.imagePath.matches('^conversations/' + conversationId + '/' + data.senderId + '/[A-Za-z0-9_-]+[.]webp$');
+      }
+      function validMessageContent(data) {
+        let imageFieldsPresent = ('imageUrl' in data) || ('imagePath' in data);
+        let validImage = messageHasValidImage(data);
+        return data.text is string
+          && data.text.size() <= 2000
+          && (data.text.size() > 0 || validImage)
+          && (!imageFieldsPresent || validImage);
+      }
+      function messagePreview(data) {
+        return data.text.size() > 0 ? data.text : '📷 Imagem';
+      }
       function isMessageUpdate() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         let message = getAfter(messagePath(request.resource.data.lastMessageId)).data;
@@ -115,7 +140,7 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time
           && message.senderId == request.auth.uid
           && message.senderRole == request.resource.data.lastMessageSenderRole
-          && message.text == request.resource.data.lastMessage
+          && messagePreview(message) == request.resource.data.lastMessage
           && message.createdAt == request.time
           && ((customerMessage
             && resource.data.customerId == request.auth.uid
@@ -134,14 +159,14 @@ service cloud.firestore {
         return signedIn()
           && (resource.data.customerId == request.auth.uid || admin())
           && changed.hasOnly(['lastMessage','updatedAt'])
-          && changed.hasAll(['lastMessage','updatedAt'])
+          && changed.hasAll(['updatedAt'])
           && request.resource.data.lastMessage is string
           && request.resource.data.lastMessage.size() > 0
           && request.resource.data.lastMessage.size() <= 2000
           && request.resource.data.updatedAt == request.time
           && message.senderId == request.auth.uid
           && message.senderRole == resource.data.lastMessageSenderRole
-          && message.text == request.resource.data.lastMessage
+          && messagePreview(message) == request.resource.data.lastMessage
           && message.editedAt == request.time
           && (request.time - message.createdAt) < duration.value(1, 'h');
       }
@@ -171,13 +196,13 @@ service cloud.firestore {
                   && !changed.hasAll(['unreadForCustomer'])
                   && request.resource.data.unreadForCustomer == resource.data.unreadForCustomer))))
           && ((resource.data.lastMessageId == request.resource.data.lastDeletedMessageId
-            && changed.hasAll(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt'])
+            && changed.hasAll(['lastMessageId','lastMessageSenderRole','updatedAt'])
             && request.resource.data.updatedAt == request.time
             && ((request.resource.data.lastMessageId == ''
               && request.resource.data.lastMessage == ''
               && request.resource.data.lastMessageSenderRole == '')
               || (request.resource.data.lastMessageId != ''
-                && getAfter(messagePath(request.resource.data.lastMessageId)).data.text == request.resource.data.lastMessage
+                && messagePreview(getAfter(messagePath(request.resource.data.lastMessageId)).data) == request.resource.data.lastMessage
                 && getAfter(messagePath(request.resource.data.lastMessageId)).data.senderRole == request.resource.data.lastMessageSenderRole)))
             || (resource.data.lastMessageId != request.resource.data.lastDeletedMessageId
               && !changed.hasAll(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt'])
@@ -250,27 +275,27 @@ service cloud.firestore {
           return signedIn()
             && resource.data.senderId == request.auth.uid
             && (request.time - resource.data.createdAt) < duration.value(1, 'h')
-            && changed.hasOnly(['text','editedAt'])
+            && changed.hasOnly(['text','editedAt','imageUrl','imagePath'])
             && changed.hasAll(['text','editedAt'])
-            && text(request.resource.data.text, 2000)
+            && validMessageContent(request.resource.data)
             && request.resource.data.editedAt == request.time
             && request.resource.data.senderId == resource.data.senderId
             && request.resource.data.senderRole == resource.data.senderRole
             && request.resource.data.createdAt == resource.data.createdAt
             && (conversation().lastMessageId != messageId
               || (conversationAfter().lastMessageId == messageId
-                && conversationAfter().lastMessage == request.resource.data.text));
+                && conversationAfter().lastMessage == messagePreview(request.resource.data)));
         }
         allow read: if canAccessConversation();
         allow create: if signedIn()
-          && request.resource.data.keys().hasOnly(['senderId','senderRole','text','createdAt'])
+          && request.resource.data.keys().hasOnly(['senderId','senderRole','text','createdAt','imageUrl','imagePath'])
           && request.resource.data.keys().hasAll(['senderId','senderRole','text','createdAt'])
           && request.resource.data.senderId == request.auth.uid
-          && text(request.resource.data.text, 2000)
+          && validMessageContent(request.resource.data)
           && request.resource.data.createdAt == request.time
           && canAccessConversation()
           && conversationAfter().lastMessageId == messageId
-          && conversationAfter().lastMessage == request.resource.data.text
+          && conversationAfter().lastMessage == messagePreview(request.resource.data)
           && ((request.resource.data.senderRole == 'customer'
               && conversationId == request.auth.uid)
             || (request.resource.data.senderRole == 'admin' && admin()));
@@ -281,7 +306,6 @@ service cloud.firestore {
           && conversationAfter().lastDeletedMessageId == messageId;
       }
     }
-    // Uploads ainda serão habilitados com regras específicas.
     match /{document=**} { allow read, write: if false; }
   }
 }

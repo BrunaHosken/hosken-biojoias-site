@@ -15,8 +15,46 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { auth, db, localMode } from "../firebase";
+import {
+  deleteObject,
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytes,
+} from "firebase/storage";
+import { auth, db, localMode, storage } from "../firebase";
+import { convertToWebp } from "../utils/convertToWebp";
 import type { ChatConversation, ChatMessage } from "./models";
+
+const MAX_CHAT_IMAGE_BYTES = 10 * 1024 * 1024;
+
+async function uploadChatImage(
+  conversationId: string,
+  senderId: string,
+  messageId: string,
+  file: File,
+) {
+  if (!file.type.startsWith("image/") || file.size > MAX_CHAT_IMAGE_BYTES) {
+    throw new Error("invalid-chat-image");
+  }
+  const webp = await convertToWebp(file);
+  if (webp.size > MAX_CHAT_IMAGE_BYTES) {
+    throw new Error("chat-image-too-large");
+  }
+  const suffix = Math.random().toString(36).slice(2, 10);
+  const path = `conversations/${conversationId}/${senderId}/${messageId}-${Date.now()}-${suffix}.webp`;
+  const target = storageRef(storage, path);
+  await uploadBytes(target, webp, { contentType: "image/webp" });
+  try {
+    return { imagePath: path, imageUrl: await getDownloadURL(target) };
+  } catch (cause) {
+    await deleteObject(target).catch(() => {});
+    throw cause;
+  }
+}
+
+function messagePreview(message: Pick<ChatMessage, "text" | "imageUrl">) {
+  return message.text || (message.imageUrl ? "📷 Imagem" : "");
+}
 
 export function useCustomerConversation(uid: string | undefined) {
   const [data, setData] = useState<ChatConversation[]>([]);
@@ -179,11 +217,16 @@ export async function sendChatMessage(
   senderId: string,
   senderRole: ChatMessage["senderRole"],
   text: string,
+  imageFile?: File,
 ) {
   const cleanText = text.trim();
-  if (!cleanText || cleanText.length > 2000) return;
+  if ((!cleanText && !imageFile) || cleanText.length > 2000) return;
   const conversationRef = doc(db, "conversations", conversationId);
   const messageRef = doc(collection(conversationRef, "messages"));
+  const uploadedImage = imageFile
+    ? await uploadChatImage(conversationId, senderId, messageRef.id, imageFile)
+    : undefined;
+  const preview = cleanText || "📷 Imagem";
   const currentUser = auth.currentUser;
   const diagnostics = {
     projectId: db.app.options.projectId,
@@ -209,9 +252,10 @@ export async function sendChatMessage(
     senderRole,
     text: cleanText,
     createdAt: serverTimestamp(),
+    ...(uploadedImage || {}),
   });
   batch.update(conversationRef, {
-    lastMessage: cleanText,
+    lastMessage: preview,
     lastMessageId: messageRef.id,
     lastMessageSenderRole: senderRole,
     updatedAt: serverTimestamp(),
@@ -222,6 +266,11 @@ export async function sendChatMessage(
   try {
     await batch.commit();
   } catch (cause) {
+    if (uploadedImage) {
+      await deleteObject(storageRef(storage, uploadedImage.imagePath)).catch(
+        () => {},
+      );
+    }
     if (import.meta.env.DEV) {
       console.error("[Hosken chat] batch de envio recusado", {
         ...diagnostics,
@@ -250,9 +299,14 @@ export async function editChatMessage(
   conversationId: string,
   message: ChatMessage,
   nextText: string,
+  replacementImage?: File,
 ) {
   const cleanText = nextText.trim();
-  if (!cleanText || cleanText.length > 2000) throw new Error("Invalid message");
+  if (
+    (!cleanText && !replacementImage && !message.imageUrl) ||
+    cleanText.length > 2000
+  )
+    throw new Error("Invalid message");
   const messageRef = doc(
     db,
     "conversations",
@@ -261,24 +315,52 @@ export async function editChatMessage(
     message.id,
   );
   const conversationRef = doc(db, "conversations", conversationId);
-  await runTransaction(db, async (transaction) => {
-    const conversationSnapshot = await transaction.get(conversationRef);
-    const messageSnapshot = await transaction.get(messageRef);
-    if (!conversationSnapshot.exists() || !messageSnapshot.exists()) {
-      throw new Error("Chat message no longer exists");
-    }
+  const uploadedImage = replacementImage
+    ? await uploadChatImage(
+        conversationId,
+        message.senderId,
+        message.id,
+        replacementImage,
+      )
+    : undefined;
+  const preview =
+    cleanText || (uploadedImage || message.imageUrl ? "📷 Imagem" : "");
+  try {
+    await runTransaction(db, async (transaction) => {
+      const conversationSnapshot = await transaction.get(conversationRef);
+      const messageSnapshot = await transaction.get(messageRef);
+      if (!conversationSnapshot.exists() || !messageSnapshot.exists()) {
+        throw new Error("Chat message no longer exists");
+      }
 
-    transaction.update(messageRef, {
-      text: cleanText,
-      editedAt: serverTimestamp(),
-    });
-    if (conversationSnapshot.data().lastMessageId === message.id) {
-      transaction.update(conversationRef, {
-        lastMessage: cleanText,
-        updatedAt: serverTimestamp(),
+      transaction.update(messageRef, {
+        text: cleanText,
+        editedAt: serverTimestamp(),
+        ...(uploadedImage || {}),
       });
+      if (conversationSnapshot.data().lastMessageId === message.id) {
+        transaction.update(conversationRef, {
+          lastMessage: preview,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    });
+  } catch (cause) {
+    if (uploadedImage) {
+      await deleteObject(storageRef(storage, uploadedImage.imagePath)).catch(
+        () => {},
+      );
     }
-  });
+    throw cause;
+  }
+  if (uploadedImage && message.imagePath) {
+    await deleteObject(storageRef(storage, message.imagePath)).catch(
+      (cause) => {
+        if (import.meta.env.DEV)
+          console.warn("Could not remove replaced chat image", cause);
+      },
+    );
+  }
 }
 export async function deleteChatMessage(
   conversation: ChatConversation,
@@ -294,7 +376,9 @@ export async function deleteChatMessage(
     lastDeletedMessageId: message.id,
   };
   if (conversation.lastMessageId === message.id) {
-    updates.lastMessage = previousMessage?.text || "";
+    updates.lastMessage = previousMessage
+      ? messagePreview(previousMessage)
+      : "";
     updates.lastMessageId = previousMessage?.id || "";
     updates.lastMessageSenderRole = previousMessage?.senderRole || "";
     updates.updatedAt = serverTimestamp();
@@ -314,4 +398,12 @@ export async function deleteChatMessage(
   }
   batch.update(conversationRef, updates);
   await batch.commit();
+  if (message.imagePath) {
+    await deleteObject(storageRef(storage, message.imagePath)).catch(
+      (cause) => {
+        if (import.meta.env.DEV)
+          console.warn("Could not remove deleted chat image", cause);
+      },
+    );
+  }
 }

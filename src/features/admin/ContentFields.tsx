@@ -1,7 +1,9 @@
-import type { Dispatch, SetStateAction } from "react";
-import { Plus } from "lucide-react";
+import type { ChangeEvent, Dispatch, SetStateAction } from "react";
+import { ImagePlus, Plus } from "lucide-react";
 import { POLICY_TYPES } from "../../app/constants";
 import type { Content, EventScheduleEntry, Taxonomy } from "../../data";
+
+export type LineImage = { url: string; path: string };
 
 export function AdminContentFields({
   tab,
@@ -10,6 +12,10 @@ export function AdminContentFields({
   editingContent,
   eventSchedule,
   setEventSchedule,
+  lineImages,
+  lineImagesUploading,
+  onUploadLineImages,
+  onRemoveLineImage,
 }: {
   tab: string;
   editingCategory?: Taxonomy;
@@ -17,6 +23,10 @@ export function AdminContentFields({
   editingContent?: Content;
   eventSchedule: EventScheduleEntry[];
   setEventSchedule: Dispatch<SetStateAction<EventScheduleEntry[]>>;
+  lineImages: LineImage[];
+  lineImagesUploading: boolean;
+  onUploadLineImages: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemoveLineImage: (index: number) => void;
 }) {
   return (
     <>
@@ -35,14 +45,52 @@ export function AdminContentFields({
         />
       </label>
       {tab === "collections" && (
-        <label>
-          Descrição curta para a vitrine (opcional)
-          <textarea
-            name="description"
-            maxLength={220}
-            defaultValue={editingLine?.description || ""}
-          />
-        </label>
+        <>
+          <label>
+            Descrição curta para a vitrine (opcional)
+            <textarea
+              name="description"
+              maxLength={220}
+              defaultValue={editingLine?.description || ""}
+            />
+          </label>
+          <div className="admin-line-images">
+            <span className="admin-field-label">Fotos da linha</span>
+            <label className="button secondary admin-image-upload-button">
+              <ImagePlus size={17} />
+              {lineImagesUploading ? "Carregando fotos…" : "Adicionar fotos"}
+              <input
+                className="sr-only"
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={lineImagesUploading}
+                onChange={onUploadLineImages}
+              />
+            </label>
+            <small className="field-hint">
+              Até 6 fotos. PNG, JPEG e outros formatos de imagem são convertidos
+              para WebP.
+            </small>
+            {lineImages.length > 0 && (
+              <div className="admin-line-image-grid">
+                {lineImages.map((image, index) => (
+                  <figure key={image.path || image.url}>
+                    <img src={image.url} alt={`Foto ${index + 1} da linha`} />
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={lineImagesUploading}
+                      onClick={() => onRemoveLineImage(index)}
+                    >
+                      Remover
+                    </button>
+                  </figure>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
       {!["categories", "collections"].includes(tab) && (
         <label>

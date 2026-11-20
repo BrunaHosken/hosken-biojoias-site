@@ -73,16 +73,11 @@ function AdminNotificationBell({
         product.availability === "soldout" ||
         product.availability === "paused"),
   );
-  const unreadMessages = newConversations.reduce(
-    (total, conversation) => total + (conversation.unreadForAdmin || 0),
-    0,
-  );
+  const unreadConversations = newConversations.filter(
+    (conversation) => conversation.unreadForAdmin > 0,
+  ).length;
   const count =
-    newOrders.length +
-    unreadMessages +
-    newConversations.filter((conversation) => !conversation.unreadForAdmin)
-      .length +
-    lowStockProducts.length;
+    newOrders.length + newConversations.length + lowStockProducts.length;
   return (
     <div className="notification-bell" ref={bellRef}>
       <button
@@ -156,9 +151,11 @@ function AdminNotificationBell({
                   </span>
                   <span>
                     <strong>
-                      {unreadMessages > 0
-                        ? `${unreadMessages} nova${unreadMessages === 1 ? "" : "s"} mensagem${unreadMessages === 1 ? "" : "ns"}`
-                        : `${newConversations.length} novo${newConversations.length === 1 ? "" : "s"} atendimento${newConversations.length === 1 ? "" : "s"}`}
+                      {unreadConversations === newConversations.length
+                        ? `${unreadConversations} conversa${unreadConversations === 1 ? "" : "s"} com mensagens novas`
+                        : unreadConversations > 0
+                          ? `Novidades em ${newConversations.length} conversa${newConversations.length === 1 ? "" : "s"}`
+                          : `${newConversations.length} novo${newConversations.length === 1 ? "" : "s"} atendimento${newConversations.length === 1 ? "" : "s"}`}
                     </strong>
                   </span>
                 </Link>

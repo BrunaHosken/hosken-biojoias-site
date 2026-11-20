@@ -66,7 +66,22 @@ export function Home() {
                   to={`/loja?linha=${encodeURIComponent(line.id)}`}
                   key={line.id}
                 >
-                  <Flower2 className="line-flower" strokeWidth={0.7} />
+                  {line.imageUrls?.length ? (
+                    <div
+                      className={`line-card-gallery${line.imageUrls.length === 1 ? " line-card-gallery-single" : ""}`}
+                    >
+                      {line.imageUrls.map((imageUrl, index) => (
+                        <img
+                          src={imageUrl}
+                          alt={`${line.name} · foto ${index + 1}`}
+                          loading="lazy"
+                          key={`${imageUrl}-${index}`}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <Flower2 className="line-flower" strokeWidth={0.7} />
+                  )}
                   <h3>
                     {line.name} <ArrowRight size={19} />
                   </h3>

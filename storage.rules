@@ -13,6 +13,31 @@ service firebase.storage {
           || (request.resource.size <= 10 * 1024 * 1024
             && request.resource.contentType.matches('image/.*')));
     }
+    match /collections/{adminUid}/{fileName} {
+      allow read: if true;
+      allow create: if admin()
+        && request.auth.uid == adminUid
+        && fileName.matches('^[A-Za-z0-9_-]+[.]webp$')
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'image/webp';
+      allow update: if false;
+      allow delete: if admin() && request.auth.uid == adminUid;
+    }
+    match /conversations/{conversationId}/{senderId}/{fileName} {
+      function canAccessConversation() {
+        return request.auth != null
+          && (request.auth.uid == conversationId || admin());
+      }
+      allow read: if canAccessConversation();
+      allow create: if canAccessConversation()
+        && request.auth.uid == senderId
+        && fileName.matches('^[A-Za-z0-9_-]+[.]webp$')
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'image/webp';
+      allow update: if false;
+      allow delete: if canAccessConversation()
+        && request.auth.uid == senderId;
+    }
     match /{allPaths=**} {
       allow read, write: if false;
     }

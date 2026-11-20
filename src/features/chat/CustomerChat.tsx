@@ -1,6 +1,13 @@
-import { useContext, useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, MessageCircle, Send } from "lucide-react";
+import { ArrowRight, ImagePlus, MessageCircle, Send, X } from "lucide-react";
 import { SessionContext, useToast } from "../../app/contexts";
 import { ConfirmationModal } from "../../components/Feedback";
 import { auth, localMode } from "../../firebase";
@@ -15,6 +22,29 @@ import {
   type ChatConversation,
   type ChatMessage,
 } from "../../data";
+
+const MAX_CHAT_IMAGE_BYTES = 10 * 1024 * 1024;
+
+function useImagePreview(file: File | null) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    if (!file) {
+      setUrl("");
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  return url;
+}
+
+function validateChatImage(file: File) {
+  if (!file.type.startsWith("image/")) return "Escolha um arquivo de imagem.";
+  if (file.size > MAX_CHAT_IMAGE_BYTES)
+    return "A imagem precisa ter até 10 MB antes do envio.";
+  return "";
+}
 
 export function CustomerChat() {
   const session = useContext(SessionContext);
@@ -176,10 +206,13 @@ export function ChatThread({
       : conversation.unreadForCustomer;
   const messages = useConversationMessages(conversationId);
   const [text, setText] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState("");
   const [now, setNow] = useState(Date.now());
   const listRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const imagePreviewUrl = useImagePreview(imageFile);
   useEffect(() => {
     if (initialDraft) {
       setText((current) => (current.trim() ? current : initialDraft));
@@ -201,13 +234,21 @@ export function ChatThread({
   }, [conversationId, senderRole, unreadCount]);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() && !imageFile) return;
     setBusy(true);
     setSendError("");
     try {
-      await sendChatMessage(conversationId, senderId, senderRole, text);
+      await sendChatMessage(
+        conversationId,
+        senderId,
+        senderRole,
+        text,
+        imageFile || undefined,
+      );
       setNow(Date.now());
       setText("");
+      setImageFile(null);
+      if (imageInputRef.current) imageInputRef.current.value = "";
     } catch (cause) {
       const code =
         typeof cause === "object" && cause !== null && "code" in cause
@@ -245,9 +286,13 @@ export function ChatThread({
         });
       }
       setSendError(
-        localMode
-          ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, não lidas equipe/cliente ${conversation.unreadForAdmin}/${conversation.unreadForCustomer}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
-          : "Não foi possível enviar a mensagem. Tente novamente.",
+        cause instanceof Error && cause.message === "chat-image-too-large"
+          ? "A imagem ficou maior que 10 MB mesmo convertida. Escolha uma imagem menor."
+          : imageFile
+            ? "Não foi possível enviar a imagem. Verifique se o armazenamento do Firebase está ativo."
+            : localMode
+              ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, não lidas equipe/cliente ${conversation.unreadForAdmin}/${conversation.unreadForCustomer}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
+              : "Não foi possível enviar a mensagem. Tente novamente.",
       );
     } finally {
       setBusy(false);
@@ -290,25 +335,73 @@ export function ChatThread({
         ))}
       </div>
       <form className="chat-composer" onSubmit={submit}>
+        <input
+          ref={imageInputRef}
+          className="sr-only"
+          type="file"
+          accept="image/*"
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            const file = event.currentTarget.files?.[0];
+            if (!file) return;
+            const validation = validateChatImage(file);
+            if (validation) {
+              setSendError(validation);
+              event.currentTarget.value = "";
+              return;
+            }
+            event.currentTarget.value = "";
+            setSendError("");
+            setImageFile(file);
+          }}
+        />
         <label className="sr-only" htmlFor={`message-${conversationId}`}>
           Escreva sua mensagem
         </label>
-        <textarea
-          id={`message-${conversationId}`}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={2000}
-          rows={2}
-          placeholder="Escreva sua mensagem…"
-        />
-        <button
-          className="button"
-          disabled={busy || !text.trim()}
-          aria-label="Enviar mensagem"
-        >
-          <span>{busy ? "Enviando…" : "Enviar"}</span>
-          <Send size={17} />
-        </button>
+        <div className="chat-composer-main">
+          <textarea
+            id={`message-${conversationId}`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={2000}
+            rows={2}
+            placeholder="Escreva sua mensagem…"
+          />
+          <div className="chat-composer-actions">
+            <button
+              className="chat-attach-button"
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              aria-label="Anexar imagem"
+              title="Anexar imagem"
+            >
+              <ImagePlus size={19} />
+            </button>
+            <button
+              className="button"
+              disabled={busy || (!text.trim() && !imageFile)}
+              aria-label="Enviar mensagem"
+            >
+              <span>{busy ? "Enviando…" : "Enviar"}</span>
+              <Send size={17} />
+            </button>
+          </div>
+        </div>
+        {imageFile && (
+          <div className="chat-image-selection">
+            <img src={imagePreviewUrl} alt="Prévia da imagem anexada" />
+            <span>{imageFile.name} · será enviada em WebP</span>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                setImageFile(null);
+                if (imageInputRef.current) imageInputRef.current.value = "";
+              }}
+            >
+              Remover
+            </button>
+          </div>
+        )}
       </form>
       {sendError && (
         <p className="notice" role="alert">
@@ -336,8 +429,11 @@ function ChatMessageBubble({
   const notify = useToast();
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
+  const [replacementImage, setReplacementImage] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
+  const replacementPreviewUrl = useImagePreview(replacementImage);
   const date = message.createdAt?.toDate();
   const withinEditWindow = Boolean(
     date &&
@@ -348,8 +444,14 @@ function ChatMessageBubble({
     e.preventDefault();
     setBusy(true);
     try {
-      await editChatMessage(conversation.id, message, editText);
+      await editChatMessage(
+        conversation.id,
+        message,
+        editText,
+        replacementImage || undefined,
+      );
       setEditing(false);
+      setReplacementImage(null);
       notify("Mensagem editada.", "success");
     } catch (cause) {
       if (import.meta.env.DEV) {
@@ -389,6 +491,24 @@ function ChatMessageBubble({
     <article className={`chat-message ${own ? "own" : ""}`}>
       {editing ? (
         <form className="chat-edit-form" onSubmit={saveEdit}>
+          <input
+            ref={editImageInputRef}
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              const file = event.currentTarget.files?.[0];
+              if (!file) return;
+              const validation = validateChatImage(file);
+              if (validation) {
+                notify(validation, "error");
+                event.currentTarget.value = "";
+                return;
+              }
+              event.currentTarget.value = "";
+              setReplacementImage(file);
+            }}
+          />
           <textarea
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
@@ -396,25 +516,57 @@ function ChatMessageBubble({
             autoFocus
             aria-label="Editar mensagem"
           />
+          {(replacementImage || message.imageUrl) && (
+            <img
+              className="chat-edit-image-preview"
+              src={replacementPreviewUrl || message.imageUrl}
+              alt={replacementImage ? "Prévia da nova imagem" : "Imagem atual"}
+            />
+          )}
           <div>
             <button
               className="text-button"
               type="button"
-              onClick={() => setEditing(false)}
+              onClick={() => editImageInputRef.current?.click()}
+            >
+              {message.imageUrl ? "Trocar imagem" : "Adicionar imagem"}
+            </button>
+            <button
+              className="text-button"
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setReplacementImage(null);
+              }}
             >
               Cancelar
             </button>
             <button
               className="text-button"
               type="submit"
-              disabled={busy || !editText.trim()}
+              disabled={
+                busy ||
+                (!editText.trim() && !replacementImage && !message.imageUrl)
+              }
             >
               Salvar
             </button>
           </div>
         </form>
       ) : (
-        <p>{message.text}</p>
+        <>
+          {message.imageUrl && (
+            <a
+              className="chat-image-link"
+              href={message.imageUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src={message.imageUrl} alt="Imagem enviada na conversa" />
+            </a>
+          )}
+          {message.text && <p>{message.text}</p>}
+        </>
       )}
       <small>
         {own ? "Você" : message.senderRole === "admin" ? "Ateliê" : "Cliente"}
@@ -446,7 +598,7 @@ function ChatMessageBubble({
       {confirmDelete && (
         <ConfirmationModal
           title="Excluir mensagem?"
-          message="A conversa continuará salva, mas esta mensagem será removida."
+          message="A conversa continuará salva, mas esta mensagem e a imagem anexada serão removidas."
           confirmLabel="Excluir mensagem"
           busy={busy}
           onCancel={() => setConfirmDelete(false)}

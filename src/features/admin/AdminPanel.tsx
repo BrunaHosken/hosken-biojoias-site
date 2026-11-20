@@ -82,14 +82,14 @@ export function AdminPanel() {
   const tab =
     requestedTab && validTabs.includes(requestedTab) ? requestedTab : "orders";
   const activeTabLabel =
-    moduleGroups.flatMap((group) => group.items).find(([id]) => id === tab)?.[1] ??
-    "Pedidos";
+    moduleGroups
+      .flatMap((group) => group.items)
+      .find(([id]) => id === tab)?.[1] ?? "Pedidos";
   const conversations = useAdminConversations();
   const adminOrders = useAdminOrders();
-  const unreadCount = conversations.data.reduce(
-    (sum, conversation) => sum + (conversation.unreadForAdmin || 0),
-    0,
-  );
+  const unreadCount = conversations.data.filter(
+    (conversation) => (conversation.unreadForAdmin || 0) > 0,
+  ).length;
 
   useEffect(() => {
     document.title = unreadCount
@@ -160,7 +160,7 @@ export function AdminPanel() {
                     {id === "chat" && unreadCount > 0 && (
                       <span
                         className="unread-badge"
-                        aria-label={`${unreadCount} mensagens não lidas`}
+                        aria-label={`${unreadCount} conversas com mensagens novas`}
                       >
                         {unreadCount > 99 ? "99+" : unreadCount}
                       </span>

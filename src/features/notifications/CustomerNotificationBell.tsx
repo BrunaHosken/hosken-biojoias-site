@@ -82,8 +82,9 @@ export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
   }, [uid]);
 
   const unreadMessages = conversation.conversation?.unreadForCustomer || 0;
+  const unreadConversations = unreadMessages > 0 ? 1 : 0;
   const pendingOrders = Object.entries(notificationState.pendingOrders);
-  const count = unreadMessages + pendingOrders.length;
+  const count = unreadConversations + pendingOrders.length;
 
   function clearOrderNotifications() {
     const acknowledgedOrderUpdates = {
@@ -159,16 +160,13 @@ export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
                   </span>
                 </Link>
               )}
-              {unreadMessages > 0 && (
+              {unreadConversations > 0 && (
                 <Link to="/chat" onClick={() => setOpen(false)}>
                   <span className="notification-icon">
                     <MessageCircle size={17} />
                   </span>
                   <span>
-                    <strong>
-                      {unreadMessages} nova{unreadMessages === 1 ? "" : "s"}{" "}
-                      mensagem{unreadMessages === 1 ? "" : "ns"} do ateliê
-                    </strong>
+                    <strong>Conversa com mensagens novas do ateliê</strong>
                   </span>
                 </Link>
               )}

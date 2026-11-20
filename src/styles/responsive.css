@@ -316,6 +316,10 @@
     height: 105px;
     margin: 10px 0;
   }
+  .line-card-gallery {
+    height: 120px;
+    margin: 12px 0;
+  }
   .line-card h3 {
     font-size: 30px;
   }
@@ -453,6 +457,12 @@
   }
   .chat-composer {
     grid-template-columns: 1fr;
+  }
+  .chat-composer-main {
+    grid-template-columns: 1fr;
+  }
+  .chat-composer-actions {
+    justify-content: flex-end;
   }
   .chat-composer .button {
     justify-self: end;

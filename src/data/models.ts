@@ -6,6 +6,8 @@ export type Taxonomy = {
   slug: string;
   status: string;
   description?: string;
+  imageUrls?: string[];
+  imagePaths?: string[];
 };
 export type Product = {
   id: string;
@@ -82,6 +84,8 @@ export type ChatMessage = {
   senderId: string;
   senderRole: "customer" | "admin";
   text: string;
+  imageUrl?: string;
+  imagePath?: string;
   createdAt?: Timestamp;
   editedAt?: Timestamp;
 };

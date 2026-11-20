@@ -26,7 +26,7 @@ import { useRecords, type Product, type Taxonomy } from "../../data";
 import { auth, db, storage } from "../../firebase";
 import { getProductImages } from "../storefront/productImages";
 import { availabilityFromStock } from "../../data/productAvailability";
-import { convertToWebp } from "./convertToWebp";
+import { convertToWebp } from "../../utils/convertToWebp";
 import { AdminRecordList } from "./AdminRecordList";
 import { AdminProductFields } from "./ProductFields";
 import { blankProduct } from "./productModel";

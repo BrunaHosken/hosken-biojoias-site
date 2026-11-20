@@ -29,11 +29,12 @@ export function AdminChatInbox({
       <div className="admin-inbox-heading">
         <div>
           <h2>Atendimentos</h2>
-          <p className="muted">Mensagens atualizadas em tempo real.</p>
+          <p className="muted">Conversas atualizadas em tempo real.</p>
         </div>
         {unreadCount > 0 && (
           <span className="unread-summary">
-            {unreadCount} não lida{unreadCount === 1 ? "" : "s"}
+            {unreadCount} conversa{unreadCount === 1 ? "" : "s"} com mensagens
+            novas
           </span>
         )}
       </div>
@@ -83,10 +84,11 @@ export function AdminChatInbox({
                   <span className="conversation-preview-top">
                     <strong>{conversation.customerName || "Cliente"}</strong>
                     {!!conversation.unreadForAdmin && (
-                      <span className="unread-badge">
-                        {conversation.unreadForAdmin > 99
-                          ? "99+"
-                          : conversation.unreadForAdmin}
+                      <span
+                        className="unread-badge"
+                        aria-label="Mensagens novas"
+                      >
+                        1
                       </span>
                     )}
                   </span>

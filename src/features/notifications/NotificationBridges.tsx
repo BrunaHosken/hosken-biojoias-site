@@ -9,10 +9,9 @@ import {
 export function AdminNotificationBridge() {
   const location = useLocation();
   const conversations = useAdminConversations(location.pathname !== "/admin");
-  const unreadCount = conversations.data.reduce(
-    (sum, conversation) => sum + (conversation.unreadForAdmin || 0),
-    0,
-  );
+  const unreadCount = conversations.data.filter(
+    (conversation) => (conversation.unreadForAdmin || 0) > 0,
+  ).length;
   useEffect(() => {
     if (location.pathname === "/admin") return;
     document.title = unreadCount
@@ -58,7 +57,8 @@ export function CustomerNotificationBridge({ uid }: { uid: string }) {
   }, [uid]);
 
   const unreadCount =
-    (conversation.conversation?.unreadForCustomer || 0) + pendingOrderCount;
+    ((conversation.conversation?.unreadForCustomer || 0) > 0 ? 1 : 0) +
+    pendingOrderCount;
   useEffect(() => {
     document.title = unreadCount
       ? `(${unreadCount}) Hosken Biojoias`
