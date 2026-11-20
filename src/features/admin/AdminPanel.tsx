@@ -76,7 +76,6 @@ export function Admin() {
 export function AdminPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [catalogVersion, setCatalogVersion] = useState(0);
-  const [catalogUploadBusy, setCatalogUploadBusy] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const requestedTab = searchParams.get("tab");
   const tab =
@@ -151,7 +150,6 @@ export function AdminPanel() {
                   <button
                     type="button"
                     className={`admin-nav-item ${tab === id ? "selected" : ""}`}
-                    disabled={catalogUploadBusy}
                     aria-current={tab === id ? "page" : undefined}
                     onClick={() => selectTab(id)}
                     key={id}
@@ -197,10 +195,7 @@ export function AdminPanel() {
           ) : tab === "reports" ? (
             <AdminReports />
           ) : tab === "products" ? (
-            <AdminProductManager
-              key={`products-${catalogVersion}`}
-              onImageUploadStateChange={setCatalogUploadBusy}
-            />
+            <AdminProductManager key={`products-${catalogVersion}`} />
           ) : (
             <AdminContentManager
               key={`${tab}-${catalogVersion}`}

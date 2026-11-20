@@ -288,8 +288,10 @@ export function ChatThread({
       setSendError(
         cause instanceof Error && cause.message === "chat-image-too-large"
           ? "A imagem ficou maior que 10 MB mesmo convertida. Escolha uma imagem menor."
+          : cause instanceof Error && cause.message === "file-upload-timeout"
+            ? "O envio da imagem demorou demais e foi cancelado. Confira sua conexão e tente novamente."
           : imageFile
-            ? "Não foi possível enviar a imagem. Verifique se o armazenamento do Firebase está ativo."
+            ? "Não foi possível enviar a imagem. Você pode continuar usando o chat; confira a conexão e se o Firebase Storage está configurado."
             : localMode
               ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, não lidas equipe/cliente ${conversation.unreadForAdmin}/${conversation.unreadForCustomer}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
               : "Não foi possível enviar a mensagem. Tente novamente.",

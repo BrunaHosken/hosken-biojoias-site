@@ -19,10 +19,10 @@ import {
   deleteObject,
   getDownloadURL,
   ref as storageRef,
-  uploadBytes,
 } from "firebase/storage";
 import { auth, db, localMode, storage } from "../firebase";
 import { convertToWebp } from "../utils/convertToWebp";
+import { uploadFile } from "../utils/uploadFile";
 import type { ChatConversation, ChatMessage } from "./models";
 
 const MAX_CHAT_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -43,7 +43,7 @@ async function uploadChatImage(
   const suffix = Math.random().toString(36).slice(2, 10);
   const path = `conversations/${conversationId}/${senderId}/${messageId}-${Date.now()}-${suffix}.webp`;
   const target = storageRef(storage, path);
-  await uploadBytes(target, webp, { contentType: "image/webp" });
+  await uploadFile(target, webp, { contentType: "image/webp" });
   try {
     return { imagePath: path, imageUrl: await getDownloadURL(target) };
   } catch (cause) {

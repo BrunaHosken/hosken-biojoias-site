@@ -16,7 +16,6 @@ import {
   deleteObject,
   getDownloadURL,
   ref as storageRef,
-  uploadBytes,
 } from "firebase/storage";
 import { Plus } from "lucide-react";
 import { useToast } from "../../app/contexts";
@@ -27,17 +26,12 @@ import { auth, db, storage } from "../../firebase";
 import { getProductImages } from "../storefront/productImages";
 import { availabilityFromStock } from "../../data/productAvailability";
 import { convertToWebp } from "../../utils/convertToWebp";
+import { uploadFile } from "../../utils/uploadFile";
 import { AdminRecordList } from "./AdminRecordList";
 import { AdminProductFields } from "./ProductFields";
 import { blankProduct } from "./productModel";
 
-type AdminProductManagerProps = {
-  onImageUploadStateChange: (uploading: boolean) => void;
-};
-
-export function AdminProductManager({
-  onImageUploadStateChange,
-}: AdminProductManagerProps) {
+export function AdminProductManager() {
   const products = useRecords<Product>("products", true);
   const categories = useRecords<Taxonomy>("categories", true);
   const lines = useRecords<Taxonomy>("collections", true);
@@ -109,7 +103,6 @@ export function AdminProductManager({
     }
 
     setUploadingImages(true);
-    onImageUploadStateChange(true);
     const uploaded: { path: string; url: string }[] = [];
     try {
       const webpFiles: File[] = [];
@@ -122,7 +115,7 @@ export function AdminProductManager({
         const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-80);
         const path = `products/${user.uid}/${crypto.randomUUID()}-${fileName}`;
         const target = storageRef(storage, path);
-        await uploadBytes(target, file, { contentType: "image/webp" });
+        await uploadFile(target, file, { contentType: "image/webp" });
         uploadedImagePaths.current.add(path);
         const url = await getDownloadURL(target);
         if (!mounted.current) {
@@ -159,16 +152,17 @@ export function AdminProductManager({
         notify(
           cause instanceof Error && cause.message === "webp-file-too-large"
             ? "Uma foto convertida passou de 10 MB. Escolha uma imagem menor."
+            : cause instanceof Error && cause.message === "file-upload-timeout"
+              ? "O envio demorou demais e foi cancelado. Confira sua conexão e tente novamente."
             : cause instanceof Error &&
                 cause.message === "webp-encoding-unsupported"
               ? "Este navegador não conseguiu converter a foto para WebP. Tente outro navegador."
-              : "Não foi possível converter ou enviar as fotos. Confira o formato e o Firebase Storage.",
+              : "Não foi possível enviar as fotos. Você pode continuar usando o painel; confira sua conexão e o Firebase Storage.",
           "error",
         );
     } finally {
       if (mounted.current) {
         setUploadingImages(false);
-        onImageUploadStateChange(false);
       }
     }
   }

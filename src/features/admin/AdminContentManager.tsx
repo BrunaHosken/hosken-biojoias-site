@@ -16,7 +16,6 @@ import {
   deleteObject,
   getDownloadURL,
   ref as storageRef,
-  uploadBytes,
 } from "firebase/storage";
 import { Plus } from "lucide-react";
 import type { EventScheduleEntry } from "../../data";
@@ -25,6 +24,7 @@ import { ConfirmationModal } from "../../components/Feedback";
 import { useRecords, type Content, type Taxonomy } from "../../data";
 import { auth, db, storage } from "../../firebase";
 import { convertToWebp } from "../../utils/convertToWebp";
+import { uploadFile } from "../../utils/uploadFile";
 import { getEventSchedule } from "../storefront/eventSchedule";
 import { AdminRecordList, type AdminRecord } from "./AdminRecordList";
 import { AdminContentFields, type LineImage } from "./ContentFields";
@@ -99,7 +99,7 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
           throw new Error("webp-file-too-large");
         const path = `collections/${user.uid}/${crypto.randomUUID()}.webp`;
         const target = storageRef(storage, path);
-        await uploadBytes(target, webp, { contentType: "image/webp" });
+        await uploadFile(target, webp, { contentType: "image/webp" });
         uploadedLinePaths.current.add(path);
         uploadedPaths.push(path);
         uploaded.push({ path, url: await getDownloadURL(target) });
@@ -127,10 +127,12 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
         notify(
           cause instanceof Error && cause.message === "webp-file-too-large"
             ? "Uma foto convertida passou de 10 MB. Escolha uma imagem menor."
+            : cause instanceof Error && cause.message === "file-upload-timeout"
+              ? "O envio demorou demais e foi cancelado. Confira sua conexão e tente novamente."
             : cause instanceof Error &&
                 cause.message === "webp-encoding-unsupported"
               ? "Este navegador não conseguiu converter a foto para WebP. Tente outro navegador."
-              : "Não foi possível converter ou enviar as fotos. Confira o Firebase Storage.",
+              : "Não foi possível enviar as fotos. Você pode continuar usando o painel; confira sua conexão e o Firebase Storage.",
           "error",
         );
     } finally {
