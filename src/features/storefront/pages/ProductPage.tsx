@@ -6,6 +6,7 @@ import { availability } from "../../../app/constants";
 import { Notice } from "../../../components/Feedback";
 import {
   getProductAvailability,
+  getProductWithChainPriceCents,
   isProductAvailable,
   money,
   getBasketQuantityForVariant,
@@ -47,11 +48,10 @@ export function ProductPage() {
         hasColorChoices ? selectedColorId : "",
       )
     : 0;
-  const hasChainOption = product?.withChainPriceCents !== undefined;
+  const chainPriceCents = getProductWithChainPriceCents(product);
+  const hasChainOption = chainPriceCents !== undefined;
   const selectedPrice =
-    withChain && hasChainOption
-      ? product!.withChainPriceCents!
-      : (product?.priceCents ?? 0);
+    withChain && hasChainOption ? chainPriceCents : (product?.priceCents ?? 0);
 
   useEffect(() => {
     setSelectedColorId("");
@@ -130,8 +130,7 @@ export function ProductPage() {
                     checked={withChain}
                     onChange={() => setWithChain(true)}
                   />
-                  Com corrente{" "}
-                  <strong>{money(product.withChainPriceCents!)}</strong>
+                  Com corrente <strong>{money(chainPriceCents!)}</strong>
                 </label>
               </fieldset>
             )}

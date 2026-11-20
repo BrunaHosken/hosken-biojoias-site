@@ -40,7 +40,7 @@ export function AdminProductManager() {
   const products = useRecords<Product>("products", true);
   const categories = useRecords<Taxonomy>("categories", true);
   const lines = useRecords<Taxonomy>("collections", true);
-  const colors = useRecords<Taxonomy>("colors", true);
+  const colors = useRecords<Taxonomy>("colors");
   const [editing, setEditing] = useState("");
   const [product, setProduct] = useState(blankProduct);
   const [loadingShipping, setLoadingShipping] = useState(false);
@@ -202,9 +202,12 @@ export function AdminProductManager() {
           !Number.isSafeInteger(variant.stock) ||
           variant.stock < 0,
       ) ||
-      (product.withChainPriceCents !== undefined &&
-        (!Number.isSafeInteger(product.withChainPriceCents) ||
-          product.withChainPriceCents < 0)) ||
+      (product.chainAddonPriceCents !== undefined &&
+        (!Number.isSafeInteger(product.chainAddonPriceCents) ||
+          product.chainAddonPriceCents < 0 ||
+          !Number.isSafeInteger(
+            product.priceCents + product.chainAddonPriceCents,
+          ))) ||
       !Number.isSafeInteger(
         product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
       ) ||
@@ -248,6 +251,7 @@ export function AdminProductManager() {
         packageWeightGrams,
         pieceWeightGrams,
         colorVariants: _colorVariants,
+        chainAddonPriceCents,
         withChainPriceCents,
         ...productDetails
       } = product;
@@ -264,7 +268,7 @@ export function AdminProductManager() {
               })),
             }
           : {}),
-        ...(withChainPriceCents === undefined ? {} : { withChainPriceCents }),
+        ...(chainAddonPriceCents === undefined ? {} : { chainAddonPriceCents }),
         availability:
           productDetails.availability === "available" ||
           productDetails.availability === "soldout"
@@ -329,7 +333,13 @@ export function AdminProductManager() {
     const requestVersion = ++shippingLoadVersion.current;
     void discardUnsavedImages();
     removedImagePaths.current.clear();
-    const { id, ...data } = record;
+    const { id, ...recordData } = record;
+    const { withChainPriceCents, ...data } = recordData;
+    const chainAddonPriceCents =
+      data.chainAddonPriceCents ??
+      (withChainPriceCents === undefined
+        ? undefined
+        : Math.max(0, withChainPriceCents - data.priceCents));
     const imageUrls = data.imageUrls?.length
       ? data.imageUrls
       : data.imageUrl
@@ -338,6 +348,7 @@ export function AdminProductManager() {
     setProduct({
       ...blankProduct,
       ...data,
+      ...(chainAddonPriceCents === undefined ? {} : { chainAddonPriceCents }),
       imageUrls,
       imagePaths: data.imagePaths?.length
         ? data.imagePaths

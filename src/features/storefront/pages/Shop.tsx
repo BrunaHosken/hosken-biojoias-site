@@ -4,6 +4,7 @@ import { Flower2 } from "lucide-react";
 import { Notice } from "../../../components/Feedback";
 import {
   getProductAvailability,
+  getProductWithChainPriceCents,
   money,
   useRecords,
   type Product,
@@ -79,7 +80,9 @@ export function Shop() {
             </small>
             <h3>{p.name}</h3>
             <p>
-              {p.withChainPriceCents !== undefined ? "A partir de " : ""}
+              {getProductWithChainPriceCents(p) !== undefined
+                ? "A partir de "
+                : ""}
               {money(p.priceCents)}
             </p>
             <small className="product-card-stock">

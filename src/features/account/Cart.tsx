@@ -5,6 +5,7 @@ import { BasketContext, SessionContext } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
 import {
   getBasketQuantityForVariant,
+  getProductWithChainPriceCents,
   isProductAvailable,
   money,
   parseBasketItemId,
@@ -25,9 +26,10 @@ export function Cart() {
     const product = products.data.find(
       (item) => item.id === selection.productId,
     );
+    const chainPrice = getProductWithChainPriceCents(product);
     const unitPrice =
-      selection.withChain && product?.withChainPriceCents !== undefined
-        ? product.withChainPriceCents
+      selection.withChain && chainPrice !== undefined
+        ? chainPrice
         : product?.priceCents || 0;
     return sum + unitPrice * quantity;
   }, 0);
@@ -58,7 +60,8 @@ export function Cart() {
       return Boolean(
         isProductAvailable(product) &&
         (!variantRequired || variant) &&
-        (!selection.withChain || product.withChainPriceCents !== undefined) &&
+        (!selection.withChain ||
+          getProductWithChainPriceCents(product) !== undefined) &&
         quantity <= variantStock,
       );
     });
@@ -97,12 +100,14 @@ export function Cart() {
                 p &&
                 isProductAvailable(p) &&
                 (!variantRequired || variant) &&
-                (!selection.withChain || p.withChainPriceCents !== undefined) &&
+                (!selection.withChain ||
+                  getProductWithChainPriceCents(p) !== undefined) &&
                 quantityForVariant <= variantStock,
               );
+              const chainPrice = getProductWithChainPriceCents(p);
               const itemPrice =
-                selection.withChain && p?.withChainPriceCents !== undefined
-                  ? p.withChainPriceCents
+                selection.withChain && chainPrice !== undefined
+                  ? chainPrice
                   : (p?.priceCents ?? 0);
               return (
                 <article className="cart-row" key={id}>
@@ -114,7 +119,7 @@ export function Cart() {
                         Cor: {variant?.colorName || "não selecionada"}
                       </p>
                     )}
-                    {p?.withChainPriceCents !== undefined && (
+                    {chainPrice !== undefined && (
                       <p className="cart-variant-detail">
                         {selection.withChain
                           ? "Com corrente"
@@ -146,7 +151,7 @@ export function Cart() {
                         !isProductAvailable(p) ||
                         (variantRequired && !variant) ||
                         (selection.withChain &&
-                          p.withChainPriceCents === undefined) ||
+                          getProductWithChainPriceCents(p) === undefined) ||
                         quantityForVariant >= variantStock
                       }
                       onClick={() => change(id, 1)}

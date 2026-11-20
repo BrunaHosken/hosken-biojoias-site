@@ -240,6 +240,24 @@ export const createDemoOrder = onCall({ region }, async (request) => {
           throw new HttpsError("failed-precondition", "invalid-product-price");
         }
 
+        if (
+          product.chainAddonPriceCents !== undefined &&
+          (!Number.isSafeInteger(product.chainAddonPriceCents) ||
+            product.chainAddonPriceCents < 0)
+        ) {
+          throw new HttpsError("failed-precondition", "invalid-product-price");
+        }
+        const chainPriceCents =
+          product.chainAddonPriceCents !== undefined
+            ? product.priceCents + product.chainAddonPriceCents
+            : product.withChainPriceCents;
+        if (
+          chainPriceCents !== undefined &&
+          !Number.isSafeInteger(chainPriceCents)
+        ) {
+          throw new HttpsError("failed-precondition", "invalid-product-price");
+        }
+
         const requestedByColor = new Map();
         let scalarQuantity = 0;
         for (const item of productItems) {
@@ -263,14 +281,14 @@ export const createDemoOrder = onCall({ region }, async (request) => {
             scalarQuantity += item.quantity;
           }
 
-          if (item.withChain && product.withChainPriceCents === undefined) {
+          if (item.withChain && chainPriceCents === undefined) {
             throw new HttpsError(
               "failed-precondition",
               "chain-option-unavailable",
             );
           }
           const unitPriceCents = item.withChain
-            ? product.withChainPriceCents
+            ? chainPriceCents
             : product.priceCents;
           if (!Number.isSafeInteger(unitPriceCents) || unitPriceCents < 0) {
             throw new HttpsError(
@@ -293,7 +311,7 @@ export const createDemoOrder = onCall({ region }, async (request) => {
                   colorName: variant.colorName,
                 }
               : {}),
-            ...(product.withChainPriceCents === undefined
+            ...(chainPriceCents === undefined
               ? {}
               : { withChain: item.withChain }),
             name: product.name,

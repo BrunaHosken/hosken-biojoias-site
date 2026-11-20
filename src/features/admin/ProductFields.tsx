@@ -91,26 +91,65 @@ export function AdminProductFields({
           }
         />
       </label>
-      <div className="form-pair">
-        <label>
-          {product.withChainPriceCents === undefined
-            ? "Preço (R$)"
-            : "Preço somente pingente (R$)"}
+      <label>
+        Preço da peça sem corrente (R$)
+        <input
+          required
+          type="number"
+          min="0"
+          step="0.01"
+          value={product.priceCents / 100}
+          onChange={(e) =>
+            setProduct({
+              ...product,
+              priceCents: Math.round(Number(e.target.value) * 100),
+            })
+          }
+        />
+      </label>
+      <fieldset className="admin-variant-fields">
+        <legend>Opção de corrente</legend>
+        <p className="field-hint">
+          Disponível para peças vendidas como pingente. O adicional é somado ao
+          preço da peça; o estoque continua sendo controlado por cor.
+        </p>
+        <label className="admin-color-choice">
           <input
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            value={product.priceCents / 100}
-            onChange={(e) =>
-              setProduct({
-                ...product,
-                priceCents: Math.round(Number(e.target.value) * 100),
-              })
+            type="checkbox"
+            checked={product.chainAddonPriceCents !== undefined}
+            onChange={(event) =>
+              setProduct((current) => ({
+                ...current,
+                chainAddonPriceCents: event.target.checked
+                  ? (current.chainAddonPriceCents ?? 0)
+                  : undefined,
+                withChainPriceCents: undefined,
+              }))
             }
           />
+          <span>Oferecer também a opção com corrente</span>
         </label>
-      </div>
+        {product.chainAddonPriceCents !== undefined && (
+          <label>
+            Adicional da corrente (R$)
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={product.chainAddonPriceCents / 100}
+              onChange={(event) =>
+                setProduct((current) => ({
+                  ...current,
+                  chainAddonPriceCents: Math.round(
+                    Number(event.target.value) * 100,
+                  ),
+                }))
+              }
+            />
+          </label>
+        )}
+      </fieldset>
       <fieldset className="admin-variant-fields">
         <legend>Cores e estoque por cor</legend>
         <p className="field-hint">
@@ -180,7 +219,7 @@ export function AdminProductFields({
           </div>
         ) : (
           <p className="muted">
-            Cadastre uma cor antes de configurar variantes.
+            Publique uma cor em Catálogo → Cores antes de configurar variantes.
           </p>
         )}
         {product.colorVariants?.length ? (
@@ -209,52 +248,6 @@ export function AdminProductFields({
                 }));
               }}
             />
-          </label>
-        )}
-      </fieldset>
-      <fieldset className="admin-variant-fields">
-        <legend>Opção de corrente</legend>
-        <p className="field-hint">
-          Use esta opção para peças vendidas como pingente de colar. O estoque
-          por cor continua representando o pingente.
-        </p>
-        <label className="admin-color-choice">
-          <input
-            type="checkbox"
-            checked={product.withChainPriceCents !== undefined}
-            onChange={(event) =>
-              setProduct((current) => ({
-                ...current,
-                withChainPriceCents: event.target.checked
-                  ? (current.withChainPriceCents ?? current.priceCents)
-                  : undefined,
-              }))
-            }
-          />
-          Oferecer também a opção com corrente
-        </label>
-        {product.withChainPriceCents !== undefined && (
-          <label>
-            Preço total com corrente (R$)
-            <input
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              value={product.withChainPriceCents / 100}
-              onChange={(event) =>
-                setProduct((current) => ({
-                  ...current,
-                  withChainPriceCents: Math.round(
-                    Number(event.target.value) * 100,
-                  ),
-                }))
-              }
-            />
-            <small className="field-hint">
-              O preço acima é somente do pingente; este é o valor final com
-              corrente.
-            </small>
           </label>
         )}
       </fieldset>

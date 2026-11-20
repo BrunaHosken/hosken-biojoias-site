@@ -12,6 +12,7 @@ import {
   createSavedAddress,
   deleteSavedAddress,
   getBasketQuantityForVariant,
+  getProductWithChainPriceCents,
   parseBasketItemId,
   useRecords,
   watchSavedAddresses,
@@ -143,6 +144,7 @@ export function Checkout() {
         const variant = product?.colorVariants?.find(
           (item) => item.colorId === selection.variantId,
         );
+        const chainPriceCents = getProductWithChainPriceCents(product);
         return {
           basketItemId,
           productId: selection.productId,
@@ -150,8 +152,8 @@ export function Checkout() {
           colorName: variant?.colorName,
           withChain: selection.withChain,
           unitPriceCents:
-            selection.withChain && product?.withChainPriceCents !== undefined
-              ? product.withChainPriceCents
+            selection.withChain && chainPriceCents !== undefined
+              ? chainPriceCents
               : (product?.priceCents ?? 0),
           quantity,
           product,
@@ -185,7 +187,8 @@ export function Checkout() {
       return (
         isProductAvailable(product) &&
         (!variantRequired || Boolean(variant)) &&
-        (!line.withChain || product.withChainPriceCents !== undefined) &&
+        (!line.withChain ||
+          getProductWithChainPriceCents(product) !== undefined) &&
         quantity <= stock
       );
     });

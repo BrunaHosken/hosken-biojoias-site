@@ -21,6 +21,9 @@ export type Product = {
   priceCents: number;
   stock: number;
   colorVariants?: ProductColorVariant[];
+  /** Additional cost added to the piece price for the chain option. */
+  chainAddonPriceCents?: number;
+  /** Legacy total price with chain, kept for existing catalog records. */
   withChainPriceCents?: number;
   lowStockThreshold?: number;
   categoryId: string;

@@ -99,7 +99,7 @@ const groups = {
         { colorId: "prata", colorName: "Prata", stock: 1 },
         { colorId: "bronze", colorName: "Bronze", stock: 0 },
       ],
-      withChainPriceCents: 11900,
+      chainAddonPriceCents: 3000,
       categoryId: "colar",
       collectionId: "biojoias",
       status: "published",

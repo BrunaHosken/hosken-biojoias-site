@@ -19,7 +19,7 @@ type AdminRecordListProps = {
   uploadingImages: boolean;
   onEdit: (record: AdminRecord) => void;
   onToggleProduct?: (product: Product) => void;
-  onToggleCollection?: (collection: Taxonomy) => void;
+  onToggleTaxonomy?: (taxonomy: Taxonomy) => void;
   onRequestDelete: (record: AdminRecord) => void;
 };
 
@@ -29,7 +29,7 @@ export function AdminRecordList({
   uploadingImages,
   onEdit,
   onToggleProduct,
-  onToggleCollection,
+  onToggleTaxonomy,
   onRequestDelete,
 }: AdminRecordListProps) {
   return (
@@ -93,31 +93,26 @@ export function AdminRecordList({
                 </button>
               </>
             )}
-            {tab === "collections" && "slug" in record && (
-              <>
-                <button
-                  className="text-button"
-                  disabled={uploadingImages}
-                  onClick={() => onEdit(record)}
-                >
-                  Editar
-                </button>
-                <button
-                  className="text-button"
-                  onClick={() => onToggleCollection?.(record)}
-                >
-                  {record.status === "published" ? "Ocultar" : "Publicar"}
-                </button>
-              </>
-            )}
-            {[
-              "categories",
-              "colors",
-              "news",
-              "events",
-              "partnerStores",
-              "policies",
-            ].includes(tab) && (
+            {["categories", "collections", "colors"].includes(tab) &&
+              "slug" in record && (
+                <>
+                  <button
+                    className="text-button"
+                    disabled={uploadingImages}
+                    onClick={() => onEdit(record)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={uploadingImages}
+                    onClick={() => onToggleTaxonomy?.(record)}
+                  >
+                    {record.status === "published" ? "Ocultar" : "Publicar"}
+                  </button>
+                </>
+              )}
+            {["news", "events", "partnerStores", "policies"].includes(tab) && (
               <button
                 className="text-button"
                 disabled={uploadingImages}

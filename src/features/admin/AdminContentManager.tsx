@@ -255,19 +255,28 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
     }
   }
 
-  async function toggleCollection(line: Taxonomy) {
+  async function toggleTaxonomy(record: Taxonomy) {
+    const label =
+      tab === "colors"
+        ? "Cor"
+        : tab === "categories"
+          ? "Tipo de peça"
+          : "Linha";
     try {
-      await updateDoc(doc(db, "collections", line.id), {
-        status: line.status === "published" ? "draft" : "published",
+      await updateDoc(doc(db, tab, record.id), {
+        status: record.status === "published" ? "draft" : "published",
       });
       notify(
-        line.status === "published"
-          ? "Linha ocultada da vitrine."
-          : "Linha publicada na vitrine.",
+        record.status === "published"
+          ? `${label} ocultada.`
+          : `${label} publicada.`,
         "success",
       );
     } catch {
-      notify("Não foi possível alterar a publicação da linha.", "error");
+      notify(
+        `Não foi possível alterar a publicação de ${label.toLowerCase()}.`,
+        "error",
+      );
     }
   }
 
@@ -384,7 +393,7 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
         records={records}
         uploadingImages={lineImagesUploading}
         onEdit={editRecord}
-        onToggleCollection={toggleCollection}
+        onToggleTaxonomy={toggleTaxonomy}
         onRequestDelete={requestDelete}
       />
       {pendingDelete && (
