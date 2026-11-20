@@ -202,6 +202,7 @@ export function ChatThread({
     setSendError("");
     try {
       await sendChatMessage(conversationId, senderId, senderRole, text);
+      setNow(Date.now());
       setText("");
     } catch (cause) {
       const code =

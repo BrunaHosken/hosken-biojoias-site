@@ -198,26 +198,28 @@ textarea {
   width: 100%;
 }
 .admin-workspace {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 215px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
 }
 .admin-mobile-nav-toggle {
   display: none;
 }
 .admin-navigation {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-.admin-nav-group {
-  min-width: 0;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 14px;
   border: 1px solid var(--border);
   background: #fbf7f1;
 }
-.admin-nav-group h2 {
+.admin-nav-group + .admin-nav-group {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.admin-nav-group h2,
+.admin-nav-subgroup h3 {
   margin: 0 0 9px;
   color: #806c5a;
   font-family: "DM Sans", sans-serif;
@@ -226,6 +228,14 @@ textarea {
   letter-spacing: 1.5px;
   line-height: 1.5;
   text-transform: uppercase;
+}
+.admin-nav-subgroup {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.admin-nav-trailing-items {
+  margin-top: 3px;
 }
 .admin-nav-items {
   display: grid;
