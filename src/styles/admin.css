@@ -493,11 +493,14 @@ textarea {
   font-size: 30px;
 }
 .form-pair {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 15px;
 }
 .form-pair label {
-  width: 50%;
+  width: auto;
+  min-width: 0;
 }
 .event-schedule-editor {
   margin: 4px 0 10px;

@@ -441,11 +441,12 @@ export function AdminProductFields({
       <fieldset className="product-shipping-fields">
         <legend>Dados internos para frete</legend>
         <p className="field-hint">
-          Usados para calcular o envio. Não aparecem na página da loja.
+          Dimensões e peso da embalagem ajudam a calcular o envio; o peso da
+          joia é opcional. Esses dados não aparecem na loja.
         </p>
         <div className="form-pair">
           <label>
-            Comprimento da embalagem (cm)
+            Comprimento (cm)
             <input
               required
               type="number"
@@ -483,7 +484,7 @@ export function AdminProductFields({
         </div>
         <div className="form-pair">
           <label>
-            Altura da embalagem (cm)
+            Altura (cm)
             <input
               required
               type="number"
