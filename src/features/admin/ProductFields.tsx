@@ -117,51 +117,6 @@ export function AdminProductFields({
           }
         />
       </label>
-      {necklaceProduct && (
-        <fieldset className="admin-variant-fields">
-          <legend>Opção de corrente</legend>
-          <p className="field-hint">
-            Esta opção aparece somente para colares. O adicional é somado ao
-            preço do colar; o estoque continua sendo controlado por cor.
-          </p>
-          <label className="admin-color-choice">
-            <input
-              type="checkbox"
-              checked={product.chainAddonPriceCents !== undefined}
-              onChange={(event) =>
-                setProduct((current) => ({
-                  ...current,
-                  chainAddonPriceCents: event.target.checked
-                    ? (current.chainAddonPriceCents ?? 0)
-                    : undefined,
-                  withChainPriceCents: undefined,
-                }))
-              }
-            />
-            <span>Oferecer também a opção com corrente</span>
-          </label>
-          {product.chainAddonPriceCents !== undefined && (
-            <label>
-              Adicional da corrente (R$)
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.01"
-                value={product.chainAddonPriceCents / 100}
-                onChange={(event) =>
-                  setProduct((current) => ({
-                    ...current,
-                    chainAddonPriceCents: Math.round(
-                      Number(event.target.value) * 100,
-                    ),
-                  }))
-                }
-              />
-            </label>
-          )}
-        </fieldset>
-      )}
       <fieldset className="admin-variant-fields">
         <legend>Cores e estoque por cor</legend>
         <p className="field-hint">
@@ -313,6 +268,51 @@ export function AdminProductFields({
           ))}
         </select>
       </label>
+      {necklaceProduct && (
+        <fieldset className="admin-variant-fields">
+          <legend>Opção de corrente</legend>
+          <p className="field-hint">
+            Esta opção aparece somente para colares. O adicional é somado ao
+            preço do colar; o estoque continua sendo controlado por cor.
+          </p>
+          <label className="admin-color-choice">
+            <input
+              type="checkbox"
+              checked={product.chainAddonPriceCents !== undefined}
+              onChange={(event) =>
+                setProduct((current) => ({
+                  ...current,
+                  chainAddonPriceCents: event.target.checked
+                    ? (current.chainAddonPriceCents ?? 0)
+                    : undefined,
+                  withChainPriceCents: undefined,
+                }))
+              }
+            />
+            <span>Oferecer também a opção com corrente</span>
+          </label>
+          {product.chainAddonPriceCents !== undefined && (
+            <label>
+              Adicional da corrente (R$)
+              <input
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                value={product.chainAddonPriceCents / 100}
+                onChange={(event) =>
+                  setProduct((current) => ({
+                    ...current,
+                    chainAddonPriceCents: Math.round(
+                      Number(event.target.value) * 100,
+                    ),
+                  }))
+                }
+              />
+            </label>
+          )}
+        </fieldset>
+      )}
       <label>
         Disponibilidade
         <select
