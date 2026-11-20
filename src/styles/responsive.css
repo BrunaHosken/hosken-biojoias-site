@@ -371,6 +371,7 @@
     gap: 0;
   }
   .form-pair label {
+    grid-template-rows: auto auto;
     width: 100%;
   }
   .event-schedule-editor {

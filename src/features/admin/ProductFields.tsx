@@ -446,7 +446,7 @@ export function AdminProductFields({
         </p>
         <div className="form-pair">
           <label>
-            Comprimento (cm)
+            Comprimento da embalagem (cm)
             <input
               required
               type="number"
@@ -484,7 +484,7 @@ export function AdminProductFields({
         </div>
         <div className="form-pair">
           <label>
-            Altura (cm)
+            Altura da embalagem (cm)
             <input
               required
               type="number"
