@@ -311,11 +311,29 @@ service cloud.firestore {
           && request.resource.data.unreadForCustomer == 0
           && request.resource.data.customerLastReadAt == request.time;
       }
+      function validQuoteImage(data, index) {
+        return data.imageUrls[index] is string
+          && text(data.imageUrls[index], 2048)
+          && data.imagePaths[index] is string
+          && data.imagePaths[index].size() <= 500
+          && data.imagePaths[index].matches('^conversations/' + conversationId + '/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]webp$');
+      }
+      function validCustomQuoteImages(data) {
+        return data.imageUrls is list
+          && data.imagePaths is list
+          && data.imageUrls.size() > 0
+          && data.imageUrls.size() <= 4
+          && data.imageUrls.size() == data.imagePaths.size()
+          && validQuoteImage(data, 0)
+          && (data.imageUrls.size() < 2 || validQuoteImage(data, 1))
+          && (data.imageUrls.size() < 3 || validQuoteImage(data, 2))
+          && (data.imageUrls.size() < 4 || validQuoteImage(data, 3));
+      }
       function validCustomQuoteOffer() {
         let data = request.resource.data;
         return data.keys().hasOnly([
             'customerId','title','description','categoryId','categoryName','categorySlug',
-            'colorIds','colorNames','basePriceCents','chainAddonPriceCents',
+            'colorIds','colorNames','imageUrls','imagePaths','basePriceCents','chainAddonPriceCents',
             'status','createdAt','updatedAt'
           ])
           && data.keys().hasAll([
@@ -338,6 +356,8 @@ service cloud.firestore {
           && data.status == 'offered'
           && data.createdAt == request.time
           && data.updatedAt == request.time
+          && (('imageUrls' in data) == ('imagePaths' in data))
+          && (!('imageUrls' in data) || validCustomQuoteImages(data))
           && (!('chainAddonPriceCents' in data)
             || (data.chainAddonPriceCents is int
               && data.chainAddonPriceCents > 0
@@ -391,7 +411,8 @@ service cloud.firestore {
       allow delete: if false;
 
       match /quotes/{quoteId} {
-        allow read: if canAccessConversation();
+        allow read: if admin()
+          || (signedIn() && resource.data.customerId == request.auth.uid);
         allow create: if admin() && validCustomQuoteOffer();
         allow update: if validCustomQuoteAcceptance();
         allow delete: if false;

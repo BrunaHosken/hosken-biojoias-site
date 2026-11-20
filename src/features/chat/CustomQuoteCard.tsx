@@ -86,6 +86,21 @@ export function CustomQuoteCard({
       <h3>{quote.title}</h3>
       <p className="custom-quote-type">Tipo de peça · {quote.categoryName}</p>
       <p className="custom-quote-description">{quote.description}</p>
+      {quote.imageUrls?.length ? (
+        <div className="custom-quote-gallery" aria-label="Fotos da proposta">
+          {quote.imageUrls.map((imageUrl, index) => (
+            <a
+              key={quote.imagePaths?.[index] || imageUrl}
+              href={imageUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Abrir foto ${index + 1} da proposta`}
+            >
+              <img src={imageUrl} alt={`Foto ${index + 1} da proposta`} />
+            </a>
+          ))}
+        </div>
+      ) : null}
 
       {quote.status === "offered" && !isAdmin && colorIds.length > 0 && (
         <fieldset className="custom-quote-choice-group">

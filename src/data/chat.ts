@@ -27,7 +27,7 @@ import type { ChatConversation, ChatMessage } from "./models";
 
 const MAX_CHAT_IMAGE_BYTES = 10 * 1024 * 1024;
 
-async function uploadChatImage(
+export async function uploadConversationImage(
   conversationId: string,
   senderId: string,
   messageId: string,
@@ -224,7 +224,12 @@ export async function sendChatMessage(
   const conversationRef = doc(db, "conversations", conversationId);
   const messageRef = doc(collection(conversationRef, "messages"));
   const uploadedImage = imageFile
-    ? await uploadChatImage(conversationId, senderId, messageRef.id, imageFile)
+    ? await uploadConversationImage(
+        conversationId,
+        senderId,
+        messageRef.id,
+        imageFile,
+      )
     : undefined;
   const preview = cleanText || "📷 Imagem";
   const currentUser = auth.currentUser;
@@ -316,7 +321,7 @@ export async function editChatMessage(
   );
   const conversationRef = doc(db, "conversations", conversationId);
   const uploadedImage = replacementImage
-    ? await uploadChatImage(
+    ? await uploadConversationImage(
         conversationId,
         message.senderId,
         message.id,

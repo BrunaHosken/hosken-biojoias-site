@@ -146,6 +146,8 @@ export type CustomQuote = {
   categorySlug: string;
   colorIds: string[];
   colorNames: Record<string, string>;
+  imageUrls?: string[];
+  imagePaths?: string[];
   basePriceCents: number;
   chainAddonPriceCents?: number;
   status: "offered" | "accepted" | "ordered";

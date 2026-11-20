@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { BadgePlus, X } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { BadgePlus, ImagePlus, X } from "lucide-react";
 import { useToast } from "../../app/contexts";
 import { createCustomQuote, useRecords, type Taxonomy } from "../../data";
 import { isNecklaceCategory } from "../../data/productAvailability";
@@ -22,7 +22,10 @@ export function CustomQuoteComposer({
   const [basePrice, setBasePrice] = useState("");
   const [offerChain, setOfferChain] = useState(false);
   const [chainAddon, setChainAddon] = useState("");
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const categoryOptions = categories.data.filter(
     (category) => category.status === "published",
   );
@@ -32,6 +35,12 @@ export function CustomQuoteComposer({
   const category = categoryOptions.find((item) => item.id === categoryId);
   const necklace = isNecklaceCategory(category);
 
+  useEffect(() => {
+    const previews = images.map((image) => URL.createObjectURL(image));
+    setImagePreviews(previews);
+    return () => previews.forEach((preview) => URL.revokeObjectURL(preview));
+  }, [images]);
+
   function reset() {
     setTitle("");
     setDescription("");
@@ -40,6 +49,24 @@ export function CustomQuoteComposer({
     setBasePrice("");
     setOfferChain(false);
     setChainAddon("");
+    setImages([]);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  }
+
+  function addImages(files: File[]) {
+    if (files.some((file) => !file.type.startsWith("image/"))) {
+      notify("Escolha somente arquivos de imagem.", "warning");
+      return;
+    }
+    if (files.some((file) => file.size > 10 * 1024 * 1024)) {
+      notify("Cada foto precisa ter até 10 MB antes da conversão.", "warning");
+      return;
+    }
+    if (images.length + files.length > 4) {
+      notify("Você pode anexar até 4 fotos por proposta.", "warning");
+      return;
+    }
+    setImages((current) => [...current, ...files]);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -65,19 +92,24 @@ export function CustomQuoteComposer({
     );
     setBusy(true);
     try {
-      await createCustomQuote(conversationId, adminId, {
-        title: title.trim(),
-        description: description.trim(),
-        categoryId: category.id,
-        categoryName: category.name,
-        categorySlug: category.slug,
-        colorIds: selectedColors.map((color) => color.id),
-        colorNames: Object.fromEntries(
-          selectedColors.map((color) => [color.id, color.name]),
-        ),
-        basePriceCents,
-        ...(necklace && offerChain ? { chainAddonPriceCents } : {}),
-      });
+      await createCustomQuote(
+        conversationId,
+        adminId,
+        {
+          title: title.trim(),
+          description: description.trim(),
+          categoryId: category.id,
+          categoryName: category.name,
+          categorySlug: category.slug,
+          colorIds: selectedColors.map((color) => color.id),
+          colorNames: Object.fromEntries(
+            selectedColors.map((color) => [color.id, color.name]),
+          ),
+          basePriceCents,
+          ...(necklace && offerChain ? { chainAddonPriceCents } : {}),
+        },
+        images,
+      );
       reset();
       setOpen(false);
       notify("Proposta enviada pelo chat.", "success");
@@ -130,6 +162,59 @@ export function CustomQuoteComposer({
               placeholder="Descreva materiais, formato e outros detalhes combinados."
             />
           </label>
+          <div className="custom-quote-image-field">
+            <span>Fotos de referência ou da peça</span>
+            <input
+              ref={imageInputRef}
+              className="sr-only"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) => {
+                const selectedFiles = Array.from(
+                  event.currentTarget.files || [],
+                );
+                event.currentTarget.value = "";
+                addImages(selectedFiles);
+              }}
+            />
+            <button
+              type="button"
+              className="custom-quote-image-picker"
+              disabled={busy || images.length >= 4}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <ImagePlus size={16} />
+              Adicionar fotos ({images.length}/4)
+            </button>
+            <small>As imagens serão convertidas para WebP ao enviar.</small>
+            {images.length > 0 && (
+              <div className="custom-quote-image-list">
+                {images.map((image, index) => (
+                  <figure key={`${image.name}-${index}`}>
+                    <img
+                      src={imagePreviews[index]}
+                      alt={`Prévia da foto ${index + 1}`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Remover foto ${index + 1}`}
+                      disabled={busy}
+                      onClick={() =>
+                        setImages((current) =>
+                          current.filter(
+                            (_, imageIndex) => imageIndex !== index,
+                          ),
+                        )
+                      }
+                    >
+                      <X size={15} />
+                    </button>
+                  </figure>
+                ))}
+              </div>
+            )}
+          </div>
           <label>
             Tipo de peça
             <select

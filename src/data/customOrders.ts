@@ -4,13 +4,15 @@ import {
   doc,
   increment,
   onSnapshot,
-  orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  where,
   writeBatch,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { deleteObject, ref as storageRef } from "firebase/storage";
+import { db, storage } from "../firebase";
+import { uploadConversationImage } from "./chat";
 import type { CustomQuote } from "./models";
 
 export type CustomQuoteDraft = {
@@ -40,20 +42,26 @@ export function useConversationQuotes(conversationId: string | undefined) {
     setLoading(true);
     const quotesQuery = query(
       collection(db, "conversations", conversationId, "quotes"),
-      orderBy("createdAt", "asc"),
+      where("customerId", "==", conversationId),
     );
     return onSnapshot(
       quotesQuery,
       { includeMetadataChanges: true },
       (snapshot) => {
         setData(
-          snapshot.docs.map(
-            (item) =>
-              ({
-                id: item.id,
-                ...item.data({ serverTimestamps: "estimate" }),
-              }) as CustomQuote,
-          ),
+          snapshot.docs
+            .map(
+              (item) =>
+                ({
+                  id: item.id,
+                  ...item.data({ serverTimestamps: "estimate" }),
+                }) as CustomQuote,
+            )
+            .sort(
+              (first, second) =>
+                (first.createdAt?.toMillis() ?? 0) -
+                (second.createdAt?.toMillis() ?? 0),
+            ),
         );
         setError("");
         setLoading(false);
@@ -74,6 +82,7 @@ export async function createCustomQuote(
   conversationId: string,
   adminId: string,
   quote: CustomQuoteDraft,
+  images: File[] = [],
 ) {
   const quoteRef = doc(
     collection(db, "conversations", conversationId, "quotes"),
@@ -83,29 +92,58 @@ export async function createCustomQuote(
   );
   const conversationRef = doc(db, "conversations", conversationId);
   const messageText = `A artesã enviou uma proposta para “${quote.title}”. Confira os detalhes e escolhas aqui no chat.`;
-  const batch = writeBatch(db);
-  batch.set(quoteRef, {
-    ...quote,
-    customerId: conversationId,
-    status: "offered",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  batch.set(messageRef, {
-    senderId: adminId,
-    senderRole: "admin",
-    text: messageText,
-    createdAt: serverTimestamp(),
-  });
-  batch.update(conversationRef, {
-    lastMessage: messageText,
-    lastMessageId: messageRef.id,
-    lastMessageSenderRole: "admin",
-    unreadForCustomer: increment(1),
-    updatedAt: serverTimestamp(),
-  });
-  await batch.commit();
-  return quoteRef.id;
+  if (images.length > 4) throw new Error("custom-quote-too-many-images");
+  const uploadedImages: { imagePath: string; imageUrl: string }[] = [];
+  try {
+    for (const [index, image] of images.entries()) {
+      uploadedImages.push(
+        await uploadConversationImage(
+          conversationId,
+          adminId,
+          `${quoteRef.id}-${index + 1}`,
+          image,
+        ),
+      );
+    }
+    const batch = writeBatch(db);
+    batch.set(quoteRef, {
+      ...quote,
+      ...(uploadedImages.length
+        ? {
+            imageUrls: uploadedImages.map((image) => image.imageUrl),
+            imagePaths: uploadedImages.map((image) => image.imagePath),
+          }
+        : {}),
+      customerId: conversationId,
+      status: "offered",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(messageRef, {
+      senderId: adminId,
+      senderRole: "admin",
+      text: messageText,
+      createdAt: serverTimestamp(),
+    });
+    batch.update(conversationRef, {
+      lastMessage: messageText,
+      lastMessageId: messageRef.id,
+      lastMessageSenderRole: "admin",
+      unreadForCustomer: increment(1),
+      updatedAt: serverTimestamp(),
+    });
+    await batch.commit();
+    return quoteRef.id;
+  } catch (cause) {
+    await Promise.all(
+      uploadedImages.map((image) =>
+        deleteObject(storageRef(storage, image.imagePath)).catch(
+          () => undefined,
+        ),
+      ),
+    );
+    throw cause;
+  }
 }
 
 export async function acceptCustomQuote(
