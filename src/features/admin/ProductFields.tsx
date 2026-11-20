@@ -313,6 +313,28 @@ export function AdminProductFields({
           )}
         </fieldset>
       )}
+      <div className="admin-price-preview" aria-live="polite">
+        <span className="admin-price-preview-title">
+          Prévia do preço por unidade
+        </span>
+        <div className="admin-price-preview-row">
+          <span>{necklaceProduct ? "Somente o pingente" : "Peça"}</span>
+          <strong>
+            {formatPrice(product.priceCents)}
+          </strong>
+        </div>
+        {necklaceProduct && product.chainAddonPriceCents !== undefined && (
+          <div className="admin-price-preview-row">
+            <span>Com corrente</span>
+            <strong>
+              {formatPrice(product.priceCents + product.chainAddonPriceCents)}
+            </strong>
+          </div>
+        )}
+        <small className="field-hint">
+          O total da compra depende da quantidade e das opções escolhidas.
+        </small>
+      </div>
       <label>
         Disponibilidade
         <select
@@ -527,4 +549,11 @@ export function AdminProductFields({
       </label>
     </>
   );
+}
+
+function formatPrice(priceCents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(priceCents / 100);
 }

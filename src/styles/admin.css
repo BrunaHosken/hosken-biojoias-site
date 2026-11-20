@@ -332,6 +332,33 @@ textarea {
 .admin-variant-fields > .field-hint {
   margin: 0 0 12px;
 }
+.admin-price-preview {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 20px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: #f6f1ec;
+}
+.admin-price-preview-title {
+  color: #6b5e56;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.admin-price-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.admin-price-preview-row strong {
+  color: var(--wine);
+}
+.admin-price-preview .field-hint {
+  margin: 0;
+}
 .admin-color-stock-list {
   display: grid;
   border-top: 1px solid var(--border);
