@@ -1,9 +1,12 @@
+import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Flower2, Leaf, MessageCircle } from "lucide-react";
+import { SessionContext } from "../../../app/contexts";
 import { Notice } from "../../../components/Feedback";
 import { useRecords, type Taxonomy } from "../../../data";
 
 export function Home() {
+  const session = useContext(SessionContext);
   const lines = useRecords<Taxonomy>("collections");
   return (
     <>
@@ -26,12 +29,14 @@ export function Home() {
           <Link className="button" to="/loja">
             Conheça as peças <ArrowRight size={18} />
           </Link>
-          <Link
-            className="button secondary hero-custom-order-link"
-            to="/chat?encomenda=personalizada"
-          >
-            Encomendar peça personalizada <MessageCircle size={17} />
-          </Link>
+          {session.ready && !session.admin && (
+            <Link
+              className="button secondary hero-custom-order-link"
+              to="/chat?encomenda=personalizada"
+            >
+              Encomendar peça personalizada <MessageCircle size={17} />
+            </Link>
+          )}
           <div className="hero-note">
             <Leaf size={17} /> Cada flor tem sua própria beleza.
           </div>

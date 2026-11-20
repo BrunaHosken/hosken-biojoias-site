@@ -5,7 +5,7 @@ import { BasketContext, SessionContext } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
 import {
   getBasketQuantityForVariant,
-  getProductWithChainPriceCents,
+  getProductTotalPriceCents,
   isProductAvailable,
   money,
   parseBasketItemId,
@@ -33,13 +33,8 @@ export function Cart() {
     );
     const chainPrice = isNecklaceCategory(
       categories.data.find((category) => category.id === product?.categoryId),
-    )
-      ? getProductWithChainPriceCents(product)
-      : undefined;
-    const unitPrice =
-      selection.withChain && chainPrice !== undefined
-        ? chainPrice
-        : product?.priceCents || 0;
+    );
+    const unitPrice = getProductTotalPriceCents(product, chainPrice);
     return sum + unitPrice * quantity;
   }, 0);
   const canCheckout =
@@ -52,9 +47,6 @@ export function Cart() {
         (item) => item.id === selection.productId,
       );
       if (!product) return false;
-      const necklace = isNecklaceCategory(
-        categories.data.find((category) => category.id === product.categoryId),
-      );
       const variant = product.colorVariants?.find(
         (item) => item.colorId === selection.variantId,
       );
@@ -72,8 +64,6 @@ export function Cart() {
       return Boolean(
         isProductAvailable(product) &&
         (!variantRequired || variant) &&
-        (!selection.withChain ||
-          (necklace && getProductWithChainPriceCents(product) !== undefined)) &&
         quantity <= variantStock,
       );
     });
@@ -98,11 +88,6 @@ export function Cart() {
               const p = products.data.find(
                 (product) => product.id === selection.productId,
               );
-              const necklace = isNecklaceCategory(
-                categories.data.find(
-                  (category) => category.id === p?.categoryId,
-                ),
-              );
               const variant = p?.colorVariants?.find(
                 (item) => item.colorId === selection.variantId,
               );
@@ -117,18 +102,12 @@ export function Cart() {
                 p &&
                 isProductAvailable(p) &&
                 (!variantRequired || variant) &&
-                (!selection.withChain ||
-                  (necklace &&
-                    getProductWithChainPriceCents(p) !== undefined)) &&
                 quantityForVariant <= variantStock,
               );
-              const chainPrice = necklace
-                ? getProductWithChainPriceCents(p)
-                : undefined;
-              const itemPrice =
-                selection.withChain && chainPrice !== undefined
-                  ? chainPrice
-                  : (p?.priceCents ?? 0);
+              const necklace = isNecklaceCategory(
+                categories.data.find((category) => category.id === p?.categoryId),
+              );
+              const itemPrice = getProductTotalPriceCents(p, necklace);
               return (
                 <article className="cart-row" key={id}>
                   <div>
@@ -137,13 +116,6 @@ export function Cart() {
                     {variantRequired && (
                       <p className="cart-variant-detail">
                         Cor: {variant?.colorName || "não selecionada"}
-                      </p>
-                    )}
-                    {chainPrice !== undefined && (
-                      <p className="cart-variant-detail">
-                        {selection.withChain
-                          ? "Com corrente"
-                          : "Somente o pingente"}
                       </p>
                     )}
                     {!itemAvailable && (
@@ -170,9 +142,6 @@ export function Cart() {
                         !p ||
                         !isProductAvailable(p) ||
                         (variantRequired && !variant) ||
-                        (selection.withChain &&
-                          (!necklace ||
-                            getProductWithChainPriceCents(p) === undefined)) ||
                         quantityForVariant >= variantStock
                       }
                       onClick={() => change(id, 1)}

@@ -21,7 +21,7 @@ export type Product = {
   priceCents: number;
   stock: number;
   colorVariants?: ProductColorVariant[];
-  /** Additional cost added to the piece price for the chain option. */
+  /** Legacy additional chain cost; new necklace prices include the chain. */
   chainAddonPriceCents?: number;
   /** Legacy total price with chain, kept for existing catalog records. */
   withChainPriceCents?: number;
@@ -101,8 +101,10 @@ export type CustomerOrder = {
   updatedAt?: Timestamp;
   trackingCode?: string;
   isDemo?: boolean;
-  paymentMethod?: "credit_card" | "pix" | string;
+  paymentMethod?: "credit_card" | "debit_card" | "pix" | string;
   installments?: number;
+  isGift?: boolean;
+  giftMessage?: string;
   deliveryMethod?: "sedex" | "pickup" | string;
   deliveryAddress?: string;
   reservationStatus?:

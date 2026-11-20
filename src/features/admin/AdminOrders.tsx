@@ -147,6 +147,12 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
             Encomenda personalizada; não altera o estoque do catálogo.
           </p>
         )}
+        {order.isGift && (
+          <p className="order-tracking">
+            Compra para presente
+            {order.giftMessage ? ` · Mensagem: ${order.giftMessage}` : ""}
+          </p>
+        )}
         <p className="order-total">
           <span>Total</span>
           <strong>{money(order.totalCents)}</strong>

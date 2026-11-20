@@ -20,8 +20,6 @@ export function CustomQuoteComposer({
   const [categoryId, setCategoryId] = useState("");
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   const [basePrice, setBasePrice] = useState("");
-  const [offerChain, setOfferChain] = useState(false);
-  const [chainAddon, setChainAddon] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -47,8 +45,6 @@ export function CustomQuoteComposer({
     setCategoryId("");
     setSelectedColorIds([]);
     setBasePrice("");
-    setOfferChain(false);
-    setChainAddon("");
     setImages([]);
     if (imageInputRef.current) imageInputRef.current.value = "";
   }
@@ -73,20 +69,10 @@ export function CustomQuoteComposer({
     event.preventDefault();
     if (!category || !adminId || busy) return;
     const basePriceCents = Math.round(Number(basePrice) * 100);
-    const chainAddonPriceCents = Math.round(Number(chainAddon) * 100);
     if (!Number.isSafeInteger(basePriceCents) || basePriceCents <= 0) {
       notify("Informe um preço válido para a peça.", "warning");
       return;
     }
-    if (
-      necklace &&
-      offerChain &&
-      (!Number.isSafeInteger(chainAddonPriceCents) || chainAddonPriceCents <= 0)
-    ) {
-      notify("Informe o adicional da corrente.", "warning");
-      return;
-    }
-
     const selectedColors = colorOptions.filter((color) =>
       selectedColorIds.includes(color.id),
     );
@@ -106,7 +92,6 @@ export function CustomQuoteComposer({
             selectedColors.map((color) => [color.id, color.name]),
           ),
           basePriceCents,
-          ...(necklace && offerChain ? { chainAddonPriceCents } : {}),
         },
         images,
       );
@@ -222,8 +207,6 @@ export function CustomQuoteComposer({
               value={categoryId}
               onChange={(event) => {
                 setCategoryId(event.target.value);
-                setOfferChain(false);
-                setChainAddon("");
               }}
             >
               <option value="">Selecione</option>
@@ -263,7 +246,7 @@ export function CustomQuoteComposer({
             ))}
           </fieldset>
           <label>
-            Preço da peça (R$)
+            Preço total da peça{necklace ? " (corrente incluída)" : ""} (R$)
             <input
               required
               type="number"
@@ -274,36 +257,6 @@ export function CustomQuoteComposer({
               onChange={(event) => setBasePrice(event.target.value)}
             />
           </label>
-          {necklace && (
-            <fieldset className="custom-quote-chain">
-              <legend>Opção de corrente</legend>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={offerChain}
-                  onChange={(event) => {
-                    setOfferChain(event.target.checked);
-                    if (!event.target.checked) setChainAddon("");
-                  }}
-                />
-                Oferecer opção com corrente
-              </label>
-              {offerChain && (
-                <label>
-                  Adicional da corrente (R$)
-                  <input
-                    required
-                    type="number"
-                    min="0.01"
-                    max="1000000"
-                    step="0.01"
-                    value={chainAddon}
-                    onChange={(event) => setChainAddon(event.target.value)}
-                  />
-                </label>
-              )}
-            </fieldset>
-          )}
           <button
             className="button"
             disabled={busy || categories.loading || !category}

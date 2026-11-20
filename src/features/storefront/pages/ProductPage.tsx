@@ -6,7 +6,7 @@ import { availability } from "../../../app/constants";
 import { Notice } from "../../../components/Feedback";
 import {
   getProductAvailability,
-  getProductWithChainPriceCents,
+  getProductTotalPriceCents,
   isProductAvailable,
   money,
   getBasketQuantityForVariant,
@@ -28,7 +28,6 @@ export function ProductPage() {
   const categories = useRecords<Taxonomy>("categories");
   const { items, change } = useContext(BasketContext);
   const [selectedColorId, setSelectedColorId] = useState("");
-  const [withChain, setWithChain] = useState(false);
   const product = products.data.find((p) => p.id === id);
   const colorVariants = product?.colorVariants || [];
   const hasColorChoices = colorVariants.length > 0;
@@ -42,7 +41,6 @@ export function ProductPage() {
     ? makeBasketItemId(
         product.id,
         hasColorChoices ? selectedColorId : "",
-        withChain,
       )
     : "";
   const selectedBasketQuantity = basketItemId ? items[basketItemId] || 0 : 0;
@@ -53,22 +51,14 @@ export function ProductPage() {
         hasColorChoices ? selectedColorId : "",
       )
     : 0;
-  const chainPriceCents = getProductWithChainPriceCents(product);
-  const hasChainOption =
-    isNecklaceCategory(
-      categories.data.find((category) => category.id === product?.categoryId),
-    ) && chainPriceCents !== undefined;
-  const selectedPrice =
-    withChain && hasChainOption ? chainPriceCents : (product?.priceCents ?? 0);
+  const necklace = isNecklaceCategory(
+    categories.data.find((category) => category.id === product?.categoryId),
+  );
+  const selectedPrice = getProductTotalPriceCents(product, necklace);
 
   useEffect(() => {
     setSelectedColorId("");
-    setWithChain(false);
   }, [id]);
-
-  useEffect(() => {
-    if (!hasChainOption) setWithChain(false);
-  }, [hasChainOption]);
 
   useEffect(() => {
     if (!hasColorChoices) {
@@ -96,7 +86,7 @@ export function ProductPage() {
             <h1>{product.name}</h1>
             <p className="price">
               {money(selectedPrice)}
-              {hasChainOption && <small> · preço da opção selecionada</small>}
+              {necklace && <small> · corrente incluída</small>}
             </p>
             <p className="description">{product.description}</p>
             {hasColorChoices && (
@@ -120,30 +110,6 @@ export function ProductPage() {
                     </button>
                   ))}
                 </div>
-              </fieldset>
-            )}
-            {hasChainOption && (
-              <fieldset className="product-variant-picker">
-                <legend>Como prefere receber?</legend>
-                <label className="product-option-radio">
-                  <input
-                    type="radio"
-                    name={`chain-option-${product.id}`}
-                    checked={!withChain}
-                    onChange={() => setWithChain(false)}
-                  />
-                  Somente o pingente{" "}
-                  <strong>{money(product.priceCents)}</strong>
-                </label>
-                <label className="product-option-radio">
-                  <input
-                    type="radio"
-                    name={`chain-option-${product.id}`}
-                    checked={withChain}
-                    onChange={() => setWithChain(true)}
-                  />
-                  Com corrente <strong>{money(chainPriceCents!)}</strong>
-                </label>
               </fieldset>
             )}
             {product.materials ||
@@ -186,8 +152,7 @@ export function ProductPage() {
                   disabled={
                     !isProductAvailable(product) ||
                     selectedStock <= basketQuantityForVariant ||
-                    (hasColorChoices && !selectedVariant) ||
-                    (withChain && !hasChainOption)
+                    (hasColorChoices && !selectedVariant)
                   }
                   onClick={() => change(basketItemId, 1)}
                 >

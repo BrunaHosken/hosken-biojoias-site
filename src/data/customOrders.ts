@@ -151,7 +151,6 @@ export async function acceptCustomQuote(
   quoteId: string,
   customerId: string,
   selectedColorId: string,
-  withChain: boolean,
 ) {
   const quoteRef = doc(db, "conversations", conversationId, "quotes", quoteId);
   const conversationRef = doc(db, "conversations", conversationId);
@@ -172,15 +171,12 @@ export async function acceptCustomQuote(
       throw new Error("custom-quote-color-required");
     if (!colorIds.length && selectedColorId)
       throw new Error("custom-quote-color-unavailable");
-    if (withChain && quote.chainAddonPriceCents === undefined)
-      throw new Error("custom-quote-chain-unavailable");
 
     const selectedColorName = selectedColorId
       ? quote.colorNames?.[selectedColorId]
       : "";
     const selectedOptions = [
       selectedColorName ? `na cor ${selectedColorName}` : "",
-      withChain ? "com corrente" : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -189,7 +185,7 @@ export async function acceptCustomQuote(
     transaction.update(quoteRef, {
       status: "accepted",
       ...(selectedColorId ? { selectedColorId } : {}),
-      withChain: Boolean(withChain),
+      withChain: false,
       acceptedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

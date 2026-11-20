@@ -12,6 +12,10 @@ export function SiteFooter() {
         <small>NATUREZA QUE ACOMPANHA VOCÊ.</small>
       </div>
       <p>Flores naturais. Histórias únicas. Feito à mão.</p>
+      <p className="footer-shipping-note">
+        Pedidos com Sedex são enviados em até 48 horas úteis após a confirmação
+        do pagamento.
+      </p>
       <div>
         <a
           href="https://www.instagram.com/hosken.biojoias/"

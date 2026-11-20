@@ -1,7 +1,7 @@
 import type { AddressDetails, Product } from "../../data/models";
 
 export type DeliveryMethod = "sedex" | "pickup";
-export type CheckoutPaymentMethod = "credit_card" | "pix";
+export type CheckoutPaymentMethod = "credit_card" | "debit_card" | "pix";
 export type CheckoutContact = {
   name: string;
   email: string;
@@ -13,6 +13,8 @@ export type CheckoutDraft = {
   orderId?: string;
   deliveryMethod: DeliveryMethod;
   pickupAgreed: boolean;
+  isGift: boolean;
+  giftMessage: string;
   contact: CheckoutContact;
   address: CheckoutAddress;
 };
@@ -21,8 +23,7 @@ export type CheckoutLine = {
   productId: string;
   variantId: string;
   colorName?: string;
-  withChain: boolean;
-  chainOptionAvailable: boolean;
+  isNecklace?: boolean;
   unitPriceCents: number;
   quantity: number;
   product: Product | undefined;
@@ -57,6 +58,8 @@ export function emptyCheckoutDraft(name = "", email = ""): CheckoutDraft {
     step: 1,
     deliveryMethod: "sedex",
     pickupAgreed: false,
+    isGift: false,
+    giftMessage: "",
     contact: { name, email, phone: "" },
     address: {
       postalCode: "",
@@ -106,6 +109,11 @@ export function loadCheckoutDraft(
           : undefined,
       deliveryMethod: saved.deliveryMethod === "pickup" ? "pickup" : "sedex",
       pickupAgreed: saved.pickupAgreed === true,
+      isGift: saved.isGift === true,
+      giftMessage:
+        typeof saved.giftMessage === "string"
+          ? saved.giftMessage.slice(0, 250)
+          : "",
     };
   } catch {
     return emptyCheckoutDraft(name, email);

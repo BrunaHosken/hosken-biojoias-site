@@ -135,11 +135,12 @@
   min-height: 240px;
   max-height: 540px;
   padding: 20px clamp(16px, 2.5vw, 24px);
+  overflow-x: clip;
 }
 .custom-quote-card {
   box-sizing: border-box;
   align-self: flex-start;
-  width: min(100%, 560px);
+  width: min(calc(100% - 4px), 560px);
   min-width: 0;
   max-width: 100%;
   padding: 18px;
@@ -185,19 +186,21 @@
   box-sizing: border-box;
   display: grid;
   gap: 7px;
-  width: 100%;
+  width: calc(100% - 8px);
   min-width: 0;
   min-inline-size: 0;
   max-width: 100%;
-  margin: 14px 0;
-  padding: 10px 12px;
+  margin: 14px 4px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
 }
 .custom-quote-choice-group legend {
+  max-width: calc(100% - 10px);
   padding: 0 5px;
   color: var(--wine);
   font-size: 11px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .custom-quote-choice-group label {
   display: flex;
@@ -261,12 +264,14 @@
   max-width: 100%;
   margin: 12px 0;
 }
-.custom-quote-gallery a {
+.custom-quote-gallery button {
   display: block;
   min-width: 0;
+  padding: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   background: #f8f0eb;
+  cursor: zoom-in;
 }
 .custom-quote-gallery img {
   display: block;

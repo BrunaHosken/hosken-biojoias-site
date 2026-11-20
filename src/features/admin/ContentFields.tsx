@@ -1,7 +1,13 @@
-import type { ChangeEvent, Dispatch, SetStateAction } from "react";
+import {
+  useState,
+  type ChangeEvent,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { ImagePlus, Plus } from "lucide-react";
 import { POLICY_TYPES } from "../../app/constants";
 import type { Content, EventScheduleEntry, Taxonomy } from "../../data";
+import { ImageLightbox } from "../../components/ImageLightbox";
 
 export type LineImage = { url: string; path: string };
 
@@ -30,6 +36,7 @@ export function AdminContentFields({
   onUploadLineImages: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemoveLineImage: (index: number) => void;
 }) {
+  const [lightboxImage, setLightboxImage] = useState("");
   return (
     <>
       <label>
@@ -83,7 +90,14 @@ export function AdminContentFields({
               <div className="admin-line-image-grid">
                 {lineImages.map((image, index) => (
                   <figure key={image.path || image.url}>
-                    <img src={image.url} alt={`Foto ${index + 1} da linha`} />
+                    <button
+                      className="admin-image-lightbox-trigger"
+                      type="button"
+                      aria-label={`Ampliar foto ${index + 1} da linha`}
+                      onClick={() => setLightboxImage(image.url)}
+                    >
+                      <img src={image.url} alt={`Foto ${index + 1} da linha`} />
+                    </button>
                     <button
                       type="button"
                       className="text-button"
@@ -97,6 +111,13 @@ export function AdminContentFields({
               </div>
             )}
           </div>
+          {lightboxImage && (
+            <ImageLightbox
+              src={lightboxImage}
+              alt="Foto da linha"
+              onClose={() => setLightboxImage("")}
+            />
+          )}
         </>
       )}
       {!["categories", "collections", "colors"].includes(tab) && (

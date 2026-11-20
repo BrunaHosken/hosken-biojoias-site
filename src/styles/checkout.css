@@ -107,6 +107,31 @@
   gap: 10px;
   margin-bottom: 22px;
 }
+.checkout-gift-fields {
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  background: #fffdf9;
+}
+.checkout-gift-message {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0 0;
+  color: #6b5e56;
+  font-size: 11px;
+}
+.checkout-gift-message textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  resize: vertical;
+  font: inherit;
+}
+.checkout-gift-message small {
+  color: var(--muted);
+  text-align: right;
+}
 .checkout-option {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
@@ -318,7 +343,7 @@
 }
 .checkout-payment-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 19px;
 }
@@ -523,5 +548,13 @@
   }
   .checkout-payment-options button {
     font-size: 10px;
+  }
+}
+@media (max-width: 760px) {
+  .checkout-payment-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .checkout-payment-options button:nth-child(3) {
+    grid-column: 1 / -1;
   }
 }

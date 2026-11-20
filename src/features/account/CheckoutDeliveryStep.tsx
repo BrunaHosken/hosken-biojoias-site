@@ -78,7 +78,8 @@ export function CheckoutDeliveryStep({
             <strong>Receber pelos Correios (Sedex)</strong>
             <small>
               O valor do frete ainda será combinado; ele não está incluído nesta
-              simulação.
+              simulação. Após a confirmação do pagamento, o envio será feito em
+              até 48 horas úteis.
             </small>
           </span>
         </label>
@@ -106,6 +107,41 @@ export function CheckoutDeliveryStep({
             </small>
           </span>
         </label>
+      </div>
+
+      <div className="checkout-gift-fields">
+        <label className="checkout-checkbox">
+          <input
+            type="checkbox"
+            checked={draft.isGift}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                isGift: event.target.checked,
+                giftMessage: event.target.checked ? current.giftMessage : "",
+              }))
+            }
+          />
+          Esta compra é para presente.
+        </label>
+        {draft.isGift && (
+          <label className="checkout-gift-message">
+            Mensagem para acompanhar o presente (opcional)
+            <textarea
+              maxLength={250}
+              rows={3}
+              value={draft.giftMessage}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  giftMessage: event.target.value,
+                }))
+              }
+              placeholder="Escreva uma mensagem curta para o cartão."
+            />
+            <small>{draft.giftMessage.length}/250 caracteres</small>
+          </label>
+        )}
       </div>
 
       {draft.deliveryMethod === "pickup" && (

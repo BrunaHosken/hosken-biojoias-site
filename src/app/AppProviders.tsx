@@ -16,13 +16,14 @@ import {
 } from "./contexts";
 import { auth, localMode } from "../firebase";
 import { ToastNotice } from "../components/Feedback";
+import { normalizeBasketItems } from "../data/basket";
 
 const publicPreview = import.meta.env.VITE_PUBLIC_PREVIEW === "true";
 
 function readBasket(): Record<string, number> {
   try {
     const value = JSON.parse(localStorage.getItem("hosken-cart") || "{}");
-    return Object.fromEntries(
+    const validItems = Object.fromEntries(
       Object.entries(value).filter(
         ([, quantity]) =>
           Number.isInteger(quantity) &&
@@ -30,6 +31,7 @@ function readBasket(): Record<string, number> {
           Number(quantity) <= 99,
       ),
     ) as Record<string, number>;
+    return normalizeBasketItems(validItems);
   } catch {
     return {};
   }

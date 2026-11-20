@@ -12,7 +12,7 @@ import {
   createSavedAddress,
   deleteSavedAddress,
   getBasketQuantityForVariant,
-  getProductWithChainPriceCents,
+  getProductTotalPriceCents,
   parseBasketItemId,
   useRecords,
   useConversationQuotes,
@@ -175,26 +175,18 @@ export function Checkout() {
         const variant = product?.colorVariants?.find(
           (item) => item.colorId === selection.variantId,
         );
-        const chainOptionAvailable =
-          isNecklaceCategory(
-            categories.data.find(
-              (category) => category.id === product?.categoryId,
-            ),
-          ) && getProductWithChainPriceCents(product) !== undefined;
-        const chainPriceCents = chainOptionAvailable
-          ? getProductWithChainPriceCents(product)
-          : undefined;
+        const necklace = isNecklaceCategory(
+          categories.data.find(
+            (category) => category.id === product?.categoryId,
+          ),
+        );
         return {
           basketItemId,
           productId: selection.productId,
           variantId: selection.variantId,
           colorName: variant?.colorName,
-          withChain: selection.withChain,
-          chainOptionAvailable,
-          unitPriceCents:
-            selection.withChain && chainPriceCents !== undefined
-              ? chainPriceCents
-              : (product?.priceCents ?? 0),
+          isNecklace: necklace,
+          unitPriceCents: getProductTotalPriceCents(product, necklace),
           quantity,
           product,
         };
@@ -209,15 +201,13 @@ export function Checkout() {
         colorName: customQuote.selectedColorId
           ? customQuote.colorNames?.[customQuote.selectedColorId]
           : undefined,
-        withChain: customQuote.withChain === true,
-        chainOptionAvailable: Number.isSafeInteger(
-          customQuote.chainAddonPriceCents,
-        ),
+        isNecklace: isNecklaceCategory({
+          name: customQuote.categoryName,
+          slug: customQuote.categorySlug,
+        }),
         unitPriceCents:
           customQuote.basePriceCents +
-          (customQuote.withChain === true
-            ? customQuote.chainAddonPriceCents || 0
-            : 0),
+          (customQuote.chainAddonPriceCents || 0),
         quantity: 1,
         product: undefined,
         displayName: customQuote.title,
@@ -244,7 +234,7 @@ export function Checkout() {
     customQuote.basePriceCents > 0 &&
     (!customQuote.colorIds?.length ||
       customQuote.colorIds.includes(customQuote.selectedColorId || "")) &&
-    (customQuote.withChain !== true ||
+    (customQuote.chainAddonPriceCents === undefined ||
       Number.isSafeInteger(customQuote.chainAddonPriceCents)),
   );
   const cartIsValid = customCheckoutRequested
@@ -270,7 +260,6 @@ export function Checkout() {
         return (
           isProductAvailable(product) &&
           (!variantRequired || Boolean(variant)) &&
-          (!line.withChain || line.chainOptionAvailable) &&
           quantity <= stock
         );
       });
@@ -286,7 +275,7 @@ export function Checkout() {
     subtotalCents * (1 + DEMO_INSTALLMENT_RATE * Math.max(0, installments - 1)),
   );
   const paymentTotalCents =
-    paymentMethod === "pix" ? subtotalCents : cardTotalCents;
+    paymentMethod === "credit_card" ? cardTotalCents : subtotalCents;
 
   if (!session.ready) return <div className="page">Carregando sua conta…</div>;
   if (session.admin) return <Navigate to="/admin" replace />;
@@ -549,10 +538,9 @@ export function Checkout() {
         customerPhone: draft.contact.phone.trim(),
         items: customCheckoutRequested
           ? []
-          : lines.map(({ productId, variantId, withChain, quantity }) => ({
+          : lines.map(({ productId, variantId, quantity }) => ({
               productId,
               ...(variantId ? { variantId } : {}),
-              withChain,
               quantity,
             })),
         ...(customCheckoutRequested ? { customQuoteId, conversationId } : {}),
@@ -561,6 +549,10 @@ export function Checkout() {
         ...(draft.deliveryMethod === "sedex" ? { address: draft.address } : {}),
         paymentMethod,
         installments: paymentMethod === "credit_card" ? installments : 1,
+        isGift: draft.isGift,
+        ...(draft.isGift && draft.giftMessage.trim()
+          ? { giftMessage: draft.giftMessage.trim() }
+          : {}),
         paymentStatus: status,
         expectedTotalCents: paymentTotalCents,
       });

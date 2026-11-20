@@ -50,7 +50,7 @@ function validateCheckout(data) {
   if (!["sedex", "pickup"].includes(deliveryMethod)) {
     throw new HttpsError("invalid-argument", "Invalid delivery method.");
   }
-  if (!["credit_card", "pix"].includes(paymentMethod)) {
+  if (!["credit_card", "debit_card", "pix"].includes(paymentMethod)) {
     throw new HttpsError("invalid-argument", "Invalid payment method.");
   }
   if (!["simulated_paid", "pending"].includes(paymentStatus)) {
@@ -61,10 +61,17 @@ function validateCheckout(data) {
     !Number.isInteger(installments) ||
     installments < 1 ||
     installments > 6 ||
-    (paymentMethod === "pix" && installments !== 1)
+    (paymentMethod !== "credit_card" && installments !== 1)
   ) {
     throw new HttpsError("invalid-argument", "Invalid installments.");
   }
+  const isGift = data.isGift === true;
+  if (data.isGift !== undefined && typeof data.isGift !== "boolean") {
+    throw new HttpsError("invalid-argument", "Invalid gift option.");
+  }
+  const giftMessage = isGift
+    ? requireText(data.giftMessage || "", "giftMessage", 250, true)
+    : "";
   if (deliveryMethod === "pickup" && data.pickupAgreed !== true) {
     throw new HttpsError("failed-precondition", "pickup-not-confirmed");
   }
@@ -133,7 +140,6 @@ function validateCheckout(data) {
     const variantId = item?.variantId
       ? requireText(item.variantId, "variantId", 150)
       : "";
-    const withChain = item?.withChain === true;
     if (
       (item?.withChain !== undefined && typeof item.withChain !== "boolean") ||
       !/^[A-Za-z0-9_-]+$/.test(productId) ||
@@ -141,7 +147,7 @@ function validateCheckout(data) {
     ) {
       throw new HttpsError("invalid-argument", "Invalid or repeated product.");
     }
-    const lineKey = `${productId}::${variantId}::${withChain ? "chain" : "pendant"}`;
+    const lineKey = `${productId}::${variantId}`;
     if (seen.has(lineKey)) {
       throw new HttpsError("invalid-argument", "Invalid or repeated product.");
     }
@@ -153,7 +159,7 @@ function validateCheckout(data) {
     ) {
       throw new HttpsError("invalid-argument", "Invalid item quantity.");
     }
-    return { productId, variantId, withChain, quantity: item.quantity };
+    return { productId, variantId, quantity: item.quantity };
   });
 
   return {
@@ -165,6 +171,8 @@ function validateCheckout(data) {
     paymentMethod,
     paymentStatus,
     installments,
+    isGift,
+    giftMessage,
     expectedTotalCents: data.expectedTotalCents,
     address,
     items,
@@ -178,6 +186,8 @@ function checkoutFingerprint(checkout) {
     paymentMethod: checkout.paymentMethod,
     paymentStatus: checkout.paymentStatus,
     installments: checkout.installments,
+    isGift: checkout.isGift,
+    giftMessage: checkout.giftMessage,
     expectedTotalCents: checkout.expectedTotalCents,
     items: checkout.items,
     customQuoteId: checkout.customQuoteId || "",
@@ -313,15 +323,8 @@ export const createDemoOrder = onCall({ region }, async (request) => {
             "custom-quote-chain-unavailable",
           );
         }
-        const withChain = quote.withChain === true;
-        if (withChain && !hasChainOption) {
-          throw new HttpsError(
-            "failed-precondition",
-            "custom-quote-chain-unavailable",
-          );
-        }
         const unitPriceCents =
-          quote.basePriceCents + (withChain ? quote.chainAddonPriceCents : 0);
+          quote.basePriceCents + (hasChainOption ? quote.chainAddonPriceCents : 0);
         if (!Number.isSafeInteger(unitPriceCents)) {
           throw new HttpsError(
             "failed-precondition",
@@ -337,7 +340,6 @@ export const createDemoOrder = onCall({ region }, async (request) => {
           customDescription: quote.description.trim(),
           name: quote.title.trim(),
           ...(selectedColorId ? { variantId: selectedColorId, colorName } : {}),
-          ...(hasChainOption ? { withChain } : {}),
           quantity: 1,
           unitPriceCents,
         });
@@ -446,15 +448,10 @@ export const createDemoOrder = onCall({ region }, async (request) => {
             scalarQuantity += item.quantity;
           }
 
-          if (item.withChain && chainPriceCents === undefined) {
-            throw new HttpsError(
-              "failed-precondition",
-              "chain-option-unavailable",
-            );
-          }
-          const unitPriceCents = item.withChain
-            ? chainPriceCents
-            : product.priceCents;
+          const unitPriceCents =
+            isNecklace && chainPriceCents !== undefined
+              ? chainPriceCents
+              : product.priceCents;
           if (!Number.isSafeInteger(unitPriceCents) || unitPriceCents < 0) {
             throw new HttpsError(
               "failed-precondition",
@@ -476,9 +473,6 @@ export const createDemoOrder = onCall({ region }, async (request) => {
                   colorName: variant.colorName,
                 }
               : {}),
-            ...(chainPriceCents === undefined
-              ? {}
-              : { withChain: item.withChain }),
             name: product.name,
             quantity: item.quantity,
             unitPriceCents,
@@ -582,6 +576,10 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         paymentStatus: checkout.paymentStatus,
         paymentMethod: checkout.paymentMethod,
         installments: checkout.installments,
+        ...(checkout.isGift ? { isGift: true } : {}),
+        ...(checkout.isGift && checkout.giftMessage
+          ? { giftMessage: checkout.giftMessage }
+          : {}),
         deliveryMethod: checkout.deliveryMethod,
         ...(deliveryAddress ? { deliveryAddress } : {}),
         isDemo: true,

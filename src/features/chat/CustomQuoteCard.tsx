@@ -3,6 +3,7 @@ import { ArrowRight, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../app/contexts";
 import { acceptCustomQuote, money, type CustomQuote } from "../../data";
+import { ImageLightbox } from "../../components/ImageLightbox";
 
 export function CustomQuoteCard({
   quote,
@@ -20,24 +21,19 @@ export function CustomQuoteCard({
   const [selectedColorId, setSelectedColorId] = useState(
     quote.selectedColorId || quote.colorIds?.[0] || "",
   );
-  const [withChain, setWithChain] = useState(quote.withChain === true);
   const [busy, setBusy] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState("");
   const colorIds = quote.colorIds || [];
-  const hasChainOption = Number.isSafeInteger(quote.chainAddonPriceCents);
   const selectedColorName = selectedColorId
     ? quote.colorNames?.[selectedColorId]
     : "";
   const unitPriceCents =
-    quote.basePriceCents +
-    (withChain && hasChainOption ? quote.chainAddonPriceCents || 0 : 0);
+    quote.basePriceCents + (quote.chainAddonPriceCents || 0);
   const checkoutPath = `/checkout?customQuote=${encodeURIComponent(quote.id)}&conversation=${encodeURIComponent(conversationId)}`;
 
   useEffect(() => {
     setSelectedColorId(quote.selectedColorId || quote.colorIds?.[0] || "");
   }, [quote.id, quote.selectedColorId]);
-  useEffect(() => {
-    setWithChain(quote.withChain === true);
-  }, [quote.id, quote.withChain]);
 
   async function acceptOffer() {
     if (busy) return;
@@ -52,7 +48,6 @@ export function CustomQuoteCard({
         quote.id,
         customerId,
         selectedColorId,
-        withChain,
       );
       navigate(checkoutPath);
     } catch (cause) {
@@ -89,15 +84,14 @@ export function CustomQuoteCard({
       {quote.imageUrls?.length ? (
         <div className="custom-quote-gallery" aria-label="Fotos da proposta">
           {quote.imageUrls.map((imageUrl, index) => (
-            <a
+            <button
               key={quote.imagePaths?.[index] || imageUrl}
-              href={imageUrl}
-              target="_blank"
-              rel="noreferrer"
+              type="button"
               aria-label={`Abrir foto ${index + 1} da proposta`}
+              onClick={() => setLightboxImage(imageUrl)}
             >
               <img src={imageUrl} alt={`Foto ${index + 1} da proposta`} />
-            </a>
+            </button>
           ))}
         </div>
       ) : null}
@@ -124,78 +118,10 @@ export function CustomQuoteCard({
         </p>
       )}
 
-      {hasChainOption && (
-        <fieldset className="custom-quote-choice-group">
-          <legend>Como prefere receber?</legend>
-          {quote.status === "offered" && !isAdmin ? (
-            <>
-              <label>
-                <input
-                  type="radio"
-                  name={`custom-chain-${quote.id}`}
-                  checked={!withChain}
-                  onChange={() => setWithChain(false)}
-                />
-                Somente o pingente
-                <strong>{money(quote.basePriceCents)}</strong>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name={`custom-chain-${quote.id}`}
-                  checked={withChain}
-                  onChange={() => setWithChain(true)}
-                />
-                Com corrente
-                <strong>
-                  {money(
-                    quote.basePriceCents + (quote.chainAddonPriceCents || 0),
-                  )}
-                </strong>
-              </label>
-            </>
-          ) : quote.status === "offered" && isAdmin ? (
-            <>
-              <p>
-                Somente o pingente ·{" "}
-                <strong>{money(quote.basePriceCents)}</strong>
-              </p>
-              <p>
-                Com corrente ·{" "}
-                <strong>
-                  {money(
-                    quote.basePriceCents + (quote.chainAddonPriceCents || 0),
-                  )}
-                </strong>
-              </p>
-            </>
-          ) : (
-            <p>
-              {quote.withChain ? "Com corrente" : "Somente o pingente"} ·{" "}
-              <strong>{money(unitPriceCents)}</strong>
-            </p>
-          )}
-        </fieldset>
-      )}
-
-      {!hasChainOption && (
-        <div className="custom-quote-price-row">
-          <span>Preço da peça</span>
-          <strong>{money(quote.basePriceCents)}</strong>
-        </div>
-      )}
-      {hasChainOption && quote.status === "offered" && !isAdmin && (
-        <div className="custom-quote-price-row custom-quote-total-preview">
-          <span>Total da opção escolhida</span>
-          <strong>{money(unitPriceCents)}</strong>
-        </div>
-      )}
-      {hasChainOption && quote.status !== "offered" && (
-        <div className="custom-quote-price-row">
-          <span>Preço da opção escolhida</span>
-          <strong>{money(unitPriceCents)}</strong>
-        </div>
-      )}
+      <div className="custom-quote-price-row">
+        <span>Preço total da peça</span>
+        <strong>{money(unitPriceCents)}</strong>
+      </div>
 
       {quote.status === "offered" && !isAdmin && (
         <button
@@ -221,6 +147,13 @@ export function CustomQuoteCard({
         <p className="custom-quote-order-note">
           Esta proposta está vinculada ao pedido {quote.orderId}.
         </p>
+      )}
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          alt={`Foto da proposta ${quote.title}`}
+          onClose={() => setLightboxImage("")}
+        />
       )}
     </article>
   );

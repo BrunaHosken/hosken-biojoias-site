@@ -209,6 +209,12 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
             : "Correios (Sedex)"}
         </p>
       )}
+      {order.isGift && (
+        <p className="order-tracking">
+          Compra para presente
+          {order.giftMessage ? ` · Mensagem: ${order.giftMessage}` : ""}
+        </p>
+      )}
       {order.deliveryAddress && (
         <p className="order-tracking">
           Endereço de entrega: <strong>{order.deliveryAddress}</strong>
@@ -222,7 +228,11 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
       {order.paymentMethod && (
         <p className="order-tracking">
           Pagamento:{" "}
-          {order.paymentMethod === "pix" ? "Pix" : "Cartão de crédito"}
+          {order.paymentMethod === "pix"
+            ? "Pix"
+            : order.paymentMethod === "debit_card"
+              ? "Cartão de débito"
+              : "Cartão de crédito"}
           {order.installments && order.installments > 1
             ? ` · ${order.installments} parcelas`
             : ""}

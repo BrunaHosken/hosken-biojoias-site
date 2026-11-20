@@ -15,3 +15,19 @@ export function getProductWithChainPriceCents(
   }
   return product.withChainPriceCents;
 }
+
+export function getProductTotalPriceCents(
+  product:
+    | Pick<
+        Product,
+        "priceCents" | "chainAddonPriceCents" | "withChainPriceCents"
+      >
+    | null
+    | undefined,
+  necklace: boolean,
+) {
+  if (!product) return 0;
+  return necklace
+    ? (getProductWithChainPriceCents(product) ?? product.priceCents)
+    : product.priceCents;
+}

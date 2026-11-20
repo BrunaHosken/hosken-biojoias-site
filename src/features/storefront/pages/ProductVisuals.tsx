@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Flower2 } from "lucide-react";
+import { ImageLightbox } from "../../../components/ImageLightbox";
 import { availability } from "../../../app/constants";
 import type { Product } from "../../../data";
 import { getProductAvailability } from "../../../data";
@@ -32,10 +33,25 @@ export function PieceArt({
 export function ProductGallery({ product }: { product: Product }) {
   const images = getProductImages(product);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [lightboxImage, setLightboxImage] = useState("");
   useEffect(() => setSelectedImage(0), [product.id]);
   return (
     <div className="product-gallery">
-      <PieceArt product={product} imageUrl={images[selectedImage]} />
+      <button
+        className="product-gallery-main"
+        type="button"
+        aria-label="Ampliar foto do produto"
+        onClick={() => images[selectedImage] && setLightboxImage(images[selectedImage])}
+        onMouseMove={(event) => {
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const x = ((event.clientX - bounds.left) / bounds.width) * 100;
+          const y = ((event.clientY - bounds.top) / bounds.height) * 100;
+          event.currentTarget.style.setProperty("--zoom-x", `${x}%`);
+          event.currentTarget.style.setProperty("--zoom-y", `${y}%`);
+        }}
+      >
+        <PieceArt product={product} imageUrl={images[selectedImage]} />
+      </button>
       {images.length > 1 && (
         <div className="product-thumbnails" aria-label="Fotos do produto">
           {images.map((image, index) => (
@@ -51,6 +67,13 @@ export function ProductGallery({ product }: { product: Product }) {
             </button>
           ))}
         </div>
+      )}
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          alt={product.name}
+          onClose={() => setLightboxImage("")}
+        />
       )}
     </div>
   );

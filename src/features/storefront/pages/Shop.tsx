@@ -1,20 +1,25 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Flower2 } from "lucide-react";
+import { SessionContext } from "../../../app/contexts";
 import { Notice } from "../../../components/Feedback";
 import {
   getProductAvailability,
-  getProductWithChainPriceCents,
+  getProductTotalPriceCents,
   money,
   useRecords,
   type Product,
   type Taxonomy,
 } from "../../../data";
 import { availability } from "../../../app/constants";
-import { getProductStock } from "../../../data/productAvailability";
+import {
+  getProductStock,
+  isNecklaceCategory,
+} from "../../../data/productAvailability";
 import { PieceArt } from "./ProductVisuals";
 
 export function Shop() {
+  const session = useContext(SessionContext);
   const products = useRecords<Product>("products");
   const lines = useRecords<Taxonomy>("collections");
   const cats = useRecords<Taxonomy>("categories");
@@ -38,15 +43,17 @@ export function Shop() {
       <p className="lead">
         Explore as criações e encontre uma flor para chamar de sua.
       </p>
-      <div className="custom-order-callout">
-        <div>
-          <strong>Tem uma ideia especial?</strong>
-          <p>Converse com a artesã sobre uma peça feita para você.</p>
+      {session.ready && !session.admin && (
+        <div className="custom-order-callout">
+          <div>
+            <strong>Tem uma ideia especial?</strong>
+            <p>Converse com a artesã sobre uma peça feita para você.</p>
+          </div>
+          <Link className="button secondary" to="/chat?encomenda=personalizada">
+            Encomendar peça personalizada <ArrowRight size={17} />
+          </Link>
         </div>
-        <Link className="button secondary" to="/chat?encomenda=personalizada">
-          Encomendar peça personalizada <ArrowRight size={17} />
-        </Link>
-      </div>
+      )}
       <div className="filters">
         <label>
           Linha
@@ -89,10 +96,14 @@ export function Shop() {
             </small>
             <h3>{p.name}</h3>
             <p>
-              {getProductWithChainPriceCents(p) !== undefined
-                ? "A partir de "
-                : ""}
-              {money(p.priceCents)}
+              {money(
+                getProductTotalPriceCents(
+                  p,
+                  isNecklaceCategory(
+                    cats.data.find((category) => category.id === p.categoryId),
+                  ),
+                ),
+              )}
             </p>
             <small className="product-card-stock">
               {availability[getProductAvailability(p)]} · {getProductStock(p)}{" "}

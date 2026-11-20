@@ -40,7 +40,9 @@ export function CheckoutSummary({
   const addressSummary = formatAddress(draft.address);
   const isCustomOrder = lines.some((line) => Boolean(line.customQuoteId));
   const paymentLabel =
-    paymentMethod === "pix" ? "Pix ilustrativo" : "Cartão de crédito";
+    paymentMethod === "pix"
+      ? "Pix ilustrativo"
+      : `Cartão de ${paymentMethod === "credit_card" ? "crédito" : "débito"}`;
 
   return (
     <aside className="checkout-summary">
@@ -55,8 +57,7 @@ export function CheckoutSummary({
             customDescription,
             quantity,
             colorName,
-            withChain,
-            chainOptionAvailable,
+            isNecklace,
             unitPriceCents,
           }) => (
             <li key={basketItemId}>
@@ -73,18 +74,14 @@ export function CheckoutSummary({
                     {customDescription}
                   </small>
                 )}
-                {(colorName || chainOptionAvailable) && (
+                {colorName && (
                   <small className="checkout-line-options">
-                    {[
-                      colorName ? `Cor: ${colorName}` : "",
-                      chainOptionAvailable
-                        ? withChain
-                          ? "Com corrente"
-                          : "Somente o pingente"
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+                    Cor: {colorName}
+                  </small>
+                )}
+                {isNecklace && (
+                  <small className="checkout-line-options">
+                    Corrente incluída
                   </small>
                 )}
               </span>
@@ -121,6 +118,12 @@ export function CheckoutSummary({
             .join(" · ") || "Preencha seus dados de contato."}
         </span>
       </div>
+      {draft.isGift && (
+        <div className="checkout-summary-address">
+          <strong>Compra para presente</strong>
+          <span>{draft.giftMessage.trim() || "Sem mensagem para o cartão."}</span>
+        </div>
+      )}
       {draft.step === 2 &&
         paymentMethod === "credit_card" &&
         installments > 1 && (
@@ -144,7 +147,7 @@ export function CheckoutSummary({
       )}
       <p className="checkout-summary-note">
         {draft.deliveryMethod === "sedex"
-          ? "O frete dos Correios ainda não foi calculado e não está incluído no total desta demonstração."
+          ? "O frete dos Correios ainda não foi calculado e não está incluído no total desta demonstração. O envio será feito em até 48 horas úteis após a confirmação do pagamento."
           : "A retirada depende de combinação prévia com a artesã pelo chat."}
       </p>
       <p className="checkout-summary-note">

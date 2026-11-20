@@ -10,7 +10,6 @@ export type CreateDemoOrderInput = {
   items: {
     productId: string;
     variantId?: string;
-    withChain?: boolean;
     quantity: number;
   }[];
   customQuoteId?: string;
@@ -18,8 +17,10 @@ export type CreateDemoOrderInput = {
   deliveryMethod: "sedex" | "pickup";
   pickupAgreed: boolean;
   address?: AddressDetails;
-  paymentMethod: "credit_card" | "pix";
+  paymentMethod: "credit_card" | "debit_card" | "pix";
   installments: number;
+  isGift: boolean;
+  giftMessage?: string;
   paymentStatus: "simulated_paid" | "pending";
   expectedTotalCents: number;
 };

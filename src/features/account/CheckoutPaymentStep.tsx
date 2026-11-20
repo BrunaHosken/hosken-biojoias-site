@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, CreditCard } from "lucide-react";
 import type { CheckoutPaymentMethod } from "./checkoutModel";
 
@@ -73,6 +72,14 @@ export function CheckoutPaymentStep({
       <div className="checkout-payment-options">
         <button
           type="button"
+          aria-pressed={paymentMethod === "debit_card"}
+          className={paymentMethod === "debit_card" ? "is-selected" : ""}
+          onClick={() => setPaymentMethod("debit_card")}
+        >
+          <CreditCard size={18} /> Cartão de débito
+        </button>
+        <button
+          type="button"
           aria-pressed={paymentMethod === "credit_card"}
           className={paymentMethod === "credit_card" ? "is-selected" : ""}
           onClick={() => setPaymentMethod("credit_card")}
@@ -88,7 +95,7 @@ export function CheckoutPaymentStep({
           <span className="pix-symbol">◇</span> Pix
         </button>
       </div>
-      {paymentMethod === "credit_card" ? (
+      {paymentMethod !== "pix" ? (
         <>
           <p className="checkout-payment-warning">
             Demonstração visual. Não digite dados reais: o cartão não será
@@ -144,30 +151,39 @@ export function CheckoutPaymentStep({
                 />
               </label>
             </div>
-            <label>
-              Parcelas
-              <select
-                value={installments}
-                onChange={(event) =>
-                  setInstallments(Number(event.target.value))
-                }
-              >
-                {Array.from({ length: 6 }, (_, index) => index + 1).map(
-                  (count) => (
-                    <option key={count} value={count}>
-                      {count}x{" "}
-                      {count === 1 ? "sem juros" : "com juros ilustrativos"}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <p className="checkout-interest-note">
-              Para esta simulação, usamos juros ilustrativos de 2% por parcela
-              adicional. A taxa real dependerá do meio de pagamento escolhido.
-            </p>
+            {paymentMethod === "credit_card" && (
+              <>
+                <label>
+                  Parcelas
+                  <select
+                    value={installments}
+                    onChange={(event) =>
+                      setInstallments(Number(event.target.value))
+                    }
+                  >
+                    {Array.from({ length: 6 }, (_, index) => index + 1).map(
+                      (count) => (
+                        <option key={count} value={count}>
+                          {count}x{" "}
+                          {count === 1
+                            ? "sem juros"
+                            : "com juros ilustrativos"}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <p className="checkout-interest-note">
+                  Para esta simulação, usamos juros ilustrativos de 2% por
+                  parcela adicional. A taxa real dependerá do meio de pagamento
+                  escolhido.
+                </p>
+              </>
+            )}
             <button className="button" disabled={busy || !cartIsValid}>
-              {busy ? "Registrando…" : "Simular aprovação do cartão"}{" "}
+              {busy
+                ? "Registrando…"
+                : `Simular aprovação do cartão de ${paymentMethod === "credit_card" ? "crédito" : "débito"}`}{" "}
               <ArrowRight size={18} />
             </button>
           </form>
@@ -200,7 +216,7 @@ export function CheckoutPaymentStep({
           </div>
         </div>
       )}
-      {paymentMethod === "credit_card" && (
+      {paymentMethod !== "pix" && (
         <button
           className="text-button checkout-pending-action"
           type="button"

@@ -1,4 +1,9 @@
-import type { ChangeEvent, Dispatch, SetStateAction } from "react";
+import {
+  useState,
+  type ChangeEvent,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   availability,
   DEFAULT_LOW_STOCK_THRESHOLD,
@@ -13,6 +18,7 @@ import type {
   Content,
 } from "../../data";
 import type { ProductDraft } from "./productModel";
+import { ImageLightbox } from "../../components/ImageLightbox";
 import {
   availabilityFromStock,
   getProductStock,
@@ -40,6 +46,7 @@ export function AdminProductFields({
   onUploadImages,
   onRemoveImage,
 }: ProductFieldsProps) {
+  const [lightboxImage, setLightboxImage] = useState("");
   const productColors = colors.filter(
     (color) =>
       color.status === "published" ||
@@ -101,7 +108,7 @@ export function AdminProductFields({
       </label>
       <label>
         {necklaceProduct
-          ? "Preço do colar sem corrente (R$)"
+          ? "Preço do colar com corrente (R$)"
           : "Preço da peça (R$)"}
         <input
           required
@@ -247,17 +254,7 @@ export function AdminProductFields({
           value={product.categoryId}
           onChange={(e) => {
             const categoryId = e.target.value;
-            const category = categories.find((item) => item.id === categoryId);
-            setProduct((current) => ({
-              ...current,
-              categoryId,
-              ...(isNecklaceCategory(category)
-                ? {}
-                : {
-                    chainAddonPriceCents: undefined,
-                    withChainPriceCents: undefined,
-                  }),
-            }));
+            setProduct((current) => ({ ...current, categoryId }));
           }}
         >
           <option value="">Selecione</option>
@@ -268,69 +265,16 @@ export function AdminProductFields({
           ))}
         </select>
       </label>
-      {necklaceProduct && (
-        <fieldset className="admin-variant-fields">
-          <legend>Opção de corrente</legend>
-          <p className="field-hint">
-            Esta opção aparece somente para colares. O adicional é somado ao
-            preço do colar; o estoque continua sendo controlado por cor.
-          </p>
-          <label className="admin-color-choice">
-            <input
-              type="checkbox"
-              checked={product.chainAddonPriceCents !== undefined}
-              onChange={(event) =>
-                setProduct((current) => ({
-                  ...current,
-                  chainAddonPriceCents: event.target.checked
-                    ? (current.chainAddonPriceCents ?? 0)
-                    : undefined,
-                  withChainPriceCents: undefined,
-                }))
-              }
-            />
-            <span>Oferecer também a opção com corrente</span>
-          </label>
-          {product.chainAddonPriceCents !== undefined && (
-            <label>
-              Adicional da corrente (R$)
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.01"
-                value={product.chainAddonPriceCents / 100}
-                onChange={(event) =>
-                  setProduct((current) => ({
-                    ...current,
-                    chainAddonPriceCents: Math.round(
-                      Number(event.target.value) * 100,
-                    ),
-                  }))
-                }
-              />
-            </label>
-          )}
-        </fieldset>
-      )}
       <div className="admin-price-preview" aria-live="polite">
         <span className="admin-price-preview-title">
           Prévia do preço por unidade
         </span>
         <div className="admin-price-preview-row">
-          <span>{necklaceProduct ? "Somente o pingente" : "Peça"}</span>
+          <span>{necklaceProduct ? "Colar com corrente" : "Peça"}</span>
           <strong>
             {formatPrice(product.priceCents)}
           </strong>
         </div>
-        {necklaceProduct && product.chainAddonPriceCents !== undefined && (
-          <div className="admin-price-preview-row">
-            <span>Com corrente</span>
-            <strong>
-              {formatPrice(product.priceCents + product.chainAddonPriceCents)}
-            </strong>
-          </div>
-        )}
         <small className="field-hint">
           O total da compra depende da quantidade e das opções escolhidas.
         </small>
@@ -387,10 +331,17 @@ export function AdminProductFields({
         <div className="admin-product-images" aria-label="Fotos cadastradas">
           {getProductImages(product).map((image, index) => (
             <div className="admin-product-image" key={`${image}-${index}`}>
-              <img
-                src={image}
-                alt={`Foto ${index + 1} de ${product.name || "produto"}`}
-              />
+              <button
+                className="admin-image-lightbox-trigger"
+                type="button"
+                aria-label={`Ampliar foto ${index + 1}`}
+                onClick={() => setLightboxImage(image)}
+              >
+                <img
+                  src={image}
+                  alt={`Foto ${index + 1} de ${product.name || "produto"}`}
+                />
+              </button>
               <button
                 type="button"
                 className="text-button"
@@ -402,6 +353,13 @@ export function AdminProductFields({
             </div>
           ))}
         </div>
+      )}
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          alt={`Foto de ${product.name || "produto"}`}
+          onClose={() => setLightboxImage("")}
+        />
       )}
       <label>
         Materiais (opcional)

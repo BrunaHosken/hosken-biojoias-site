@@ -26,6 +26,7 @@ import {
   type Product,
   type ProductShippingData,
   type Taxonomy,
+  getProductWithChainPriceCents,
 } from "../../data";
 import { auth, db, storage } from "../../firebase";
 import { getProductImages } from "../storefront/productImages";
@@ -195,7 +196,6 @@ export function AdminProductManager() {
       setBusy(false);
       return;
     }
-    const necklaceProduct = isNecklaceCategory(productCategory);
     const colorVariants = product.colorVariants || [];
     const variantStock = colorVariants.reduce(
       (total, variant) => total + variant.stock,
@@ -217,13 +217,6 @@ export function AdminProductManager() {
           !Number.isSafeInteger(variant.stock) ||
           variant.stock < 0,
       ) ||
-      (necklaceProduct &&
-        product.chainAddonPriceCents !== undefined &&
-        (!Number.isSafeInteger(product.chainAddonPriceCents) ||
-          product.chainAddonPriceCents < 0 ||
-          !Number.isSafeInteger(
-            product.priceCents + product.chainAddonPriceCents,
-          ))) ||
       !Number.isSafeInteger(
         product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
       ) ||
@@ -267,10 +260,12 @@ export function AdminProductManager() {
         packageWeightGrams,
         pieceWeightGrams,
         colorVariants: _colorVariants,
-        chainAddonPriceCents,
-        withChainPriceCents,
+        chainAddonPriceCents: legacyChainAddonPriceCents,
+        withChainPriceCents: legacyWithChainPriceCents,
         ...productDetails
       } = product;
+      void legacyChainAddonPriceCents;
+      void legacyWithChainPriceCents;
       const productToSave = {
         ...productDetails,
         stock: totalStock,
@@ -284,9 +279,6 @@ export function AdminProductManager() {
               })),
             }
           : {}),
-        ...(!necklaceProduct || chainAddonPriceCents === undefined
-          ? {}
-          : { chainAddonPriceCents }),
         availability:
           productDetails.availability === "available" ||
           productDetails.availability === "soldout"
@@ -352,12 +344,11 @@ export function AdminProductManager() {
     void discardUnsavedImages();
     removedImagePaths.current.clear();
     const { id, ...recordData } = record;
-    const { withChainPriceCents, ...data } = recordData;
-    const chainAddonPriceCents =
-      data.chainAddonPriceCents ??
-      (withChainPriceCents === undefined
-        ? undefined
-        : Math.max(0, withChainPriceCents - data.priceCents));
+    const data = recordData;
+    const category = categories.data.find(
+      (item) => item.id === data.categoryId,
+    );
+    const fullNecklacePrice = getProductWithChainPriceCents(data);
     const imageUrls = data.imageUrls?.length
       ? data.imageUrls
       : data.imageUrl
@@ -366,7 +357,11 @@ export function AdminProductManager() {
     setProduct({
       ...blankProduct,
       ...data,
-      ...(chainAddonPriceCents === undefined ? {} : { chainAddonPriceCents }),
+      ...(isNecklaceCategory(category) && fullNecklacePrice !== undefined
+        ? { priceCents: fullNecklacePrice }
+        : {}),
+      chainAddonPriceCents: undefined,
+      withChainPriceCents: undefined,
       imageUrls,
       imagePaths: data.imagePaths?.length
         ? data.imagePaths
