@@ -6,11 +6,11 @@ import {
   type FormEvent,
 } from "react";
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
+  getDoc,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import {
   deleteObject,
@@ -21,7 +21,12 @@ import { Plus } from "lucide-react";
 import { useToast } from "../../app/contexts";
 import { DEFAULT_LOW_STOCK_THRESHOLD } from "../../app/constants";
 import { ConfirmationModal } from "../../components/Feedback";
-import { useRecords, type Product, type Taxonomy } from "../../data";
+import {
+  useRecords,
+  type Product,
+  type ProductShippingData,
+  type Taxonomy,
+} from "../../data";
 import { auth, db, storage } from "../../firebase";
 import { getProductImages } from "../storefront/productImages";
 import { availabilityFromStock } from "../../data/productAvailability";
@@ -37,10 +42,13 @@ export function AdminProductManager() {
   const lines = useRecords<Taxonomy>("collections", true);
   const [editing, setEditing] = useState("");
   const [product, setProduct] = useState(blankProduct);
+  const [loadingShipping, setLoadingShipping] = useState(false);
+  const [shippingLoadError, setShippingLoadError] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const uploadedImagePaths = useRef(new Set<string>());
   const removedImagePaths = useRef(new Set<string>());
   const mounted = useRef(true);
+  const shippingLoadVersion = useRef(0);
   const notify = useToast();
   const [pendingDelete, setPendingDelete] = useState<{
     id: string;
@@ -169,6 +177,7 @@ export function AdminProductManager() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loadingShipping || shippingLoadError) return;
     setBusy(true);
     const wasEditing = Boolean(editing);
     if (
@@ -188,23 +197,68 @@ export function AdminProductManager() {
       setBusy(false);
       return;
     }
+    const requiredPackageValues = [
+      product.packageLengthCm,
+      product.packageWidthCm,
+      product.packageHeightCm,
+      product.packageWeightGrams,
+    ];
+    if (
+      requiredPackageValues.some(
+        (value) =>
+          typeof value !== "number" || !Number.isFinite(value) || value <= 0,
+      ) ||
+      (product.pieceWeightGrams !== undefined &&
+        (!Number.isFinite(product.pieceWeightGrams) ||
+          product.pieceWeightGrams <= 0))
+    ) {
+      notify(
+        "Preencha as dimensões e o peso da embalagem. O peso da joia é opcional.",
+        "warning",
+      );
+      setBusy(false);
+      return;
+    }
 
     try {
+      const {
+        packageLengthCm,
+        packageWidthCm,
+        packageHeightCm,
+        packageWeightGrams,
+        pieceWeightGrams,
+        ...productDetails
+      } = product;
       const productToSave = {
-        ...product,
+        ...productDetails,
         availability:
-          product.availability === "available" ||
-          product.availability === "soldout"
-            ? availabilityFromStock(product.stock)
-            : product.availability,
+          productDetails.availability === "available" ||
+          productDetails.availability === "soldout"
+            ? availabilityFromStock(productDetails.stock)
+            : productDetails.availability,
         imageUrls: product.imageUrls || getProductImages(product),
         imagePaths: product.imagePaths || [],
         imageUrl: product.imageUrls?.[0] || product.imageUrl || "",
         lowStockThreshold:
           product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
       };
-      if (editing) await updateDoc(doc(db, "products", editing), productToSave);
-      else await addDoc(collection(db, "products"), productToSave);
+      const shippingToSave: ProductShippingData = {
+        packageLengthCm: packageLengthCm!,
+        packageWidthCm: packageWidthCm!,
+        packageHeightCm: packageHeightCm!,
+        packageWeightGrams: packageWeightGrams!,
+        ...(pieceWeightGrams === undefined ? {} : { pieceWeightGrams }),
+      };
+      const productRef = editing
+        ? doc(db, "products", editing)
+        : doc(collection(db, "products"));
+      const batch = writeBatch(db);
+      batch.set(productRef, productToSave);
+      batch.set(
+        doc(db, "productShipping", productRef.id),
+        shippingToSave,
+      );
+      await batch.commit();
       const removedPaths = Array.from(removedImagePaths.current);
       removedImagePaths.current.clear();
       await Promise.allSettled(
@@ -213,6 +267,8 @@ export function AdminProductManager() {
       uploadedImagePaths.current.clear();
       setProduct(blankProduct);
       setEditing("");
+      setLoadingShipping(false);
+      setShippingLoadError(false);
       notify(
         wasEditing ? "Alterações salvas." : "Cadastro criado com sucesso.",
         "success",
@@ -238,7 +294,8 @@ export function AdminProductManager() {
     }
   }
 
-  function editProduct(record: Product) {
+  async function editProduct(record: Product) {
+    const requestVersion = ++shippingLoadVersion.current;
     void discardUnsavedImages();
     removedImagePaths.current.clear();
     const { id, ...data } = record;
@@ -257,13 +314,50 @@ export function AdminProductManager() {
       lowStockThreshold: data.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     });
     setEditing(id);
+    setLoadingShipping(true);
+    setShippingLoadError(false);
+    try {
+      const shippingSnapshot = await getDoc(
+        doc(db, "productShipping", id),
+      );
+      if (
+        !mounted.current ||
+        requestVersion !== shippingLoadVersion.current
+      )
+        return;
+      const shipping = shippingSnapshot.exists()
+        ? (shippingSnapshot.data() as ProductShippingData)
+        : undefined;
+      setProduct((current) => ({
+        ...current,
+        packageLengthCm: shipping?.packageLengthCm,
+        packageWidthCm: shipping?.packageWidthCm,
+        packageHeightCm: shipping?.packageHeightCm,
+        packageWeightGrams: shipping?.packageWeightGrams,
+        pieceWeightGrams: shipping?.pieceWeightGrams,
+      }));
+    } catch {
+      if (mounted.current && requestVersion === shippingLoadVersion.current) {
+        setShippingLoadError(true);
+        notify(
+          "Não foi possível carregar os dados internos de frete deste produto.",
+          "error",
+        );
+      }
+    } finally {
+      if (mounted.current && requestVersion === shippingLoadVersion.current)
+        setLoadingShipping(false);
+    }
   }
 
   async function removeProduct(id: string) {
     setDeleteBusy(true);
     try {
       const removedProduct = products.data.find((item) => item.id === id);
-      await deleteDoc(doc(db, "products", id));
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "products", id));
+      batch.delete(doc(db, "productShipping", id));
+      await batch.commit();
       if (removedProduct?.imagePaths?.length) {
         await Promise.allSettled(
           removedProduct.imagePaths
@@ -284,44 +378,64 @@ export function AdminProductManager() {
     <div className="admin-layout">
       <form key={`products-${editing}`} className="admin-form" onSubmit={save}>
         <h2>{editing ? "Editar peça" : "Novo cadastro"}</h2>
-        <AdminProductFields
-          product={product}
-          setProduct={setProduct}
-          lines={lines.data}
-          categories={categories.data}
-          uploadingImages={uploadingImages}
-          onUploadImages={uploadImages}
-          onRemoveImage={removeImage}
-        />
-        <button className="button" disabled={busy || uploadingImages}>
-          {busy
-            ? "Salvando…"
-            : editing
-              ? "Salvar alterações"
-              : "Salvar cadastro"}{" "}
-          <Plus size={17} />
-        </button>
+        <fieldset
+          className="admin-product-fieldset"
+          disabled={busy || uploadingImages || loadingShipping}
+        >
+          <AdminProductFields
+            product={product}
+            setProduct={setProduct}
+            lines={lines.data}
+            categories={categories.data}
+            uploadingImages={uploadingImages}
+            onUploadImages={uploadImages}
+            onRemoveImage={removeImage}
+          />
+          <button className="button" disabled={shippingLoadError}>
+            {busy
+              ? "Salvando…"
+              : loadingShipping
+                ? "Carregando dados…"
+                : editing
+                  ? "Salvar alterações"
+                  : "Salvar cadastro"}{" "}
+            <Plus size={17} />
+          </button>
+        </fieldset>
         {editing && (
           <button
             type="button"
             className="text-button"
-            disabled={uploadingImages}
+            disabled={busy || uploadingImages}
             onClick={() => {
+              shippingLoadVersion.current += 1;
               void discardUnsavedImages();
               removedImagePaths.current.clear();
               setEditing("");
               setProduct(blankProduct);
+              setLoadingShipping(false);
+              setShippingLoadError(false);
             }}
           >
             Cancelar edição
           </button>
+        )}
+        {loadingShipping && editing && (
+          <p className="field-hint" role="status">
+            Carregando dados internos de frete…
+          </p>
+        )}
+        {shippingLoadError && (
+          <p className="field-hint" role="alert">
+            Cancele a edição e tente abrir o produto novamente.
+          </p>
         )}
       </form>
       <AdminRecordList
         tab="products"
         records={products}
         uploadingImages={uploadingImages}
-        onEdit={(record) => editProduct(record as Product)}
+        onEdit={(record) => void editProduct(record as Product)}
         onToggleProduct={toggleProduct}
         onRequestDelete={(record) =>
           setPendingDelete({

@@ -27,6 +27,13 @@ export type Product = {
   dimensions?: string;
   careInstructions?: string;
 };
+export type ProductShippingData = {
+  packageLengthCm: number;
+  packageWidthCm: number;
+  packageHeightCm: number;
+  packageWeightGrams: number;
+  pieceWeightGrams?: number;
+};
 export type Content = {
   id: string;
   title: string;

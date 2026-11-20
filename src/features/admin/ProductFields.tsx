@@ -229,7 +229,7 @@ export function AdminProductFields({
         />
       </label>
       <label>
-        Medidas (opcional)
+        Medidas da joia (opcional)
         <input
           maxLength={300}
           value={product.dimensions || ""}
@@ -238,6 +238,9 @@ export function AdminProductFields({
           }
           placeholder="Ex.: pingente com 3 cm"
         />
+        <small className="field-hint">
+          Este texto aparece na página do produto.
+        </small>
       </label>
       <label>
         Cuidados com a peça (opcional)
@@ -249,6 +252,105 @@ export function AdminProductFields({
           }
         />
       </label>
+      <fieldset className="product-shipping-fields">
+        <legend>Dados internos para frete</legend>
+        <p className="field-hint">
+          Usados para calcular o envio. Não aparecem na página da loja.
+        </p>
+        <div className="form-pair">
+          <label>
+            Comprimento da embalagem (cm)
+            <input
+              required
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={product.packageLengthCm ?? ""}
+              onChange={(e) =>
+                setProduct((current) => ({
+                  ...current,
+                  packageLengthCm: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
+                }))
+              }
+            />
+          </label>
+          <label>
+            Largura da embalagem (cm)
+            <input
+              required
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={product.packageWidthCm ?? ""}
+              onChange={(e) =>
+                setProduct((current) => ({
+                  ...current,
+                  packageWidthCm: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
+                }))
+              }
+            />
+          </label>
+        </div>
+        <div className="form-pair">
+          <label>
+            Altura da embalagem (cm)
+            <input
+              required
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={product.packageHeightCm ?? ""}
+              onChange={(e) =>
+                setProduct((current) => ({
+                  ...current,
+                  packageHeightCm: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
+                }))
+              }
+            />
+          </label>
+          <label>
+            Peso da embalagem (g)
+            <input
+              required
+              type="number"
+              min="1"
+              step="1"
+              value={product.packageWeightGrams ?? ""}
+              onChange={(e) =>
+                setProduct((current) => ({
+                  ...current,
+                  packageWeightGrams: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
+                }))
+              }
+            />
+          </label>
+        </div>
+        <label>
+          Peso da joia (g, opcional)
+          <input
+            type="number"
+            min="0.1"
+            step="0.1"
+            value={product.pieceWeightGrams ?? ""}
+            onChange={(e) =>
+              setProduct((current) => ({
+                ...current,
+                pieceWeightGrams: e.target.value
+                  ? Number(e.target.value)
+                  : undefined,
+              }))
+            }
+          />
+        </label>
+      </fieldset>
       <label>
         Publicação
         <select

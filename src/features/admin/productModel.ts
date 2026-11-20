@@ -1,7 +1,8 @@
 import { DEFAULT_LOW_STOCK_THRESHOLD } from "../../app/constants";
-import type { Product } from "../../data";
+import type { Product, ProductShippingData } from "../../data";
 
-export type ProductDraft = Omit<Product, "id">;
+export type ProductDraft = Omit<Product, "id"> &
+  Partial<ProductShippingData>;
 
 export const blankProduct: ProductDraft = {
   name: "",
@@ -19,4 +20,9 @@ export const blankProduct: ProductDraft = {
   materials: "",
   dimensions: "",
   careInstructions: "",
+  packageLengthCm: undefined,
+  packageWidthCm: undefined,
+  packageHeightCm: undefined,
+  packageWeightGrams: undefined,
+  pieceWeightGrams: undefined,
 };
