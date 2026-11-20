@@ -204,6 +204,13 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         const productItems = checkout.items.filter(
           (item) => item.productId === productId,
         );
+        const categorySnapshot = await transaction.get(
+          db.collection("categories").doc(product.categoryId),
+        );
+        const categorySlug = categorySnapshot.exists
+          ? String(categorySnapshot.get("slug") || "")
+          : "";
+        const isNecklace = /(^|-)colar(es)?(-|$)/.test(categorySlug);
         const colorVariants = Array.isArray(product.colorVariants)
           ? product.colorVariants
           : [];
@@ -247,10 +254,11 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         ) {
           throw new HttpsError("failed-precondition", "invalid-product-price");
         }
-        const chainPriceCents =
-          product.chainAddonPriceCents !== undefined
+        const chainPriceCents = isNecklace
+          ? product.chainAddonPriceCents !== undefined
             ? product.priceCents + product.chainAddonPriceCents
-            : product.withChainPriceCents;
+            : product.withChainPriceCents
+          : undefined;
         if (
           chainPriceCents !== undefined &&
           !Number.isSafeInteger(chainPriceCents)

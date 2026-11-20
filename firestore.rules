@@ -57,6 +57,8 @@ service cloud.firestore {
           || request.resource.data.availability in ['paused','prelaunch','made-to-order'])
         && request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 2000
         && exists(/databases/$(database)/documents/categories/$(request.resource.data.categoryId))
+        && ((!('chainAddonPriceCents' in request.resource.data) && !('withChainPriceCents' in request.resource.data))
+          || get(/databases/$(database)/documents/categories/$(request.resource.data.categoryId)).data.slug.matches('(^|.*-)colar(es)?(-.*|$)'))
         && exists(/databases/$(database)/documents/collections/$(request.resource.data.collectionId));
       allow delete: if admin();
     }

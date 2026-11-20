@@ -1,4 +1,4 @@
-import { getProductWithChainPriceCents, money } from "../../data";
+import { money } from "../../data";
 import type {
   CheckoutAddress,
   CheckoutDraft,
@@ -52,18 +52,18 @@ export function CheckoutSummary({
             quantity,
             colorName,
             withChain,
+            chainOptionAvailable,
             unitPriceCents,
           }) => (
             <li key={basketItemId}>
               <span>
                 {product?.name || "Peça indisponível"}{" "}
                 <small>× {quantity}</small>
-                {(colorName ||
-                  getProductWithChainPriceCents(product) !== undefined) && (
+                {(colorName || chainOptionAvailable) && (
                   <small className="checkout-line-options">
                     {[
                       colorName ? `Cor: ${colorName}` : "",
-                      getProductWithChainPriceCents(product) !== undefined
+                      chainOptionAvailable
                         ? withChain
                           ? "Com corrente"
                           : "Somente o pingente"

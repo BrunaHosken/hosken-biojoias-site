@@ -22,6 +22,7 @@ export type CheckoutLine = {
   variantId: string;
   colorName?: string;
   withChain: boolean;
+  chainOptionAvailable: boolean;
   unitPriceCents: number;
   quantity: number;
   product: Product | undefined;

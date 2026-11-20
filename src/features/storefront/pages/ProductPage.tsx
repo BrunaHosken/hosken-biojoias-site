@@ -13,14 +13,19 @@ import {
   makeBasketItemId,
   useRecords,
   type Product,
+  type Taxonomy,
 } from "../../../data";
-import { getProductStock } from "../../../data/productAvailability";
+import {
+  getProductStock,
+  isNecklaceCategory,
+} from "../../../data/productAvailability";
 import { ProductGallery } from "./ProductVisuals";
 
 export function ProductPage() {
   const { id } = useParams();
   const session = useContext(SessionContext);
   const products = useRecords<Product>("products");
+  const categories = useRecords<Taxonomy>("categories");
   const { items, change } = useContext(BasketContext);
   const [selectedColorId, setSelectedColorId] = useState("");
   const [withChain, setWithChain] = useState(false);
@@ -49,7 +54,10 @@ export function ProductPage() {
       )
     : 0;
   const chainPriceCents = getProductWithChainPriceCents(product);
-  const hasChainOption = chainPriceCents !== undefined;
+  const hasChainOption =
+    isNecklaceCategory(
+      categories.data.find((category) => category.id === product?.categoryId),
+    ) && chainPriceCents !== undefined;
   const selectedPrice =
     withChain && hasChainOption ? chainPriceCents : (product?.priceCents ?? 0);
 
@@ -57,6 +65,10 @@ export function ProductPage() {
     setSelectedColorId("");
     setWithChain(false);
   }, [id]);
+
+  useEffect(() => {
+    if (!hasChainOption) setWithChain(false);
+  }, [hasChainOption]);
 
   useEffect(() => {
     if (!hasColorChoices) {

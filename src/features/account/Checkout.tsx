@@ -19,8 +19,12 @@ import {
   useCustomerProfile,
   type Product,
   type SavedAddress,
+  type Taxonomy,
 } from "../../data";
-import { isProductAvailable } from "../../data/productAvailability";
+import {
+  isNecklaceCategory,
+  isProductAvailable,
+} from "../../data/productAvailability";
 import { getProductStock } from "../../data/productAvailability";
 import { createDemoOrder, getCheckoutErrorMessage } from "../../data/checkout";
 import { CheckoutDeliveryStep } from "./CheckoutDeliveryStep";
@@ -45,6 +49,7 @@ export function Checkout() {
   const notify = useToast();
   const navigate = useNavigate();
   const products = useRecords<Product>("products");
+  const categories = useRecords<Taxonomy>("categories");
   const customerProfile = useCustomerProfile(session.user?.uid);
   const [draft, setDraft] = useState<CheckoutDraft>(() => emptyCheckoutDraft());
   const [draftReady, setDraftReady] = useState(false);
@@ -144,13 +149,22 @@ export function Checkout() {
         const variant = product?.colorVariants?.find(
           (item) => item.colorId === selection.variantId,
         );
-        const chainPriceCents = getProductWithChainPriceCents(product);
+        const chainOptionAvailable =
+          isNecklaceCategory(
+            categories.data.find(
+              (category) => category.id === product?.categoryId,
+            ),
+          ) && getProductWithChainPriceCents(product) !== undefined;
+        const chainPriceCents = chainOptionAvailable
+          ? getProductWithChainPriceCents(product)
+          : undefined;
         return {
           basketItemId,
           productId: selection.productId,
           variantId: selection.variantId,
           colorName: variant?.colorName,
           withChain: selection.withChain,
+          chainOptionAvailable,
           unitPriceCents:
             selection.withChain && chainPriceCents !== undefined
               ? chainPriceCents
@@ -159,7 +173,7 @@ export function Checkout() {
           product,
         };
       }),
-    [basket.items, products.data],
+    [basket.items, products.data, categories.data],
   );
   const subtotalCents = lines.reduce(
     (sum, line) => sum + line.unitPriceCents * line.quantity,
@@ -187,8 +201,7 @@ export function Checkout() {
       return (
         isProductAvailable(product) &&
         (!variantRequired || Boolean(variant)) &&
-        (!line.withChain ||
-          getProductWithChainPriceCents(product) !== undefined) &&
+        (!line.withChain || line.chainOptionAvailable) &&
         quantity <= stock
       );
     });

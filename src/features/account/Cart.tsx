@@ -11,14 +11,19 @@ import {
   parseBasketItemId,
   useRecords,
   type Product,
+  type Taxonomy,
 } from "../../data";
-import { getProductStock } from "../../data/productAvailability";
+import {
+  getProductStock,
+  isNecklaceCategory,
+} from "../../data/productAvailability";
 
 export function Cart() {
   const session = useContext(SessionContext);
   const { items, change } = useContext(BasketContext);
   const navigate = useNavigate();
   const products = useRecords<Product>("products");
+  const categories = useRecords<Taxonomy>("categories");
   if (session.admin) return <Navigate to="/admin" replace />;
   const entries = Object.entries(items);
   const total = entries.reduce((sum, [id, quantity]) => {
@@ -26,7 +31,11 @@ export function Cart() {
     const product = products.data.find(
       (item) => item.id === selection.productId,
     );
-    const chainPrice = getProductWithChainPriceCents(product);
+    const chainPrice = isNecklaceCategory(
+      categories.data.find((category) => category.id === product?.categoryId),
+    )
+      ? getProductWithChainPriceCents(product)
+      : undefined;
     const unitPrice =
       selection.withChain && chainPrice !== undefined
         ? chainPrice
@@ -43,6 +52,9 @@ export function Cart() {
         (item) => item.id === selection.productId,
       );
       if (!product) return false;
+      const necklace = isNecklaceCategory(
+        categories.data.find((category) => category.id === product.categoryId),
+      );
       const variant = product.colorVariants?.find(
         (item) => item.colorId === selection.variantId,
       );
@@ -61,7 +73,7 @@ export function Cart() {
         isProductAvailable(product) &&
         (!variantRequired || variant) &&
         (!selection.withChain ||
-          getProductWithChainPriceCents(product) !== undefined) &&
+          (necklace && getProductWithChainPriceCents(product) !== undefined)) &&
         quantity <= variantStock,
       );
     });
@@ -86,6 +98,11 @@ export function Cart() {
               const p = products.data.find(
                 (product) => product.id === selection.productId,
               );
+              const necklace = isNecklaceCategory(
+                categories.data.find(
+                  (category) => category.id === p?.categoryId,
+                ),
+              );
               const variant = p?.colorVariants?.find(
                 (item) => item.colorId === selection.variantId,
               );
@@ -101,10 +118,13 @@ export function Cart() {
                 isProductAvailable(p) &&
                 (!variantRequired || variant) &&
                 (!selection.withChain ||
-                  getProductWithChainPriceCents(p) !== undefined) &&
+                  (necklace &&
+                    getProductWithChainPriceCents(p) !== undefined)) &&
                 quantityForVariant <= variantStock,
               );
-              const chainPrice = getProductWithChainPriceCents(p);
+              const chainPrice = necklace
+                ? getProductWithChainPriceCents(p)
+                : undefined;
               const itemPrice =
                 selection.withChain && chainPrice !== undefined
                   ? chainPrice
@@ -151,7 +171,8 @@ export function Cart() {
                         !isProductAvailable(p) ||
                         (variantRequired && !variant) ||
                         (selection.withChain &&
-                          getProductWithChainPriceCents(p) === undefined) ||
+                          (!necklace ||
+                            getProductWithChainPriceCents(p) === undefined)) ||
                         quantityForVariant >= variantStock
                       }
                       onClick={() => change(id, 1)}

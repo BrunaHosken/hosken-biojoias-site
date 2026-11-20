@@ -29,7 +29,10 @@ import {
 } from "../../data";
 import { auth, db, storage } from "../../firebase";
 import { getProductImages } from "../storefront/productImages";
-import { availabilityFromStock } from "../../data/productAvailability";
+import {
+  availabilityFromStock,
+  isNecklaceCategory,
+} from "../../data/productAvailability";
 import { convertToWebp } from "../../utils/convertToWebp";
 import { uploadFile } from "../../utils/uploadFile";
 import { AdminRecordList } from "./AdminRecordList";
@@ -181,6 +184,18 @@ export function AdminProductManager() {
     if (loadingShipping || shippingLoadError) return;
     setBusy(true);
     const wasEditing = Boolean(editing);
+    const productCategory = categories.data.find(
+      (category) => category.id === product.categoryId,
+    );
+    if (!productCategory) {
+      notify(
+        "Selecione um tipo de peça cadastrado antes de salvar.",
+        "warning",
+      );
+      setBusy(false);
+      return;
+    }
+    const necklaceProduct = isNecklaceCategory(productCategory);
     const colorVariants = product.colorVariants || [];
     const variantStock = colorVariants.reduce(
       (total, variant) => total + variant.stock,
@@ -202,7 +217,8 @@ export function AdminProductManager() {
           !Number.isSafeInteger(variant.stock) ||
           variant.stock < 0,
       ) ||
-      (product.chainAddonPriceCents !== undefined &&
+      (necklaceProduct &&
+        product.chainAddonPriceCents !== undefined &&
         (!Number.isSafeInteger(product.chainAddonPriceCents) ||
           product.chainAddonPriceCents < 0 ||
           !Number.isSafeInteger(
@@ -268,7 +284,9 @@ export function AdminProductManager() {
               })),
             }
           : {}),
-        ...(chainAddonPriceCents === undefined ? {} : { chainAddonPriceCents }),
+        ...(!necklaceProduct || chainAddonPriceCents === undefined
+          ? {}
+          : { chainAddonPriceCents }),
         availability:
           productDetails.availability === "available" ||
           productDetails.availability === "soldout"

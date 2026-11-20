@@ -16,6 +16,7 @@ import type { ProductDraft } from "./productModel";
 import {
   availabilityFromStock,
   getProductStock,
+  isNecklaceCategory,
 } from "../../data/productAvailability";
 
 type ProductFieldsProps = {
@@ -44,6 +45,10 @@ export function AdminProductFields({
       color.status === "published" ||
       product.colorVariants?.some((variant) => variant.colorId === color.id),
   );
+  const selectedCategory = categories.find(
+    (category) => category.id === product.categoryId,
+  );
+  const necklaceProduct = isNecklaceCategory(selectedCategory);
   for (const variant of product.colorVariants || []) {
     if (!productColors.some((color) => color.id === variant.colorId)) {
       productColors.push({
@@ -95,7 +100,9 @@ export function AdminProductFields({
         />
       </label>
       <label>
-        Preço da peça sem corrente (R$)
+        {necklaceProduct
+          ? "Preço do colar sem corrente (R$)"
+          : "Preço da peça (R$)"}
         <input
           required
           type="number"
@@ -110,49 +117,51 @@ export function AdminProductFields({
           }
         />
       </label>
-      <fieldset className="admin-variant-fields">
-        <legend>Opção de corrente</legend>
-        <p className="field-hint">
-          Disponível para peças vendidas como pingente. O adicional é somado ao
-          preço da peça; o estoque continua sendo controlado por cor.
-        </p>
-        <label className="admin-color-choice">
-          <input
-            type="checkbox"
-            checked={product.chainAddonPriceCents !== undefined}
-            onChange={(event) =>
-              setProduct((current) => ({
-                ...current,
-                chainAddonPriceCents: event.target.checked
-                  ? (current.chainAddonPriceCents ?? 0)
-                  : undefined,
-                withChainPriceCents: undefined,
-              }))
-            }
-          />
-          <span>Oferecer também a opção com corrente</span>
-        </label>
-        {product.chainAddonPriceCents !== undefined && (
-          <label>
-            Adicional da corrente (R$)
+      {necklaceProduct && (
+        <fieldset className="admin-variant-fields">
+          <legend>Opção de corrente</legend>
+          <p className="field-hint">
+            Esta opção aparece somente para colares. O adicional é somado ao
+            preço do colar; o estoque continua sendo controlado por cor.
+          </p>
+          <label className="admin-color-choice">
             <input
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              value={product.chainAddonPriceCents / 100}
+              type="checkbox"
+              checked={product.chainAddonPriceCents !== undefined}
               onChange={(event) =>
                 setProduct((current) => ({
                   ...current,
-                  chainAddonPriceCents: Math.round(
-                    Number(event.target.value) * 100,
-                  ),
+                  chainAddonPriceCents: event.target.checked
+                    ? (current.chainAddonPriceCents ?? 0)
+                    : undefined,
+                  withChainPriceCents: undefined,
                 }))
               }
             />
+            <span>Oferecer também a opção com corrente</span>
           </label>
-        )}
-      </fieldset>
+          {product.chainAddonPriceCents !== undefined && (
+            <label>
+              Adicional da corrente (R$)
+              <input
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                value={product.chainAddonPriceCents / 100}
+                onChange={(event) =>
+                  setProduct((current) => ({
+                    ...current,
+                    chainAddonPriceCents: Math.round(
+                      Number(event.target.value) * 100,
+                    ),
+                  }))
+                }
+              />
+            </label>
+          )}
+        </fieldset>
+      )}
       <fieldset className="admin-variant-fields">
         <legend>Cores e estoque por cor</legend>
         <p className="field-hint">
@@ -281,9 +290,20 @@ export function AdminProductFields({
         <select
           required
           value={product.categoryId}
-          onChange={(e) =>
-            setProduct({ ...product, categoryId: e.target.value })
-          }
+          onChange={(e) => {
+            const categoryId = e.target.value;
+            const category = categories.find((item) => item.id === categoryId);
+            setProduct((current) => ({
+              ...current,
+              categoryId,
+              ...(isNecklaceCategory(category)
+                ? {}
+                : {
+                    chainAddonPriceCents: undefined,
+                    withChainPriceCents: undefined,
+                  }),
+            }));
+          }}
         >
           <option value="">Selecione</option>
           {categories.map((t) => (
