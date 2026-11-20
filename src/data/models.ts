@@ -77,6 +77,10 @@ export type OrderItem = {
   variantId?: string;
   colorName?: string;
   withChain?: boolean;
+  customQuoteId?: string;
+  customConversationId?: string;
+  categoryName?: string;
+  customDescription?: string;
   name: string;
   quantity: number;
   unitPriceCents: number;
@@ -101,7 +105,8 @@ export type CustomerOrder = {
   installments?: number;
   deliveryMethod?: "sedex" | "pickup" | string;
   deliveryAddress?: string;
-  reservationStatus?: "active" | "released" | string;
+  reservationStatus?:
+    "active" | "released" | "committed" | "not_applicable" | string;
   stockReserved?: boolean;
 };
 export type ChatConversation = {
@@ -130,4 +135,23 @@ export type ChatMessage = {
   imagePath?: string;
   createdAt?: Timestamp;
   editedAt?: Timestamp;
+};
+export type CustomQuote = {
+  id: string;
+  customerId: string;
+  title: string;
+  description: string;
+  categoryId: string;
+  categoryName: string;
+  categorySlug: string;
+  colorIds: string[];
+  colorNames: Record<string, string>;
+  basePriceCents: number;
+  chainAddonPriceCents?: number;
+  status: "offered" | "accepted" | "ordered";
+  selectedColorId?: string;
+  withChain?: boolean;
+  orderId?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 };

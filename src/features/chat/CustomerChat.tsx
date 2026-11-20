@@ -15,6 +15,7 @@ import {
   createCustomerConversation,
   useCustomerConversation,
   useConversationMessages,
+  useConversationQuotes,
   sendChatMessage,
   markConversationRead,
   editChatMessage,
@@ -22,6 +23,8 @@ import {
   type ChatConversation,
   type ChatMessage,
 } from "../../data";
+import { CustomQuoteCard } from "./CustomQuoteCard";
+import { CustomQuoteComposer } from "./CustomQuoteComposer";
 
 const MAX_CHAT_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -57,12 +60,21 @@ export function CustomerChat() {
     .replace(/\s+/g, " ")
     .slice(0, 120);
   const checkoutReturn = searchParams.get("voltar") === "checkout";
+  const returnCustomQuoteId = searchParams.get("customQuote") || "";
+  const returnConversationId = searchParams.get("conversation") || "";
+  const checkoutReturnPath =
+    returnCustomQuoteId && returnConversationId
+      ? `/checkout?customQuote=${encodeURIComponent(returnCustomQuoteId)}&conversation=${encodeURIComponent(returnConversationId)}`
+      : "/checkout";
+  const customOrderRequest = searchParams.get("encomenda") === "personalizada";
   const productContext = productId && productName ? productName : "";
   const initialDraft = productContext
     ? `Olá! Tenho uma dúvida sobre a peça ${productContext}.`
-    : checkoutReturn
-      ? "Olá! Quero combinar uma retirada presencial para um pedido que estou finalizando."
-      : "";
+    : customOrderRequest
+      ? "Olá! Gostaria de encomendar uma peça personalizada. Vou explicar a ideia por aqui."
+      : checkoutReturn
+        ? "Olá! Quero combinar uma retirada presencial para um pedido que estou finalizando."
+        : "";
   const chatPath = searchParams.size
     ? `/chat?${searchParams.toString()}`
     : "/chat";
@@ -159,9 +171,19 @@ export function CustomerChat() {
             Depois de combinar a retirada com a artesã, volte ao checkout e
             marque a confirmação para continuar.
           </p>
-          <Link className="button secondary" to="/checkout">
+          <Link className="button secondary" to={checkoutReturnPath}>
             Voltar ao checkout <ArrowRight size={17} />
           </Link>
+        </div>
+      )}
+      {customOrderRequest && (
+        <div className="chat-custom-order-context">
+          <strong>Encomenda personalizada</strong>
+          <p>
+            Conte o que você imaginou e, se ajudar, envie uma foto de
+            referência. A artesã conversa com você e prepara uma proposta com
+            tipo da peça, cores e valores.
+          </p>
         </div>
       )}
       {productContext && (
@@ -219,6 +241,7 @@ export function ChatThread({
       ? conversation.unreadForAdmin
       : conversation.unreadForCustomer;
   const messages = useConversationMessages(conversationId);
+  const quotes = useConversationQuotes(conversationId);
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -227,6 +250,19 @@ export function ChatThread({
   const listRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const imagePreviewUrl = useImagePreview(imageFile);
+  const timelineItems = [
+    ...messages.data.map((message, index) => ({
+      type: "message" as const,
+      timestamp: message.createdAt?.toMillis() ?? 0,
+      message,
+      previousMessage: messages.data[index - 1],
+    })),
+    ...quotes.data.map((quote) => ({
+      type: "quote" as const,
+      timestamp: quote.createdAt?.toMillis() ?? 0,
+      quote,
+    })),
+  ].sort((first, second) => first.timestamp - second.timestamp);
   useEffect(() => {
     if (initialDraft) {
       setText((current) => (current.trim() ? current : initialDraft));
@@ -238,7 +274,7 @@ export function ChatThread({
   }, []);
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [messages.data.length]);
+  }, [messages.data.length, quotes.data.length]);
   useEffect(() => {
     if (unreadCount > 0) {
       markConversationRead(conversationId, senderRole).catch(() =>
@@ -329,27 +365,53 @@ export function ChatThread({
         </div>
       </header>
       <div className="chat-messages" ref={listRef} aria-live="polite">
-        {messages.loading && <p className="muted">Carregando mensagens…</p>}
+        {(messages.loading || quotes.loading) && (
+          <p className="muted">Carregando mensagens…</p>
+        )}
         {messages.error && (
           <p className="notice" role="alert">
             {messages.error}
           </p>
         )}
-        {!messages.loading && !messages.error && messages.data.length === 0 && (
-          <p className="chat-empty">Envie uma mensagem para começar.</p>
+        {quotes.error && (
+          <p className="notice" role="alert">
+            {quotes.error}
+          </p>
         )}
-        {messages.data.map((item, index) => (
-          <ChatMessageBubble
-            key={item.id}
-            conversation={conversation}
-            message={item}
-            own={item.senderId === senderId}
-            isLatest={item.id === conversation.lastMessageId}
-            previousMessage={messages.data[index - 1]}
-            now={now}
-          />
-        ))}
+        {!messages.loading &&
+          !quotes.loading &&
+          !messages.error &&
+          timelineItems.length === 0 && (
+            <p className="chat-empty">Envie uma mensagem para começar.</p>
+          )}
+        {timelineItems.map((item) =>
+          item.type === "message" ? (
+            <ChatMessageBubble
+              key={item.message.id}
+              conversation={conversation}
+              message={item.message}
+              own={item.message.senderId === senderId}
+              isLatest={item.message.id === conversation.lastMessageId}
+              previousMessage={item.previousMessage}
+              now={now}
+            />
+          ) : (
+            <CustomQuoteCard
+              key={item.quote.id}
+              quote={item.quote}
+              conversationId={conversationId}
+              customerId={conversation.customerId}
+              isAdmin={senderRole === "admin"}
+            />
+          ),
+        )}
       </div>
+      {senderRole === "admin" && (
+        <CustomQuoteComposer
+          conversationId={conversationId}
+          adminId={senderId}
+        />
+      )}
       <form className="chat-composer" onSubmit={submit}>
         <input
           ref={imageInputRef}

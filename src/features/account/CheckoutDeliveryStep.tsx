@@ -28,6 +28,7 @@ type CheckoutDeliveryStepProps = {
   onSaveAddress: () => void;
   onDeleteSavedAddress: () => void;
   onContinue: (event: FormEvent<HTMLFormElement>) => void;
+  customCheckoutParams?: string;
 };
 
 export function CheckoutDeliveryStep({
@@ -49,6 +50,7 @@ export function CheckoutDeliveryStep({
   onSaveAddress,
   onDeleteSavedAddress,
   onContinue,
+  customCheckoutParams = "",
 }: CheckoutDeliveryStepProps) {
   return (
     <form className="checkout-card" onSubmit={onContinue}>
@@ -112,7 +114,10 @@ export function CheckoutDeliveryStep({
             Abra uma conversa com a artesã para marcar a retirada. Depois de
             combinar, volte aqui e confirme para liberar o pagamento.
           </p>
-          <Link className="button secondary" to="/chat?voltar=checkout">
+          <Link
+            className="button secondary"
+            to={`/chat?voltar=checkout${customCheckoutParams}`}
+          >
             <MessageCircle size={17} /> Abrir chat para combinar
           </Link>
           <label className="checkout-checkbox">

@@ -6,6 +6,7 @@ import { Notice } from "../../components/Feedback";
 import { auth, db } from "../../firebase";
 import {
   cancelDemoOrder,
+  canCancelDemoOrder,
   money,
   useAdminOrders,
   type CustomerOrder,
@@ -51,15 +52,12 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
   const [trackingCode, setTrackingCode] = useState(order.trackingCode || "");
   const [busy, setBusy] = useState(false);
   const createdAt = order.createdAt?.toDate();
+  const isCustomOrder = order.items.some((item) => Boolean(item.customQuoteId));
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     try {
-      if (
-        order.isDemo &&
-        status === "cancelled" &&
-        order.reservationStatus === "active"
-      ) {
+      if (status === "cancelled" && canCancelDemoOrder(order)) {
         await cancelDemoOrder(order.id);
         if (trackingCode.trim() !== (order.trackingCode || "")) {
           await updateDoc(doc(db, "orders", order.id), {
@@ -67,7 +65,12 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
             updatedAt: serverTimestamp(),
           });
         }
-        notify("Pedido cancelado; as peças voltaram ao estoque.", "success");
+        notify(
+          order.stockReserved
+            ? "Pedido cancelado; as peças voltaram ao estoque."
+            : "Encomenda personalizada cancelada.",
+          "success",
+        );
       } else {
         await updateDoc(doc(db, "orders", order.id), {
           status,
@@ -115,9 +118,14 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
             <li key={`${item.productId}-${index}`}>
               <span>
                 {item.name} <small>× {item.quantity}</small>
-                {(item.colorName || item.withChain !== undefined) && (
+                {(item.categoryName ||
+                  item.customDescription ||
+                  item.colorName ||
+                  item.withChain !== undefined) && (
                   <small className="order-item-options">
                     {[
+                      item.categoryName ? `Tipo: ${item.categoryName}` : "",
+                      item.customDescription || "",
                       item.colorName ? `Cor: ${item.colorName}` : "",
                       item.withChain === undefined
                         ? ""
@@ -134,6 +142,11 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
             </li>
           ))}
         </ul>
+        {isCustomOrder && (
+          <p className="order-tracking">
+            Encomenda personalizada; não altera o estoque do catálogo.
+          </p>
+        )}
         <p className="order-total">
           <span>Total</span>
           <strong>{money(order.totalCents)}</strong>

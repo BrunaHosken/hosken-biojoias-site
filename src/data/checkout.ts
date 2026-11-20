@@ -13,6 +13,8 @@ export type CreateDemoOrderInput = {
     withChain?: boolean;
     quantity: number;
   }[];
+  customQuoteId?: string;
+  conversationId?: string;
   deliveryMethod: "sedex" | "pickup";
   pickupAgreed: boolean;
   address?: AddressDetails;
@@ -77,6 +79,9 @@ export function getCheckoutErrorMessage(error: unknown) {
     if (message.includes("price-changed")) {
       return "O preço de uma peça mudou durante a compra. Confira o novo total antes de continuar.";
     }
+    if (message.includes("custom-quote")) {
+      return "Esta proposta personalizada foi alterada ou já foi usada. Volte ao chat para conferir a versão atual.";
+    }
     return "Este pedido não pode ser concluído. Confira os dados e tente novamente.";
   }
   if (code.endsWith("/unauthenticated")) {
@@ -92,9 +97,17 @@ export function getCheckoutErrorMessage(error: unknown) {
 }
 
 export function canCancelDemoOrder(order: CustomerOrder) {
+  const customOnlyOrder =
+    order.items.length > 0 &&
+    order.items.every(
+      (item) => item.productId === "custom" && Boolean(item.customQuoteId),
+    );
   return (
     order.isDemo === true &&
-    order.reservationStatus === "active" &&
+    ((order.stockReserved !== false && order.reservationStatus === "active") ||
+      (order.stockReserved === false &&
+        order.reservationStatus === "not_applicable" &&
+        customOnlyOrder)) &&
     ["pending_payment", "confirmed", "preparing", "cancelled"].includes(
       order.status,
     )

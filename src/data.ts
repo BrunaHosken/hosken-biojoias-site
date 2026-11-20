@@ -6,6 +6,7 @@ export * from "./data/checkout";
 export * from "./data/addresses";
 export * from "./data/profile";
 export * from "./data/chat";
+export * from "./data/customOrders";
 export * from "./data/formatting";
 export * from "./data/productAvailability";
 export * from "./data/pricing";

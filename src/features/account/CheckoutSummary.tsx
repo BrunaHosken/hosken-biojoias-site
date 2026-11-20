@@ -38,6 +38,7 @@ export function CheckoutSummary({
   paymentTotalCents,
 }: CheckoutSummaryProps) {
   const addressSummary = formatAddress(draft.address);
+  const isCustomOrder = lines.some((line) => Boolean(line.customQuoteId));
   const paymentLabel =
     paymentMethod === "pix" ? "Pix ilustrativo" : "Cartão de crédito";
 
@@ -49,6 +50,9 @@ export function CheckoutSummary({
           ({
             product,
             basketItemId,
+            displayName,
+            categoryName,
+            customDescription,
             quantity,
             colorName,
             withChain,
@@ -57,8 +61,18 @@ export function CheckoutSummary({
           }) => (
             <li key={basketItemId}>
               <span>
-                {product?.name || "Peça indisponível"}{" "}
+                {product?.name || displayName || "Peça indisponível"}{" "}
                 <small>× {quantity}</small>
+                {categoryName && (
+                  <small className="checkout-line-options">
+                    Tipo de peça: {categoryName}
+                  </small>
+                )}
+                {customDescription && (
+                  <small className="checkout-line-options">
+                    {customDescription}
+                  </small>
+                )}
                 {(colorName || chainOptionAvailable) && (
                   <small className="checkout-line-options">
                     {[
@@ -135,8 +149,10 @@ export function CheckoutSummary({
       </p>
       <p className="checkout-summary-note">
         O pedido de teste e os dados de entrega ficam no Firebase. Nenhum dado
-        de cartão é enviado ou armazenado. O estoque fica reservado até o
-        cancelamento do pedido.
+        de cartão é enviado ou armazenado.
+        {isCustomOrder
+          ? " A encomenda personalizada não altera o estoque do catálogo."
+          : " O estoque fica reservado até o cancelamento do pedido."}
       </p>
     </aside>
   );

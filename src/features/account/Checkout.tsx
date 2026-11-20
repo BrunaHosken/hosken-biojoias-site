@@ -5,7 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, Check, PackageCheck } from "lucide-react";
 import { BasketContext, SessionContext, useToast } from "../../app/contexts";
 import {
@@ -15,6 +15,7 @@ import {
   getProductWithChainPriceCents,
   parseBasketItemId,
   useRecords,
+  useConversationQuotes,
   watchSavedAddresses,
   useCustomerProfile,
   type Product,
@@ -48,6 +49,20 @@ export function Checkout() {
   const basket = useContext(BasketContext);
   const notify = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const customQuoteId = searchParams.get("customQuote") || "";
+  const conversationId = searchParams.get("conversation") || "";
+  const customCheckoutRequested = Boolean(customQuoteId || conversationId);
+  const customCheckoutValid = Boolean(customQuoteId && conversationId);
+  const customChatParams = customCheckoutValid
+    ? `&customQuote=${encodeURIComponent(customQuoteId)}&conversation=${encodeURIComponent(conversationId)}`
+    : "";
+  const customQuotes = useConversationQuotes(
+    customCheckoutValid ? conversationId : undefined,
+  );
+  const customQuote = customQuotes.data.find(
+    (quote) => quote.id === customQuoteId,
+  );
   const products = useRecords<Product>("products");
   const categories = useRecords<Taxonomy>("categories");
   const customerProfile = useCustomerProfile(session.user?.uid);
@@ -73,11 +88,12 @@ export function Checkout() {
         session.user.uid,
         session.user.displayName || "",
         session.user.email || "",
+        customCheckoutRequested ? customQuoteId : "",
       ),
     );
     setDraftOwnerUid(session.user.uid);
     setDraftReady(true);
-  }, [session.user?.uid]);
+  }, [session.user?.uid, customQuoteId, customCheckoutRequested]);
 
   useEffect(() => {
     if (!session.user || customerProfile.loading) return;
@@ -131,15 +147,25 @@ export function Checkout() {
       return;
     try {
       sessionStorage.setItem(
-        checkoutDraftStorageKey(session.user.uid),
+        checkoutDraftStorageKey(
+          session.user.uid,
+          customCheckoutRequested ? customQuoteId : "",
+        ),
         JSON.stringify(draft),
       );
     } catch {
       // O checkout continua funcionando mesmo se o navegador bloquear a sessão.
     }
-  }, [draft, draftOwnerUid, draftReady, session.user]);
+  }, [
+    draft,
+    draftOwnerUid,
+    draftReady,
+    session.user,
+    customQuoteId,
+    customCheckoutRequested,
+  ]);
 
-  const lines: CheckoutLine[] = useMemo(
+  const basketLines: CheckoutLine[] = useMemo(
     () =>
       Object.entries(basket.items).map(([basketItemId, quantity]) => {
         const selection = parseBasketItemId(basketItemId);
@@ -175,36 +201,87 @@ export function Checkout() {
       }),
     [basket.items, products.data, categories.data],
   );
+  const customQuoteLine: CheckoutLine | undefined = customQuote
+    ? {
+        basketItemId: `custom:${customQuote.id}`,
+        productId: "custom",
+        variantId: customQuote.selectedColorId || "",
+        colorName: customQuote.selectedColorId
+          ? customQuote.colorNames?.[customQuote.selectedColorId]
+          : undefined,
+        withChain: customQuote.withChain === true,
+        chainOptionAvailable: Number.isSafeInteger(
+          customQuote.chainAddonPriceCents,
+        ),
+        unitPriceCents:
+          customQuote.basePriceCents +
+          (customQuote.withChain === true
+            ? customQuote.chainAddonPriceCents || 0
+            : 0),
+        quantity: 1,
+        product: undefined,
+        displayName: customQuote.title,
+        categoryName: customQuote.categoryName,
+        customDescription: customQuote.description,
+        customQuoteId: customQuote.id,
+      }
+    : undefined;
+  const lines: CheckoutLine[] = customCheckoutRequested
+    ? customQuoteLine
+      ? [customQuoteLine]
+      : []
+    : basketLines;
   const subtotalCents = lines.reduce(
     (sum, line) => sum + line.unitPriceCents * line.quantity,
     0,
   );
-  const cartIsValid =
-    lines.length > 0 &&
-    lines.every((line) => {
-      const product = line.product;
-      if (!product) return false;
-      const variant = product.colorVariants?.find(
-        (item) => item.colorId === line.variantId,
-      );
-      const variantRequired = Boolean(product.colorVariants?.length);
-      const stock = variantRequired
-        ? (variant?.stock ?? -1)
-        : line.variantId
-          ? -1
-          : getProductStock(product);
-      const quantity = getBasketQuantityForVariant(
-        basket.items,
-        line.productId,
-        line.variantId,
-      );
-      return (
-        isProductAvailable(product) &&
-        (!variantRequired || Boolean(variant)) &&
-        (!line.withChain || line.chainOptionAvailable) &&
-        quantity <= stock
-      );
-    });
+  const customQuoteIsValid = Boolean(
+    customCheckoutValid &&
+    customQuote &&
+    customQuote.customerId === session.user?.uid &&
+    customQuote.status === "accepted" &&
+    Number.isSafeInteger(customQuote.basePriceCents) &&
+    customQuote.basePriceCents > 0 &&
+    (!customQuote.colorIds?.length ||
+      customQuote.colorIds.includes(customQuote.selectedColorId || "")) &&
+    (customQuote.withChain !== true ||
+      Number.isSafeInteger(customQuote.chainAddonPriceCents)),
+  );
+  const cartIsValid = customCheckoutRequested
+    ? customQuoteIsValid
+    : lines.length > 0 &&
+      lines.every((line) => {
+        const product = line.product;
+        if (!product) return false;
+        const variant = product.colorVariants?.find(
+          (item) => item.colorId === line.variantId,
+        );
+        const variantRequired = Boolean(product.colorVariants?.length);
+        const stock = variantRequired
+          ? (variant?.stock ?? -1)
+          : line.variantId
+            ? -1
+            : getProductStock(product);
+        const quantity = getBasketQuantityForVariant(
+          basket.items,
+          line.productId,
+          line.variantId,
+        );
+        return (
+          isProductAvailable(product) &&
+          (!variantRequired || Boolean(variant)) &&
+          (!line.withChain || line.chainOptionAvailable) &&
+          quantity <= stock
+        );
+      });
+  const checkoutItemsLoading = customCheckoutRequested
+    ? customCheckoutValid && customQuotes.loading
+    : products.loading;
+  const checkoutItemsError = customCheckoutRequested
+    ? customCheckoutValid
+      ? customQuotes.error
+      : "Não foi possível abrir esta proposta personalizada. Volte ao chat e tente novamente."
+    : products.error;
   const cardTotalCents = Math.round(
     subtotalCents * (1 + DEMO_INSTALLMENT_RATE * Math.max(0, installments - 1)),
   );
@@ -214,6 +291,9 @@ export function Checkout() {
   if (!session.ready) return <div className="page">Carregando sua conta…</div>;
   if (session.admin) return <Navigate to="/admin" replace />;
   if (!session.user) {
+    const returnPath = customCheckoutRequested
+      ? `/checkout?customQuote=${encodeURIComponent(customQuoteId)}&conversation=${encodeURIComponent(conversationId)}`
+      : "/checkout";
     return (
       <div className="page narrow">
         <div className="eyebrow">FINALIZE SUA ESCOLHA</div>
@@ -223,9 +303,68 @@ export function Checkout() {
         </p>
         <Link
           className="button"
-          to={`/conta?returnTo=${encodeURIComponent("/checkout")}`}
+          to={`/conta?returnTo=${encodeURIComponent(returnPath)}`}
         >
           Entrar ou criar conta <ArrowRight size={18} />
+        </Link>
+      </div>
+    );
+  }
+  if (customCheckoutRequested && !customCheckoutValid) {
+    return (
+      <div className="page narrow">
+        <h1>Proposta incompleta</h1>
+        <p className="lead">
+          Volte ao chat e abra o checkout pela proposta personalizada.
+        </p>
+        <Link className="button" to="/chat">
+          Voltar ao chat <ArrowRight size={18} />
+        </Link>
+      </div>
+    );
+  }
+  if (customCheckoutRequested && customQuotes.loading) {
+    return <div className="page">Carregando sua proposta…</div>;
+  }
+  if (customCheckoutRequested && customQuotes.error) {
+    return (
+      <div className="page narrow">
+        <h1>Não foi possível abrir a proposta</h1>
+        <p className="lead">Volte ao chat e tente novamente.</p>
+        <Link className="button" to="/chat">
+          Voltar ao chat <ArrowRight size={18} />
+        </Link>
+      </div>
+    );
+  }
+  if (
+    customCheckoutRequested &&
+    (!customQuote || customQuote.customerId !== session.user.uid)
+  ) {
+    return (
+      <div className="page narrow">
+        <h1>Proposta não encontrada</h1>
+        <p className="lead">Confira a proposta no chat com a artesã.</p>
+        <Link className="button" to="/chat">
+          Voltar ao chat <ArrowRight size={18} />
+        </Link>
+      </div>
+    );
+  }
+  if (customQuote?.status === "ordered")
+    return <Navigate to="/pedidos" replace />;
+  if (customCheckoutRequested && customQuote?.status !== "accepted") {
+    return (
+      <div className="page narrow">
+        <h1>Responda à proposta no chat</h1>
+        <p className="lead">
+          Aceite a proposta e escolha as opções antes de seguir para o checkout.
+        </p>
+        <Link
+          className="button"
+          to={`/chat?${new URLSearchParams({ customQuote: customQuoteId, conversation: conversationId })}`}
+        >
+          Abrir proposta no chat <ArrowRight size={18} />
         </Link>
       </div>
     );
@@ -393,7 +532,10 @@ export function Checkout() {
     const currentDraft = { ...draft, orderId };
     try {
       sessionStorage.setItem(
-        checkoutDraftStorageKey(session.user.uid),
+        checkoutDraftStorageKey(
+          session.user.uid,
+          customCheckoutRequested ? customQuoteId : "",
+        ),
         JSON.stringify(currentDraft),
       );
     } catch {
@@ -405,12 +547,15 @@ export function Checkout() {
         customerName: draft.contact.name.trim(),
         customerEmail: draft.contact.email.trim(),
         customerPhone: draft.contact.phone.trim(),
-        items: lines.map(({ productId, variantId, withChain, quantity }) => ({
-          productId,
-          ...(variantId ? { variantId } : {}),
-          withChain,
-          quantity,
-        })),
+        items: customCheckoutRequested
+          ? []
+          : lines.map(({ productId, variantId, withChain, quantity }) => ({
+              productId,
+              ...(variantId ? { variantId } : {}),
+              withChain,
+              quantity,
+            })),
+        ...(customCheckoutRequested ? { customQuoteId, conversationId } : {}),
         deliveryMethod: draft.deliveryMethod,
         pickupAgreed: draft.pickupAgreed,
         ...(draft.deliveryMethod === "sedex" ? { address: draft.address } : {}),
@@ -420,16 +565,22 @@ export function Checkout() {
         expectedTotalCents: paymentTotalCents,
       });
       try {
-        sessionStorage.removeItem(checkoutDraftStorageKey(session.user.uid));
+        sessionStorage.removeItem(
+          checkoutDraftStorageKey(
+            session.user.uid,
+            customCheckoutRequested ? customQuoteId : "",
+          ),
+        );
       } catch {
         // O pedido já foi gravado no Firestore.
       }
-      basket.clear();
+      if (!customCheckoutRequested) basket.clear();
       navigate("/pedidos", {
         state: {
           checkoutDemo: status,
           orderNumber: order.orderNumber,
-          stockReserved: true,
+          stockReserved: !customCheckoutRequested,
+          customOrder: customCheckoutRequested,
         },
       });
     } catch (error) {
@@ -442,13 +593,19 @@ export function Checkout() {
   return (
     <div className="page checkout-page">
       <div className="eyebrow">UMA COMPRA FEITA COM CARINHO</div>
-      <h1>Finalizar compra</h1>
+      <h1>
+        {customCheckoutRequested
+          ? "Finalizar encomenda personalizada"
+          : "Finalizar compra"}
+      </h1>
       <div className="checkout-demo-banner" role="note">
         <strong>Checkout de demonstração</strong>
         <span>
           Nenhuma cobrança será feita. Não informe dados reais de cartão. O
-          pedido e a reserva de estoque são gravados no Firebase. A reserva só é
-          liberada se o pedido for cancelado.
+          pedido fica gravado no Firebase.
+          {customCheckoutRequested
+            ? " A encomenda personalizada não altera o estoque do catálogo."
+            : " As peças ficam reservadas no estoque até o cancelamento do pedido."}
         </span>
       </div>
 
@@ -469,29 +626,45 @@ export function Checkout() {
         </li>
       </ol>
 
-      {products.loading && <p role="status">Carregando as peças…</p>}
-      {products.error && (
-        <p className="notice" role="alert">
-          Não foi possível carregar a sacola. Volte ao carrinho e tente
-          novamente.
+      {checkoutItemsLoading && (
+        <p role="status">
+          {customCheckoutRequested
+            ? "Carregando sua proposta…"
+            : "Carregando as peças…"}
         </p>
       )}
-      {!products.loading && !products.error && lines.length === 0 && (
+      {checkoutItemsError && (
+        <p className="notice" role="alert">
+          {customCheckoutRequested
+            ? checkoutItemsError
+            : "Não foi possível carregar a sacola. Volte ao carrinho e tente novamente."}
+        </p>
+      )}
+      {!checkoutItemsLoading && !checkoutItemsError && lines.length === 0 && (
         <div className="empty">
           <PackageCheck />
-          <h2>Sua sacola está vazia.</h2>
-          <Link className="button" to="/loja">
-            Conhecer as peças <ArrowRight size={18} />
+          <h2>
+            {customCheckoutRequested
+              ? "Não há uma proposta disponível para finalizar."
+              : "Sua sacola está vazia."}
+          </h2>
+          <Link
+            className="button"
+            to={customCheckoutRequested ? "/chat" : "/loja"}
+          >
+            {customCheckoutRequested ? "Voltar ao chat" : "Conhecer as peças"}{" "}
+            <ArrowRight size={18} />
           </Link>
         </div>
       )}
-      {!products.loading && !products.error && lines.length > 0 && (
+      {!checkoutItemsLoading && !checkoutItemsError && lines.length > 0 && (
         <div className="checkout-layout">
           <div className="checkout-main">
             {!cartIsValid && (
               <p className="notice" role="alert">
-                Uma ou mais peças não estão mais disponíveis na quantidade
-                escolhida. Ajuste a sacola antes de continuar.
+                {customCheckoutRequested
+                  ? "A proposta mudou ou uma das opções não está válida. Volte ao chat para conferir."
+                  : "Uma ou mais peças não estão mais disponíveis na quantidade escolhida. Ajuste a sacola antes de continuar."}
               </p>
             )}
             {draft.step === 1 ? (
@@ -514,6 +687,7 @@ export function Checkout() {
                 onSaveAddress={() => void saveCurrentAddress()}
                 onDeleteSavedAddress={deleteSelectedAddress}
                 onContinue={continueToPayment}
+                customCheckoutParams={customChatParams}
               />
             ) : (
               <CheckoutPaymentStep

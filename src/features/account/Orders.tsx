@@ -19,8 +19,12 @@ export function OrdersPage() {
   const allOrders = [...orders.data].sort(
     (a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
   );
-  const checkoutResult = (location.state as { checkoutDemo?: string } | null)
-    ?.checkoutDemo;
+  const checkoutState = location.state as {
+    checkoutDemo?: string;
+    customOrder?: boolean;
+  } | null;
+  const checkoutResult = checkoutState?.checkoutDemo;
+  const checkoutCustomOrder = checkoutState?.customOrder === true;
   if (!session.ready) {
     return <div className="page">Carregando sua conta…</div>;
   }
@@ -48,21 +52,28 @@ export function OrdersPage() {
       {checkoutResult === "simulated_paid" && (
         <p className="notice" role="status">
           Pagamento de demonstração confirmado. O pedido aparece como em
-          produção e o estoque fica reservado até o cancelamento. Nenhum valor
-          foi cobrado.
+          produção.{" "}
+          {checkoutCustomOrder
+            ? "A encomenda personalizada não altera o estoque do catálogo."
+            : "O estoque fica reservado até o cancelamento."}{" "}
+          Nenhum valor foi cobrado.
         </p>
       )}
       {checkoutResult === "pending" && (
         <p className="notice" role="status">
-          Pedido de demonstração criado e aguardando pagamento; o estoque fica
-          reservado até o cancelamento. Nenhuma cobrança foi feita.
+          Pedido de demonstração criado e aguardando pagamento.{" "}
+          {checkoutCustomOrder
+            ? "A encomenda personalizada não altera o estoque do catálogo."
+            : "O estoque fica reservado até o cancelamento."}{" "}
+          Nenhuma cobrança foi feita.
         </p>
       )}
       {allOrders.some((order) => order.isDemo) && (
         <p className="demo-orders-note">
-          Os pedidos de demonstração são gravados no Firebase. A compra reserva
-          o estoque; o cancelamento antes do envio devolve as peças. Nenhum
-          pagamento real é processado.
+          Os pedidos de demonstração são gravados no Firebase. Compras de peças
+          do catálogo reservam o estoque até o cancelamento; encomendas
+          personalizadas não alteram o estoque do catálogo. Nenhum pagamento
+          real é processado.
         </p>
       )}
       {orders.loading && <p role="status">Carregando pedidos…</p>}
@@ -97,11 +108,14 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
       ? "Em produção (simulação)"
       : orderStatusLabels[order.status] || "Em atualização";
   const createdAt = order.createdAt?.toDate();
+  const isCustomOrder = order.items.some((item) => Boolean(item.customQuoteId));
 
   async function cancelOrder() {
     if (
       !window.confirm(
-        "Cancelar este pedido de teste e devolver as peças ao estoque?",
+        order.stockReserved
+          ? "Cancelar este pedido de teste e devolver as peças ao estoque?"
+          : "Cancelar esta encomenda personalizada?",
       )
     ) {
       return;
@@ -109,7 +123,12 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
     setCancelBusy(true);
     try {
       await cancelDemoOrder(order.id);
-      notify("Pedido cancelado; as peças voltaram ao estoque.", "success");
+      notify(
+        order.stockReserved
+          ? "Pedido cancelado; as peças voltaram ao estoque."
+          : "Encomenda personalizada cancelada.",
+        "success",
+      );
     } catch {
       notify("Não foi possível cancelar o pedido. Tente novamente.", "error");
     } finally {
@@ -145,9 +164,14 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
           <li key={`${order.id}-${item.productId}-${index}`}>
             <span>
               {item.name} <small>× {item.quantity}</small>
-              {(item.colorName || item.withChain !== undefined) && (
+              {(item.categoryName ||
+                item.customDescription ||
+                item.colorName ||
+                item.withChain !== undefined) && (
                 <small className="order-item-options">
                   {[
+                    item.categoryName ? `Tipo: ${item.categoryName}` : "",
+                    item.customDescription || "",
                     item.colorName ? `Cor: ${item.colorName}` : "",
                     item.withChain === undefined
                       ? ""
@@ -224,6 +248,11 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
           Estoque reservado até o cancelamento deste pedido.
         </p>
       )}
+      {isCustomOrder && (
+        <p className="order-tracking">
+          Encomenda personalizada; não altera o estoque do catálogo.
+        </p>
+      )}
       {canCancelDemoOrder(order) && (
         <button
           className="text-button order-cancel-button"
@@ -232,7 +261,11 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
           onClick={cancelOrder}
         >
           <RotateCcw size={16} />
-          {cancelBusy ? "Cancelando…" : "Cancelar pedido e liberar estoque"}
+          {cancelBusy
+            ? "Cancelando…"
+            : order.stockReserved
+              ? "Cancelar pedido e liberar estoque"
+              : "Cancelar encomenda"}
         </button>
       )}
       {order.isDemo && (

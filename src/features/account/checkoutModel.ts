@@ -26,6 +26,10 @@ export type CheckoutLine = {
   unitPriceCents: number;
   quantity: number;
   product: Product | undefined;
+  displayName?: string;
+  categoryName?: string;
+  customDescription?: string;
+  customQuoteId?: string;
 };
 
 export const DEMO_INSTALLMENT_RATE = 0.02;
@@ -66,18 +70,22 @@ export function emptyCheckoutDraft(name = "", email = ""): CheckoutDraft {
   };
 }
 
-export function checkoutDraftStorageKey(uid: string) {
-  return `hosken-checkout-draft:${uid}`;
+export function checkoutDraftStorageKey(uid: string, customQuoteId = "") {
+  return customQuoteId
+    ? `hosken-checkout-draft:${uid}:custom:${customQuoteId}`
+    : `hosken-checkout-draft:${uid}`;
 }
 
 export function loadCheckoutDraft(
   uid: string,
   name: string,
   email: string,
+  customQuoteId = "",
 ): CheckoutDraft {
   try {
     const saved = JSON.parse(
-      sessionStorage.getItem(checkoutDraftStorageKey(uid)) || "null",
+      sessionStorage.getItem(checkoutDraftStorageKey(uid, customQuoteId)) ||
+        "null",
     ) as Partial<CheckoutDraft> | null;
     if (!saved || !saved.contact || !saved.address)
       return emptyCheckoutDraft(name, email);

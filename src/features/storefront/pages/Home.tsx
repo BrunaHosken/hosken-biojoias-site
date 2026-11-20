@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Flower2, Leaf } from "lucide-react";
+import { ArrowRight, Flower2, Leaf, MessageCircle } from "lucide-react";
 import { Notice } from "../../../components/Feedback";
 import { useRecords, type Taxonomy } from "../../../data";
 
@@ -25,6 +25,12 @@ export function Home() {
           </p>
           <Link className="button" to="/loja">
             Conheça as peças <ArrowRight size={18} />
+          </Link>
+          <Link
+            className="button secondary hero-custom-order-link"
+            to="/chat?encomenda=personalizada"
+          >
+            Encomendar peça personalizada <MessageCircle size={17} />
           </Link>
           <div className="hero-note">
             <Leaf size={17} /> Cada flor tem sua própria beleza.

@@ -166,7 +166,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'trackingCode', 'updatedAt', 'reservationStatus', 'stockReserved'])
         && request.resource.data.status in ['pending_payment', 'confirmed', 'preparing', 'in_transit', 'completed', 'cancelled', 'refunded']
         && (!('trackingCode' in request.resource.data) || (request.resource.data.trackingCode is string && request.resource.data.trackingCode.size() <= 100))
-        && (!('reservationStatus' in request.resource.data) || request.resource.data.reservationStatus in ['active', 'released', 'committed'])
+        && (!('reservationStatus' in request.resource.data) || request.resource.data.reservationStatus in ['active', 'released', 'committed', 'not_applicable'])
         && (!('stockReserved' in request.resource.data) || request.resource.data.stockReserved is bool)
         && request.resource.data.updatedAt == request.time;
     }
@@ -311,6 +311,61 @@ service cloud.firestore {
           && request.resource.data.unreadForCustomer == 0
           && request.resource.data.customerLastReadAt == request.time;
       }
+      function validCustomQuoteOffer() {
+        let data = request.resource.data;
+        return data.keys().hasOnly([
+            'customerId','title','description','categoryId','categoryName','categorySlug',
+            'colorIds','colorNames','basePriceCents','chainAddonPriceCents',
+            'status','createdAt','updatedAt'
+          ])
+          && data.keys().hasAll([
+            'customerId','title','description','categoryId','categoryName','categorySlug',
+            'colorIds','colorNames','basePriceCents','status','createdAt','updatedAt'
+          ])
+          && data.customerId == get(/databases/$(database)/documents/conversations/$(conversationId)).data.customerId
+          && text(data.title, 100)
+          && text(data.description, 1500)
+          && text(data.categoryId, 150)
+          && text(data.categoryName, 80)
+          && text(data.categorySlug, 80)
+          && data.colorIds is list
+          && data.colorIds.size() <= 20
+          && data.colorNames is map
+          && data.colorNames.size() == data.colorIds.size()
+          && data.basePriceCents is int
+          && data.basePriceCents > 0
+          && data.basePriceCents <= 100000000
+          && data.status == 'offered'
+          && data.createdAt == request.time
+          && data.updatedAt == request.time
+          && (!('chainAddonPriceCents' in data)
+            || (data.chainAddonPriceCents is int
+              && data.chainAddonPriceCents > 0
+              && data.chainAddonPriceCents <= 100000000
+              && exists(/databases/$(database)/documents/categories/$(data.categoryId))
+              && get(/databases/$(database)/documents/categories/$(data.categoryId)).data.slug.matches('(^|.*-)colar(es)?(-.*|$)')));
+      }
+      function validCustomQuoteAcceptance() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let selectedColorRequired = resource.data.colorIds.size() > 0;
+        return signedIn()
+          && resource.data.customerId == request.auth.uid
+          && get(/databases/$(database)/documents/conversations/$(conversationId)).data.customerId == request.auth.uid
+          && resource.data.status == 'offered'
+          && changed.hasOnly(['status','selectedColorId','withChain','acceptedAt','updatedAt'])
+          && changed.hasAll(['status','withChain','acceptedAt','updatedAt'])
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.withChain is bool
+          && request.resource.data.acceptedAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && (selectedColorRequired
+            ? (request.resource.data.selectedColorId is string
+              && request.resource.data.selectedColorId in resource.data.colorIds)
+            : !('selectedColorId' in request.resource.data))
+          && (!request.resource.data.withChain
+            || (('chainAddonPriceCents' in resource.data)
+              && resource.data.categorySlug.matches('(^|.*-)colar(es)?(-.*|$)')));
+      }
       allow read: if admin() || (signedIn() && resource.data.customerId == request.auth.uid);
       allow create: if signedIn()
         && conversationId == request.auth.uid
@@ -334,6 +389,13 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow update: if isMessageUpdate() || isMessageEditUpdate() || isMessageDeleteUpdate() || markAdminRead() || markCustomerRead();
       allow delete: if false;
+
+      match /quotes/{quoteId} {
+        allow read: if canAccessConversation();
+        allow create: if admin() && validCustomQuoteOffer();
+        allow update: if validCustomQuoteAcceptance();
+        allow delete: if false;
+      }
 
       match /messages/{messageId} {
         function conversation() {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Flower2 } from "lucide-react";
+import { ArrowRight, Flower2 } from "lucide-react";
 import { Notice } from "../../../components/Feedback";
 import {
   getProductAvailability,
@@ -38,6 +38,15 @@ export function Shop() {
       <p className="lead">
         Explore as criações e encontre uma flor para chamar de sua.
       </p>
+      <div className="custom-order-callout">
+        <div>
+          <strong>Tem uma ideia especial?</strong>
+          <p>Converse com a artesã sobre uma peça feita para você.</p>
+        </div>
+        <Link className="button secondary" to="/chat?encomenda=personalizada">
+          Encomendar peça personalizada <ArrowRight size={17} />
+        </Link>
+      </div>
       <div className="filters">
         <label>
           Linha

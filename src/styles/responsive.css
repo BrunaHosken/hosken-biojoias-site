@@ -277,6 +277,18 @@
   .hero-note {
     margin-top: 23px;
   }
+  .custom-order-callout {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+    padding: 17px;
+  }
+  .custom-order-callout .button {
+    width: 100%;
+  }
+  .hero-copy > .button.hero-custom-order-link {
+    margin-top: 12px;
+  }
   .intro-strip {
     gap: 13px;
     padding: 17px 12px;

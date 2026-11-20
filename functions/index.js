@@ -75,6 +75,21 @@ function validateCheckout(data) {
     throw new HttpsError("invalid-argument", "Invalid expected total.");
   }
 
+  const customQuoteId = data.customQuoteId
+    ? requireText(data.customQuoteId, "customQuoteId", 150)
+    : "";
+  const conversationId = data.conversationId
+    ? requireText(data.conversationId, "conversationId", 150)
+    : "";
+  if (
+    Boolean(customQuoteId) !== Boolean(conversationId) ||
+    (customQuoteId &&
+      (!/^[A-Za-z0-9_-]+$/.test(customQuoteId) ||
+        !/^[A-Za-z0-9_-]+$/.test(conversationId)))
+  ) {
+    throw new HttpsError("invalid-argument", "Invalid custom quote.");
+  }
+
   let address;
   if (deliveryMethod === "sedex") {
     if (!data.address || typeof data.address !== "object") {
@@ -95,14 +110,25 @@ function validateCheckout(data) {
   }
 
   if (
-    !Array.isArray(data.items) ||
-    data.items.length < 1 ||
-    data.items.length > maxItems
+    customQuoteId &&
+    data.items !== undefined &&
+    (!Array.isArray(data.items) || data.items.length !== 0)
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "A custom quote cannot be combined with catalog items.",
+    );
+  }
+  if (
+    !customQuoteId &&
+    (!Array.isArray(data.items) ||
+      data.items.length < 1 ||
+      data.items.length > maxItems)
   ) {
     throw new HttpsError("invalid-argument", "Invalid order items.");
   }
   const seen = new Set();
-  const items = data.items.map((item) => {
+  const items = (customQuoteId ? [] : data.items).map((item) => {
     const productId = requireText(item?.productId, "productId", 150);
     const variantId = item?.variantId
       ? requireText(item.variantId, "variantId", 150)
@@ -142,6 +168,7 @@ function validateCheckout(data) {
     expectedTotalCents: data.expectedTotalCents,
     address,
     items,
+    ...(customQuoteId ? { customQuoteId, conversationId } : {}),
   };
 }
 
@@ -153,6 +180,8 @@ function checkoutFingerprint(checkout) {
     installments: checkout.installments,
     expectedTotalCents: checkout.expectedTotalCents,
     items: checkout.items,
+    customQuoteId: checkout.customQuoteId || "",
+    conversationId: checkout.conversationId || "",
   });
   return createHash("sha256").update(payload).digest("hex");
 }
@@ -183,6 +212,137 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         };
       }
 
+      let subtotalCents = 0;
+      const orderItems = [];
+      const stockUpdates = [];
+      let customQuoteRef;
+      if (checkout.customQuoteId) {
+        if (checkout.conversationId !== userId) {
+          throw new HttpsError("permission-denied", "Invalid custom quote.");
+        }
+        const conversationSnapshot = await transaction.get(
+          db.collection("conversations").doc(checkout.conversationId),
+        );
+        if (
+          !conversationSnapshot.exists ||
+          conversationSnapshot.get("customerId") !== userId
+        ) {
+          throw new HttpsError("permission-denied", "Invalid custom quote.");
+        }
+        customQuoteRef = db
+          .collection("conversations")
+          .doc(checkout.conversationId)
+          .collection("quotes")
+          .doc(checkout.customQuoteId);
+        const customQuoteSnapshot = await transaction.get(customQuoteRef);
+        if (!customQuoteSnapshot.exists) {
+          throw new HttpsError("failed-precondition", "custom-quote-not-found");
+        }
+        const quote = customQuoteSnapshot.data();
+        if (quote.customerId !== userId || quote.status !== "accepted") {
+          throw new HttpsError(
+            "failed-precondition",
+            "custom-quote-already-used",
+          );
+        }
+        if (
+          typeof quote.title !== "string" ||
+          !quote.title.trim() ||
+          typeof quote.description !== "string" ||
+          !Number.isSafeInteger(quote.basePriceCents) ||
+          quote.basePriceCents <= 0 ||
+          quote.basePriceCents > 100000000
+        ) {
+          throw new HttpsError(
+            "failed-precondition",
+            "custom-quote-invalid-price",
+          );
+        }
+        const categorySnapshot = await transaction.get(
+          db.collection("categories").doc(quote.categoryId),
+        );
+        if (!categorySnapshot.exists) {
+          throw new HttpsError(
+            "failed-precondition",
+            "custom-quote-category-unavailable",
+          );
+        }
+        const categoryName = String(quote.categoryName || "").trim();
+        const categorySlug = String(categorySnapshot.get("slug") || "").trim();
+        const isNecklace = /(^|-)colar(es)?(-|$)/.test(categorySlug);
+        const colorIds = Array.isArray(quote.colorIds) ? quote.colorIds : [];
+        const selectedColorId =
+          typeof quote.selectedColorId === "string"
+            ? quote.selectedColorId
+            : "";
+        const colorNames =
+          quote.colorNames && typeof quote.colorNames === "object"
+            ? quote.colorNames
+            : {};
+        let colorName = "";
+        if (colorIds.length) {
+          if (!selectedColorId || !colorIds.includes(selectedColorId)) {
+            throw new HttpsError(
+              "failed-precondition",
+              "custom-quote-color-required",
+            );
+          }
+          colorName = String(colorNames[selectedColorId] || "").trim();
+          if (!colorName) {
+            throw new HttpsError(
+              "failed-precondition",
+              "custom-quote-color-unavailable",
+            );
+          }
+        } else if (selectedColorId) {
+          throw new HttpsError(
+            "failed-precondition",
+            "custom-quote-color-unavailable",
+          );
+        }
+        const hasChainOption = quote.chainAddonPriceCents !== undefined;
+        if (
+          hasChainOption &&
+          (!isNecklace ||
+            !Number.isSafeInteger(quote.chainAddonPriceCents) ||
+            quote.chainAddonPriceCents <= 0 ||
+            quote.chainAddonPriceCents > 100000000)
+        ) {
+          throw new HttpsError(
+            "failed-precondition",
+            "custom-quote-chain-unavailable",
+          );
+        }
+        const withChain = quote.withChain === true;
+        if (withChain && !hasChainOption) {
+          throw new HttpsError(
+            "failed-precondition",
+            "custom-quote-chain-unavailable",
+          );
+        }
+        const unitPriceCents =
+          quote.basePriceCents + (withChain ? quote.chainAddonPriceCents : 0);
+        if (!Number.isSafeInteger(unitPriceCents)) {
+          throw new HttpsError(
+            "failed-precondition",
+            "custom-quote-invalid-price",
+          );
+        }
+        subtotalCents += unitPriceCents;
+        orderItems.push({
+          productId: "custom",
+          customQuoteId: checkout.customQuoteId,
+          customConversationId: checkout.conversationId,
+          categoryName,
+          customDescription: quote.description.trim(),
+          name: quote.title.trim(),
+          ...(selectedColorId ? { variantId: selectedColorId, colorName } : {}),
+          ...(hasChainOption ? { withChain } : {}),
+          quantity: 1,
+          unitPriceCents,
+        });
+      }
+
       const productSnapshots = new Map();
       for (const productId of new Set(
         checkout.items.map((item) => item.productId),
@@ -193,9 +353,6 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         );
       }
 
-      let subtotalCents = 0;
-      const orderItems = [];
-      const stockUpdates = [];
       for (const [productId, snapshot] of productSnapshots) {
         if (!snapshot.exists) {
           throw new HttpsError("failed-precondition", "product-unavailable");
@@ -403,6 +560,13 @@ export const createDemoOrder = onCall({ region }, async (request) => {
             : {}),
         });
       }
+      if (customQuoteRef) {
+        transaction.update(customQuoteRef, {
+          status: "ordered",
+          orderId: orderRef.id,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
       transaction.create(orderRef, {
         userId,
         customerName: checkout.customerName,
@@ -422,8 +586,8 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         ...(deliveryAddress ? { deliveryAddress } : {}),
         isDemo: true,
         notificationEligible: true,
-        stockReserved: true,
-        reservationStatus: "active",
+        stockReserved: !checkout.customQuoteId,
+        reservationStatus: checkout.customQuoteId ? "not_applicable" : "active",
         checkoutFingerprint: fingerprint,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -469,7 +633,22 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
           "Only test orders can be cancelled here.",
         );
       }
-      if (order.reservationStatus !== "active") {
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      const isCustomOnlyOrder =
+        orderItems.length > 0 &&
+        orderItems.every(
+          (item) =>
+            item.productId === "custom" &&
+            typeof item.customQuoteId === "string" &&
+            item.customQuoteId.length > 0,
+        );
+      const hasActiveStockReservation =
+        order.stockReserved !== false && order.reservationStatus === "active";
+      const isCustomOrderWithoutStock =
+        order.stockReserved === false &&
+        order.reservationStatus === "not_applicable" &&
+        isCustomOnlyOrder;
+      if (!hasActiveStockReservation && !isCustomOrderWithoutStock) {
         if (order.status === "cancelled") {
           return { id: orderId, alreadyCancelled: true };
         }
@@ -488,12 +667,36 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
           "This order can no longer be cancelled from the test checkout.",
         );
       }
-      if (!Array.isArray(order.items) || order.items.length > maxItems) {
+      if (orderItems.length === 0 || orderItems.length > maxItems) {
         throw new HttpsError("failed-precondition", "Invalid saved order.");
       }
 
+      let customQuoteRef;
+      if (isCustomOrderWithoutStock) {
+        const customItem = orderItems[0];
+        if (customItem.customConversationId !== order.userId) {
+          throw new HttpsError("failed-precondition", "Invalid custom order.");
+        }
+        customQuoteRef = db
+          .collection("conversations")
+          .doc(customItem.customConversationId)
+          .collection("quotes")
+          .doc(customItem.customQuoteId);
+        const quoteSnapshot = await transaction.get(customQuoteRef);
+        if (
+          !quoteSnapshot.exists ||
+          quoteSnapshot.get("status") !== "ordered" ||
+          quoteSnapshot.get("orderId") !== orderId
+        ) {
+          throw new HttpsError(
+            "failed-precondition",
+            "Invalid custom order proposal.",
+          );
+        }
+      }
+
       const itemsByProduct = new Map();
-      for (const item of order.items) {
+      for (const item of orderItems) {
         if (
           typeof item.productId !== "string" ||
           !Number.isSafeInteger(item.quantity) ||
@@ -507,14 +710,18 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
       }
 
       const productSnapshots = new Map();
-      for (const productId of itemsByProduct.keys()) {
+      for (const productId of hasActiveStockReservation
+        ? itemsByProduct.keys()
+        : []) {
         productSnapshots.set(
           productId,
           await transaction.get(db.collection("products").doc(productId)),
         );
       }
 
-      for (const [productId, items] of itemsByProduct) {
+      for (const [productId, items] of hasActiveStockReservation
+        ? itemsByProduct
+        : []) {
         const productSnapshot = productSnapshots.get(productId);
         if (!productSnapshot.exists) continue;
         const product = productSnapshot.data();
@@ -591,11 +798,20 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
 
       transaction.update(orderRef, {
         status: "cancelled",
-        reservationStatus: "released",
+        reservationStatus: hasActiveStockReservation
+          ? "released"
+          : "not_applicable",
         stockReserved: false,
         cancelledAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
+      if (customQuoteRef) {
+        transaction.update(customQuoteRef, {
+          status: "accepted",
+          orderId: FieldValue.delete(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
       return { id: orderId, alreadyCancelled: false };
     });
   } catch (error) {
