@@ -10,7 +10,13 @@ export function FloatingChatButton() {
     return null;
   return (
     <Link
-      to={session.admin ? "/admin?tab=chat" : "/chat"}
+      to={
+        session.admin
+          ? "/admin?tab=chat"
+          : location.pathname === "/checkout"
+            ? "/chat?voltar=checkout"
+            : "/chat"
+      }
       className="chat-fab"
       aria-label={session.admin ? "Abrir atendimentos" : "Falar com o ateliê"}
       title={session.admin ? "Abrir atendimentos" : "Falar com o ateliê"}

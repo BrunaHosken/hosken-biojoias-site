@@ -9,6 +9,7 @@ import { Contact } from "../features/storefront/Contact";
 import { Account } from "../features/account/Account";
 import { OrdersPage } from "../features/account/Orders";
 import { Cart } from "../features/account/Cart";
+import { Checkout } from "../features/account/Checkout";
 import { CustomerChat } from "../features/chat/CustomerChat";
 import { Admin } from "../features/admin/AdminPanel";
 
@@ -56,6 +57,7 @@ export function AppRoutes() {
       <Route path="/chat" element={<CustomerChat />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/carrinho" element={<Cart />} />
+      <Route path="/checkout" element={<Checkout />} />
       <Route
         path="*"
         element={

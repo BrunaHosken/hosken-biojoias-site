@@ -1,10 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
-import {
-  connectStorageEmulator,
-  getStorage,
-} from "firebase/storage";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
+import { connectStorageEmulator, getStorage } from "firebase/storage";
 export const localMode = import.meta.env.VITE_USE_EMULATORS !== "false";
 const projectId = localMode
   ? "demo-hosken"
@@ -30,7 +28,7 @@ if (
   throw new Error(
     "Configure os dados do app Firebase antes de desativar os emuladores.",
   );
-const app = initializeApp({
+export const app = initializeApp({
   projectId,
   storageBucket,
   apiKey: localMode ? "demo-key" : import.meta.env.VITE_FIREBASE_API_KEY,
@@ -40,8 +38,10 @@ const app = initializeApp({
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const functions = getFunctions(app, "southamerica-east1");
 if (localMode) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
   connectStorageEmulator(storage, "127.0.0.1", 9199);
 }

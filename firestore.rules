@@ -122,9 +122,11 @@ service cloud.firestore {
       allow read: if signedIn() && (resource.data.userId == request.auth.uid || admin());
       allow create, delete: if false;
       allow update: if admin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'trackingCode', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'trackingCode', 'updatedAt', 'reservationStatus', 'stockReserved'])
         && request.resource.data.status in ['pending_payment', 'confirmed', 'preparing', 'in_transit', 'completed', 'cancelled', 'refunded']
         && (!('trackingCode' in request.resource.data) || (request.resource.data.trackingCode is string && request.resource.data.trackingCode.size() <= 100))
+        && (!('reservationStatus' in request.resource.data) || request.resource.data.reservationStatus in ['active', 'released', 'committed'])
+        && (!('stockReserved' in request.resource.data) || request.resource.data.stockReserved is bool)
         && request.resource.data.updatedAt == request.time;
     }
     match /conversations/{conversationId} {

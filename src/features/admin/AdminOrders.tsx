@@ -4,7 +4,12 @@ import { orderStatusLabels, orderStatusOptions } from "../../app/constants";
 import { useToast } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
 import { auth, db } from "../../firebase";
-import { money, useAdminOrders, type CustomerOrder } from "../../data";
+import {
+  cancelDemoOrder,
+  money,
+  useAdminOrders,
+  type CustomerOrder,
+} from "../../data";
 
 export function AdminOrders({
   orders,
@@ -50,12 +55,32 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await updateDoc(doc(db, "orders", order.id), {
-        status,
-        trackingCode: trackingCode.trim(),
-        updatedAt: serverTimestamp(),
-      });
-      notify("Status e rastreio atualizados.", "success");
+      if (
+        order.isDemo &&
+        status === "cancelled" &&
+        order.reservationStatus === "active"
+      ) {
+        await cancelDemoOrder(order.id);
+        if (trackingCode.trim() !== (order.trackingCode || "")) {
+          await updateDoc(doc(db, "orders", order.id), {
+            trackingCode: trackingCode.trim(),
+            updatedAt: serverTimestamp(),
+          });
+        }
+        notify("Pedido cancelado; as peças voltaram ao estoque.", "success");
+      } else {
+        await updateDoc(doc(db, "orders", order.id), {
+          status,
+          trackingCode: trackingCode.trim(),
+          ...(order.isDemo &&
+          order.reservationStatus === "active" &&
+          ["in_transit", "completed"].includes(status)
+            ? { reservationStatus: "committed", stockReserved: false }
+            : {}),
+          updatedAt: serverTimestamp(),
+        });
+        notify("Status e rastreio atualizados.", "success");
+      }
     } catch {
       notify(
         "Não foi possível atualizar este pedido. Tente novamente.",

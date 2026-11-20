@@ -59,6 +59,7 @@ export type CustomerOrder = {
   userId: string;
   customerName?: string;
   customerEmail?: string;
+  customerPhone?: string;
   orderNumber?: string;
   items: OrderItem[];
   totalCents: number;
@@ -68,6 +69,12 @@ export type CustomerOrder = {
   updatedAt?: Timestamp;
   trackingCode?: string;
   isDemo?: boolean;
+  paymentMethod?: "credit_card" | "pix" | string;
+  installments?: number;
+  deliveryMethod?: "sedex" | "pickup" | string;
+  deliveryAddress?: string;
+  reservationStatus?: "active" | "released" | string;
+  stockReserved?: boolean;
 };
 export type ChatConversation = {
   id: string;

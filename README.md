@@ -1,6 +1,6 @@
 # Hosken Biojoias
 
-Loja em React + TypeScript + Vite, com Firebase Authentication, Firestore e Storage locais. O chat de texto funciona em tempo real; checkout, frete e notificações push ainda serão implementados. O PWA será preparado em uma etapa posterior.
+Loja em React + TypeScript + Vite, com Firebase Authentication, Firestore e Storage. O checkout de demonstração grava pedidos no Firestore e reserva o estoque em uma transação; pagamentos reais e cálculo de frete ainda não estão conectados. O PWA será preparado em uma etapa posterior.
 
 ## Começar sem conta Firebase
 
@@ -36,30 +36,32 @@ O script de seed preserva cadastros existentes. O banco exporta os dados para `.
 - Eventos podem incluir várias datas e horários, além de local, endereço e link de mapa. A página pública organiza os eventos pela primeira data.
 - A página Políticas da loja é alimentada pelo painel administrativo. Cada texto pode ser classificado como entrega, reenvio, cancelamento, trocas e devoluções, pagamento, privacidade ou geral; o ateliê publica os textos quando estiverem prontos.
 - Histórico de pedidos com leitura em tempo real, status, itens, valores e rastreio. Três registros fictícios aparecem na conta administrativa do emulador.
+- Checkout de teste em duas etapas: endereço/retirada e pagamento ilustrativo por cartão ou Pix. Uma Cloud Function valida preços e estoque, cria o pedido e baixa o estoque atomicamente. A reserva só é devolvida quando o pedido de teste é cancelado antes do envio; o carrinho, sozinho, não reserva unidades.
+- Cancelamento de pedidos de teste em Meus pedidos. Ao enviar o pedido, as peças ficam reservadas até cancelamento; pedidos em trânsito/concluídos deixam de ser canceláveis pelo cliente.
 - Chat de texto em tempo real: clientes abrem o chat diretamente pela bolinha flutuante; a equipe acessa pela mesma bolinha ou por `/admin` → Atendimento. O painel abre primeiro em Pedidos e tem um sino com atalhos para pedidos novos e mensagens/atendimentos não lidos. Cada pessoa pode editar ou excluir somente as próprias mensagens por até uma hora. A conversa continua salva. Conversas e mensagens são privadas ao cliente e à equipe autorizada.
 - WhatsApp, Instagram e e-mail da loja na página de contato.
 - Logo fornecida pela família; produtos de exemplo usam ilustrações provisórias. Fotos são cadastradas por URL nesta etapa. Upload será implementado com Storage.
 
-Produtos e preços do seed são demonstrativos. O carrinho confere disponibilidade para exibição; o checkout deverá revalidar todos os dados no servidor.
+Produtos e preços do seed são demonstrativos. O carrinho confere disponibilidade para exibição; a Cloud Function revalida produto, preço e estoque antes de gravar o pedido. Os campos de cartão da demonstração nunca são enviados nem armazenados.
 
 ## Estrutura do banco
 
-| Coleção                           | Campos principais                                                                                    | Acesso                                                                                |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `collections`                     | name, slug, status                                                                                   | Público: publicados; admin: escrita                                                   |
-| `categories`                      | name, slug, status                                                                                   | Público: publicados; admin: escrita                                                   |
-| `products`                        | name, description, priceCents, stock, categoryId, collectionId, availability, status, imageUrls, imagePaths, materials, dimensions, careInstructions | Público: publicados; admin: escrita                                                   |
-| `news`, `events`, `partnerStores`, `policies` | title, body, status; eventos também têm eventSchedule (lista de data/horário), local, endereço e mapa; políticas têm policyType | Público: publicados; admin: escrita                                                   |
-| `users`                           | displayName                                                                                          | Dono pode escrever campos permitidos; admin pode ler                                  |
-| `orders`                          | orderNumber, userId, customerName, customerEmail, items, totalCents, status, createdAt, trackingCode | Dono pode ler; admin lê e atualiza status/rastreio; backend cria e confirma pagamento |
-| `conversations/{uid}`             | customerId, customerName, customerEmail, lastMessage, unread counters, timestamps                    | Cliente dono e admin autorizado; criação pelo próprio cliente                         |
-| `conversations/{uid}/messages`    | senderId, senderRole, text, createdAt, editedAt                                                       | Cliente dono e admin autorizado; autor edita/apaga por até uma hora                    |
+| Coleção                                       | Campos principais                                                                                                                                    | Acesso                                                                                            |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `collections`                                 | name, slug, status                                                                                                                                   | Público: publicados; admin: escrita                                                               |
+| `categories`                                  | name, slug, status                                                                                                                                   | Público: publicados; admin: escrita                                                               |
+| `products`                                    | name, description, priceCents, stock, categoryId, collectionId, availability, status, imageUrls, imagePaths, materials, dimensions, careInstructions | Público: publicados; admin: escrita                                                               |
+| `news`, `events`, `partnerStores`, `policies` | title, body, status; eventos também têm eventSchedule (lista de data/horário), local, endereço e mapa; políticas têm policyType                      | Público: publicados; admin: escrita                                                               |
+| `users`                                       | displayName                                                                                                                                          | Dono pode escrever campos permitidos; admin pode ler                                              |
+| `orders`                                      | orderNumber, userId, customerName, customerEmail, items, totalCents, status, createdAt, trackingCode, reservationStatus                              | Dono pode ler; admin lê e atualiza status/rastreio; Cloud Functions cria/cancela pedidos de teste |
+| `conversations/{uid}`                         | customerId, customerName, customerEmail, lastMessage, unread counters, timestamps                                                                    | Cliente dono e admin autorizado; criação pelo próprio cliente                                     |
+| `conversations/{uid}/messages`                | senderId, senderRole, text, createdAt, editedAt                                                                                                      | Cliente dono e admin autorizado; autor edita/apaga por até uma hora                               |
 
-Pedidos usam `orderNumber`, `userId`, `customerName`, `customerEmail`, `items` (cópias de nome, quantidade e preço unitário), `totalCents`, `status`, `paymentStatus`, `createdAt` e, opcionalmente, `trackingCode`. No painel, a aba Pedidos permite consultar todos e editar somente status, rastreio e data de atualização. O checkout/backend cria o documento e confirma pagamento; preços e itens ficam imutáveis no painel. O código de rastreio é preenchido manualmente com o código fornecido pela transportadora. Os status aceitos pela interface incluem `pending_payment`, `confirmed`, `preparing`, `in_transit`, `completed`, `cancelled` e `refunded`. Na área do cliente, pedidos são filtrados por usuário; as listas ordenam resultados no cliente. O seed cria três pedidos fictícios para cada conta no emulador local; eles aparecem identificados como exemplos e nunca são enviados ao Firebase real.
+Pedidos usam `orderNumber`, `userId`, `customerName`, `customerEmail`, `items` (cópias de nome, quantidade e preço unitário), `totalCents`, `status`, `paymentStatus`, `createdAt` e, opcionalmente, `trackingCode`. A Cloud Function cria o pedido de teste e baixa o estoque na mesma transação; a função de cancelamento devolve o estoque uma única vez. No painel, a aba Pedidos permite consultar todos e editar status/rastreio. Ao mover uma reserva de teste para envio ou conclusão, o estoque fica comprometido e o cliente não pode mais devolvê-lo cancelando. Pagamentos reais e webhooks ainda não estão conectados. O código de rastreio é preenchido manualmente com o código da transportadora. O seed cria três pedidos fictícios por conta no emulador local.
 
 `status`: `draft` ou `published`. `availability`: `available`, `soldout`, `prelaunch`, `made-to-order`. Estoque e preço devem ser inteiros não negativos. Documentos referenciados de linha e tipo devem existir. Nesta base, evite excluir linhas e tipos usados em produtos; prefira mantê-los em rascunho até implementarmos arquivamento e validação de dependências no backend.
 
-Push para a tela bloqueada/central de notificações, pagamentos, endereços e uploads ainda não estão habilitados. O contador de não lidas funciona enquanto a aplicação está aberta; push em segundo plano exige PWA, permissão do dispositivo, Firebase Cloud Messaging e um backend. As regras negam por padrão as coleções não implementadas. Senhas são gerenciadas pelo Authentication, nunca armazenadas no Firestore. O backend deverá salvar nos pedidos uma cópia dos dados e preços comprados, reservar estoque por transação e processar webhooks de pagamento com idempotência.
+Push para a tela bloqueada/central de notificações, pagamentos reais e cálculo automático de frete ainda não estão habilitados. O contador de não lidas funciona enquanto a aplicação está aberta; push em segundo plano exige PWA, permissão do dispositivo e Firebase Cloud Messaging. As regras negam por padrão as coleções não implementadas. Senhas são gerenciadas pelo Authentication, nunca armazenadas no Firestore. O fluxo de demonstração é protegido por uma lista de e-mails autorizados e deve continuar restrito enquanto usar aprovação simulada.
 
 ## Verificação
 
@@ -86,7 +88,8 @@ Os testes usam um Firestore temporário no projeto `demo-hosken`, sem login Goog
 3. Criar sua conta real. Atribuir `admin: true` ao seu UID via Admin SDK em um ambiente confiável. Nenhum cliente pode atribuir essa permissão. Não reutilizar a senha local.
 4. Revisar e publicar `firestore.rules` e índices no projeto real, explicitando `--project SEU_PROJECT_ID`. O projeto padrão continua sendo `demo-hosken` para evitar ações acidentais.
 5. Migrar os cadastros reais com script controlado. O seed é deliberadamente limitado aos emuladores e não faz essa migração.
-6. Habilitar Firebase Storage, configurar `VITE_FIREBASE_STORAGE_BUCKET` e publicar também `storage.rules`; integrar checkout/backend antes de aceitar pedidos.
+6. Habilitar Firebase Storage, configurar `VITE_FIREBASE_STORAGE_BUCKET` e publicar também `storage.rules`.
+7. Para ativar o checkout online, o projeto precisa do plano Blaze para implantar Cloud Functions. Copie `functions/.env.example` para `functions/.env.hosken-biojoias`, informe as contas de teste autorizadas e implante `firebase deploy --only functions` usando o projeto correto. Sem isso, o checkout online não grava pedidos nem altera estoque.
 
 O projeto real começa separado do banco local. Nunca colocar chaves do Admin SDK, tokens ou contas de serviço no frontend/Git. Os identificadores públicos de configuração web não substituem regras de autorização.
 
@@ -94,7 +97,7 @@ O projeto real começa separado do banco local. Nunca colocar chaves do Admin SD
 
 O workflow `.github/workflows/deploy-pages.yml` publica automaticamente a prévia a cada push na branch `main`. Na primeira configuração do repositório, selecione **GitHub Actions** em **Settings → Pages → Build and deployment → Source**. O endereço esperado é `https://brunahosken.github.io/hosken-biojoias-site/`.
 
-A prévia usa registros demonstrativos definidos no frontend. Login, atendimento, estoque real e compras não ficam disponíveis até conectar um projeto Firebase de produção e finalizar o checkout. Não cadastrar dados reais nessa prévia. O domínio próprio será configurado depois.
+A página usa o Firebase real configurado nas variables/secrets do GitHub. O checkout de demonstração só funciona online depois de implantar as Cloud Functions e configurar a lista de contas de teste; antes disso, não cria pedidos nem baixa estoque. Não informar dados reais de cartão. O domínio próprio será configurado depois.
 
 ## Dependências
 

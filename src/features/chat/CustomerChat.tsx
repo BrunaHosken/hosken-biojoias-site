@@ -56,10 +56,13 @@ export function CustomerChat() {
     .trim()
     .replace(/\s+/g, " ")
     .slice(0, 120);
+  const checkoutReturn = searchParams.get("voltar") === "checkout";
   const productContext = productId && productName ? productName : "";
   const initialDraft = productContext
     ? `Olá! Tenho uma dúvida sobre a peça ${productContext}.`
-    : "";
+    : checkoutReturn
+      ? "Olá! Quero combinar uma retirada presencial para um pedido que estou finalizando."
+      : "";
   const chatPath = searchParams.size
     ? `/chat?${searchParams.toString()}`
     : "/chat";
@@ -150,6 +153,17 @@ export function CustomerChat() {
       <p className="lead">
         Envie sua mensagem. Nossa equipe responderá por aqui.
       </p>
+      {checkoutReturn && (
+        <div className="chat-checkout-return">
+          <p>
+            Depois de combinar a retirada com a artesã, volte ao checkout e
+            marque a confirmação para continuar.
+          </p>
+          <Link className="button secondary" to="/checkout">
+            Voltar ao checkout <ArrowRight size={17} />
+          </Link>
+        </div>
+      )}
       {productContext && (
         <div className="chat-product-context">
           <span className="eyebrow">PEÇA EM FOCO</span>
@@ -290,11 +304,11 @@ export function ChatThread({
           ? "A imagem ficou maior que 10 MB mesmo convertida. Escolha uma imagem menor."
           : cause instanceof Error && cause.message === "file-upload-timeout"
             ? "O envio da imagem demorou demais e foi cancelado. Confira sua conexão e tente novamente."
-          : imageFile
-            ? "Não foi possível enviar a imagem. Você pode continuar usando o chat; confira a conexão e se o Firebase Storage está configurado."
-            : localMode
-              ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, não lidas equipe/cliente ${conversation.unreadForAdmin}/${conversation.unreadForCustomer}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
-              : "Não foi possível enviar a mensagem. Tente novamente.",
+            : imageFile
+              ? "Não foi possível enviar a imagem. Você pode continuar usando o chat; confira a conexão e se o Firebase Storage está configurado."
+              : localMode
+                ? `Não foi possível enviar (${code}). Diagnóstico: conta ${matchesAuth ? "ok" : "divergente"}, caminho ${matchesConversationPath ? "ok" : "divergente"}, cliente da conversa ${matchesConversationOwner ? "ok" : "divergente"}, não lidas equipe/cliente ${conversation.unreadForAdmin}/${conversation.unreadForCustomer}, papel ${senderRole}, ${text.trim().length} caracteres, claim admin ${adminClaim}, projeto ${auth.app.options.projectId}.`
+                : "Não foi possível enviar a mensagem. Tente novamente.",
       );
     } finally {
       setBusy(false);

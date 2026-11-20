@@ -20,8 +20,10 @@ export function useToast() {
 export type Basket = {
   items: Record<string, number>;
   change: (id: string, delta: number) => void;
+  clear: () => void;
 };
 export const BasketContext = createContext<Basket>({
   items: {},
   change: () => {},
+  clear: () => {},
 });

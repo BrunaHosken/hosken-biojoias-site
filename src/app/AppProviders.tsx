@@ -92,14 +92,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={notify}>
       <SessionContext.Provider value={session}>
-        <BasketContext.Provider value={{ items, change }}>
+        <BasketContext.Provider
+          value={{ items, change, clear: () => setItems({}) }}
+        >
           {(localMode || publicPreview) && (
             <div className="local-banner">
               {publicPreview ? "PRÉVIA DO ATELIÊ" : "ATELIÊ EM CONSTRUÇÃO"}{" "}
               <span>
                 {publicPreview
                   ? "Versão de demonstração · dados ilustrativos · compras desativadas"
-                  : "Ambiente local · produtos e valores de exemplo · compras desativadas"}
+                  : "Ambiente local · produtos e valores de exemplo · compras simuladas no emulador"}
               </span>
             </div>
           )}

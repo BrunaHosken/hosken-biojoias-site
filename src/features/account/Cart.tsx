@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { ArrowRight, ShoppingBag, Plus, Minus } from "lucide-react";
 import { BasketContext, SessionContext } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
@@ -13,6 +13,7 @@ import {
 export function Cart() {
   const session = useContext(SessionContext);
   const { items, change } = useContext(BasketContext);
+  const navigate = useNavigate();
   const products = useRecords<Product>("products");
   if (session.admin) return <Navigate to="/admin" replace />;
   const entries = Object.entries(items);
@@ -21,6 +22,16 @@ export function Cart() {
       sum + (products.data.find((p) => p.id === id)?.priceCents || 0) * q,
     0,
   );
+  const canCheckout =
+    entries.length > 0 &&
+    !products.loading &&
+    !products.error &&
+    entries.every(([id, quantity]) => {
+      const product = products.data.find((item) => item.id === id);
+      return Boolean(
+        product && isProductAvailable(product) && quantity <= product.stock,
+      );
+    });
   return (
     <div className="page">
       <div className="eyebrow">ESCOLHIDAS POR VOCÊ</div>
@@ -84,12 +95,15 @@ export function Cart() {
               Subtotal <strong>{money(total)}</strong>
             </p>
             <p className="muted">Frete ainda não calculado.</p>
-            <button className="button" disabled>
-              Checkout em preparação
+            <button
+              className="button"
+              disabled={!canCheckout}
+              onClick={() => navigate("/checkout")}
+            >
+              Ir para a entrega <ArrowRight size={18} />
             </button>
             <p className="muted">
-              Nenhuma cobrança será realizada. A integração de pagamento será a
-              próxima etapa.
+              Compra de demonstração. Nenhum pagamento real será cobrado.
             </p>
           </aside>
         </div>
