@@ -110,7 +110,17 @@ service cloud.firestore {
               && text(request.resource.data.body, 12000)
               && request.resource.data.policyType in ['delivery','reshipment','cancellation','returns','payment','privacy','general']
               && request.resource.data.status in ['published','draft']
-            : contentCollection in ['news','partnerStores']
+            : contentCollection == 'partnerStores'
+              ? request.resource.data.keys().hasOnly(['title','body','status','partnerType','location','address','mapUrl'])
+                && request.resource.data.keys().hasAll(['partnerType','address'])
+                && text(request.resource.data.title, 160)
+                && text(request.resource.data.body, 5000)
+                && request.resource.data.partnerType in ['partner_store','physical_store']
+                && text(request.resource.data.address, 300)
+                && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 160))
+                && (!('mapUrl' in request.resource.data) || (request.resource.data.mapUrl is string && request.resource.data.mapUrl.size() <= 2000))
+                && request.resource.data.status in ['published','draft']
+            : contentCollection == 'news'
               && request.resource.data.keys().hasOnly(['title','body','status'])
               && text(request.resource.data.title, 160)
               && text(request.resource.data.body, 5000)

@@ -209,7 +209,49 @@ export function AdminContentFields({
             />
           </label>
           <label>
-            Link do mapa (opcional)
+            Link para abrir a rota (opcional)
+            <input
+              type="url"
+              name="mapUrl"
+              maxLength={2000}
+              defaultValue={editingContent?.mapUrl || ""}
+              placeholder="https://…"
+            />
+          </label>
+        </>
+      )}
+      {tab === "partnerStores" && (
+        <>
+          <label>
+            Tipo de local
+            <select
+              name="partnerType"
+              required
+              defaultValue={editingContent?.partnerType || "partner_store"}
+            >
+              <option value="partner_store">Loja parceira</option>
+              <option value="physical_store">Loja física</option>
+            </select>
+          </label>
+          <label>
+            Local
+            <input
+              name="location"
+              maxLength={160}
+              defaultValue={editingContent?.location || ""}
+            />
+          </label>
+          <label>
+            Endereço
+            <input
+              name="address"
+              maxLength={300}
+              required
+              defaultValue={editingContent?.address || ""}
+            />
+          </label>
+          <label>
+            Link para abrir a rota (opcional)
             <input
               type="url"
               name="mapUrl"

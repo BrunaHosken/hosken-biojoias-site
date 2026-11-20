@@ -220,6 +220,16 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
                   mapUrl: String(fields.get("mapUrl") || "").trim(),
                 }
               : {}),
+            ...(tab === "partnerStores"
+              ? {
+                  partnerType: String(
+                    fields.get("partnerType") || "partner_store",
+                  ),
+                  location: String(fields.get("location") || "").trim(),
+                  address: String(fields.get("address") || "").trim(),
+                  mapUrl: String(fields.get("mapUrl") || "").trim(),
+                }
+              : {}),
             ...(tab === "policies"
               ? {
                   policyType: String(fields.get("policyType") || "general"),

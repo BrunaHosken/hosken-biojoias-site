@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Flower2, Leaf } from "lucide-react";
+import { Flower2, Leaf } from "lucide-react";
 import { Notice } from "../../../components/Feedback";
 import { useRecords, type Content } from "../../../data";
-import { formatEventDate, getEventSchedule, isHttpUrl } from "../eventSchedule";
+import { formatEventDate, getEventSchedule } from "../eventSchedule";
+import { MiniMap } from "../MiniMap";
 
 export function ContentPage({
   name,
@@ -35,31 +36,37 @@ export function ContentPage({
       <div className="content-grid">
         {displayedRecords.map((r) => (
           <article className="content-card" key={r.id}>
-            <Flower2 size={28} />
-            <h2>{r.title}</h2>
-            {name === "events" &&
+            <div className="content-card-title">
+              <Flower2 size={28} />
+              <h2>{r.title}</h2>
+            </div>
+            {name === "partnerStores" && (
+              <span className="policy-type">
+                {r.partnerType === "physical_store"
+                  ? "Loja física"
+                  : "Loja parceira"}
+              </span>
+            )}
+            {(name === "events" || name === "partnerStores") &&
               (getEventSchedule(r).length ||
                 r.location ||
                 r.address ||
                 r.mapUrl) && (
                 <div className="event-details">
-                  {getEventSchedule(r).map((entry, index) => (
-                    <p
-                      className="event-schedule-public"
-                      key={`${entry.date}-${entry.time}-${index}`}
-                    >
-                      {entry.date && formatEventDate(entry.date)}
-                      {entry.date && entry.time && " · "}
-                      {entry.time}
-                    </p>
-                  ))}
+                  {name === "events" &&
+                    getEventSchedule(r).map((entry, index) => (
+                      <p
+                        className="event-schedule-public"
+                        key={`${entry.date}-${entry.time}-${index}`}
+                      >
+                        {entry.date && formatEventDate(entry.date)}
+                        {entry.date && entry.time && " · "}
+                        {entry.time}
+                      </p>
+                    ))}
                   {r.location && <p>{r.location}</p>}
                   {r.address && <p>{r.address}</p>}
-                  {isHttpUrl(r.mapUrl) && (
-                    <a href={r.mapUrl} target="_blank" rel="noreferrer">
-                      Como chegar <ArrowRight size={15} />
-                    </a>
-                  )}
+                  <MiniMap record={r} />
                 </div>
               )}
             <p>{r.body}</p>

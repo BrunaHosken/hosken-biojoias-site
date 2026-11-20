@@ -36,9 +36,22 @@
   padding: 30px;
   border: 1px solid var(--border);
 }
-.content-card > svg {
-  color: #9d6c78;
+.content-card-title {
+  display: flex;
+  align-items: center;
+  gap: 13px;
   margin-bottom: 18px;
+}
+.content-card-title > svg {
+  flex: 0 0 auto;
+  color: #9d6c78;
+}
+.content-card-title h2 {
+  margin: 0;
+}
+.content-card > .policy-type {
+  margin: 0;
+  margin-bottom: 16px;
 }
 .content-card h2 {
   font-size: 30px;
@@ -69,6 +82,21 @@
   margin-top: 7px;
   color: var(--wine);
   font-size: 12px;
+}
+.mini-map {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+.mini-map iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border);
+  background: #f4eee6;
+}
+.mini-map a {
+  justify-self: start;
 }
 .policy-card p {
   white-space: pre-wrap;

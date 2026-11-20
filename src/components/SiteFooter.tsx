@@ -23,8 +23,7 @@ export function SiteFooter() {
         <a href="https://wa.me/5522992339779" target="_blank" rel="noreferrer">
           WhatsApp ↗
         </a>
-        <a href="mailto:hoskenbiojoias2026@gmail.com">E-mail</a>
-        <Link to="/contato">Contato</Link>
+        <a href="mailto:hoskenbiojoias2026@gmail.com">E-mail ↗</a>
         <Link to="/politicas">Políticas da loja</Link>
         {admin && <Link to="/admin">Administrar</Link>}
       </div>

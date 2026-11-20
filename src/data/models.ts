@@ -68,6 +68,7 @@ export type Content = {
   location?: string;
   address?: string;
   mapUrl?: string;
+  partnerType?: "partner_store" | "physical_store";
   policyType?: string;
 };
 export type EventScheduleEntry = { date: string; time: string };
