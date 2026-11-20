@@ -26,6 +26,7 @@ import { useRecords, type Product, type Taxonomy } from "../../data";
 import { auth, db, storage } from "../../firebase";
 import { getProductImages } from "../storefront/productImages";
 import { availabilityFromStock } from "../../data/productAvailability";
+import { convertToWebp } from "./convertToWebp";
 import { AdminRecordList } from "./AdminRecordList";
 import { AdminProductFields } from "./ProductFields";
 import { blankProduct } from "./productModel";
@@ -111,11 +112,17 @@ export function AdminProductManager({
     onImageUploadStateChange(true);
     const uploaded: { path: string; url: string }[] = [];
     try {
-      for (const file of files) {
+      const webpFiles: File[] = [];
+      for (const file of files) webpFiles.push(await convertToWebp(file));
+      if (webpFiles.some((file) => file.size > 10 * 1024 * 1024)) {
+        throw new Error("webp-file-too-large");
+      }
+
+      for (const file of webpFiles) {
         const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-80);
         const path = `products/${user.uid}/${crypto.randomUUID()}-${fileName}`;
         const target = storageRef(storage, path);
-        await uploadBytes(target, file, { contentType: file.type });
+        await uploadBytes(target, file, { contentType: "image/webp" });
         uploadedImagePaths.current.add(path);
         const url = await getDownloadURL(target);
         if (!mounted.current) {
@@ -138,10 +145,10 @@ export function AdminProductManager({
         imageUrl: "",
       }));
       notify(
-        "Fotos carregadas. Salve o produto para confirmar as alterações.",
+        "Fotos convertidas para WebP e carregadas. Salve o produto para confirmar as alterações.",
         "success",
       );
-    } catch {
+    } catch (cause) {
       await Promise.allSettled(
         uploaded.map(async ({ path }) => {
           uploadedImagePaths.current.delete(path);
@@ -150,7 +157,12 @@ export function AdminProductManager({
       );
       if (mounted.current)
         notify(
-          "Não foi possível enviar as fotos. Confira o Firebase Storage.",
+          cause instanceof Error && cause.message === "webp-file-too-large"
+            ? "Uma foto convertida passou de 10 MB. Escolha uma imagem menor."
+            : cause instanceof Error &&
+                cause.message === "webp-encoding-unsupported"
+              ? "Este navegador não conseguiu converter a foto para WebP. Tente outro navegador."
+              : "Não foi possível converter ou enviar as fotos. Confira o formato e o Firebase Storage.",
           "error",
         );
     } finally {

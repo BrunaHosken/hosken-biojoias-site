@@ -587,7 +587,7 @@
 }
 @media (max-width: 380px) {
   .admin-navigation {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .site-header {
     gap: 4px;

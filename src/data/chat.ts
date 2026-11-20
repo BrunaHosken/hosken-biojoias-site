@@ -110,10 +110,15 @@ export function useConversationMessages(conversationId: string | undefined) {
     );
     const unsubscribe = onSnapshot(
       messagesQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
         setData(
           snapshot.docs.map(
-            (item) => ({ id: item.id, ...item.data() }) as ChatMessage,
+            (item) =>
+              ({
+                id: item.id,
+                ...item.data({ serverTimestamps: "estimate" }),
+              }) as ChatMessage,
           ),
         );
         setError("");

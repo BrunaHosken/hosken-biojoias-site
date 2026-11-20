@@ -29,7 +29,7 @@ export function About() {
         </Link>
       </div>
       <img
-        src={`${import.meta.env.BASE_URL}hosken-logo.png`}
+        src={`${import.meta.env.BASE_URL}hosken-logo.webp`}
         alt="Logo Hosken com orquídeas"
       />
     </div>

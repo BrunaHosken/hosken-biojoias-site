@@ -335,7 +335,9 @@ function ChatMessageBubble({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const date = message.createdAt?.toDate();
   const withinEditWindow = Boolean(
-    date && now >= date.getTime() && now - date.getTime() < 60 * 60 * 1000,
+    date &&
+    now + 2000 >= date.getTime() &&
+    now - date.getTime() < 60 * 60 * 1000,
   );
   async function saveEdit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

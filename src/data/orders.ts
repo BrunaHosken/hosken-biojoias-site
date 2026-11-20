@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import type { CustomerOrder } from "./models";
 
@@ -24,22 +18,40 @@ export function useCustomerOrders(uid: string | undefined) {
     const ordersQuery = query(
       collection(db, "orders"),
       where("userId", "==", uid),
-      orderBy("createdAt", "desc"),
     );
     const unsubscribe = onSnapshot(
       ordersQuery,
       (snapshot) => {
-        setData(
-          snapshot.docs.map(
-            (snapshot) =>
-              ({ id: snapshot.id, ...snapshot.data() }) as CustomerOrder,
-          ),
+        const orders = snapshot.docs.map(
+          (snapshot) =>
+            ({ id: snapshot.id, ...snapshot.data() }) as CustomerOrder,
         );
+        orders.sort(
+          (a, b) =>
+            (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
+        );
+        setData(orders);
         setError("");
         setLoading(false);
       },
-      () => {
-        setError("Não foi possível carregar seus pedidos. Tente novamente.");
+      (cause) => {
+        const code =
+          typeof cause === "object" && cause !== null && "code" in cause
+            ? String(cause.code)
+            : "unknown";
+        if (import.meta.env.DEV) {
+          console.error("Customer orders listener failed", {
+            code,
+            message: cause instanceof Error ? cause.message : String(cause),
+            uid,
+            projectId: db.app.options.projectId,
+          });
+        }
+        setError(
+          code === "permission-denied"
+            ? "Não foi possível acessar os pedidos desta conta. Saia e entre novamente."
+            : "Não foi possível carregar seus pedidos. Tente novamente.",
+        );
         setLoading(false);
       },
     );
@@ -52,23 +64,34 @@ export function useAdminOrders() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    const ordersQuery = query(
-      collection(db, "orders"),
-      orderBy("createdAt", "desc"),
-    );
+    const ordersQuery = query(collection(db, "orders"));
     const unsubscribe = onSnapshot(
       ordersQuery,
       (snapshot) => {
-        setData(
-          snapshot.docs.map(
-            (snapshot) =>
-              ({ id: snapshot.id, ...snapshot.data() }) as CustomerOrder,
-          ),
+        const orders = snapshot.docs.map(
+          (snapshot) =>
+            ({ id: snapshot.id, ...snapshot.data() }) as CustomerOrder,
         );
+        orders.sort(
+          (a, b) =>
+            (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
+        );
+        setData(orders);
         setError("");
         setLoading(false);
       },
-      () => {
+      (cause) => {
+        if (import.meta.env.DEV) {
+          const code =
+            typeof cause === "object" && cause !== null && "code" in cause
+              ? String(cause.code)
+              : "unknown";
+          console.error("Admin orders listener failed", {
+            code,
+            message: cause instanceof Error ? cause.message : String(cause),
+            projectId: db.app.options.projectId,
+          });
+        }
         setError("Não foi possível carregar os pedidos. Tente novamente.");
         setLoading(false);
       },
