@@ -344,10 +344,10 @@ textarea {
   margin: 0;
   padding: 8px;
 }
-.admin-variant-total {
-  margin: 13px 0 4px;
-  color: var(--muted);
-  font-size: 11px;
+.admin-total-stock-field input[readonly] {
+  background: #f6f1ec;
+  color: #50443e;
+  cursor: default;
 }
 .product-shipping-fields {
   min-width: 0;

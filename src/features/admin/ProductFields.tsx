@@ -13,7 +13,10 @@ import type {
   Content,
 } from "../../data";
 import type { ProductDraft } from "./productModel";
-import { availabilityFromStock } from "../../data/productAvailability";
+import {
+  availabilityFromStock,
+  getProductStock,
+} from "../../data/productAvailability";
 
 type ProductFieldsProps = {
   product: ProductDraft;
@@ -222,34 +225,19 @@ export function AdminProductFields({
             Publique uma cor em Catálogo → Cores antes de configurar variantes.
           </p>
         )}
-        {product.colorVariants?.length ? (
-          <p className="admin-variant-total">
-            Estoque total desta peça: <strong>{product.stock}</strong>
-          </p>
-        ) : (
-          <label>
-            Estoque
-            <input
-              required
-              type="number"
-              min="0"
-              step="1"
-              value={product.stock}
-              onChange={(event) => {
-                const stock = Number(event.target.value);
-                setProduct((current) => ({
-                  ...current,
-                  stock,
-                  availability:
-                    current.availability === "available" ||
-                    current.availability === "soldout"
-                      ? availabilityFromStock(stock)
-                      : current.availability,
-                }));
-              }}
-            />
-          </label>
-        )}
+        <label className="admin-total-stock-field">
+          Estoque total da peça
+          <input
+            type="number"
+            value={getProductStock(product)}
+            readOnly
+            aria-readonly="true"
+          />
+          <small className="field-hint">
+            Total informativo calculado pelas quantidades das cores
+            selecionadas.
+          </small>
+        </label>
       </fieldset>
       <label>
         Avisar quando o estoque chegar a
