@@ -15,16 +15,7 @@ import type { AdminContentTab } from "./catalogTypes";
 import { AdminOrders } from "./AdminOrders";
 import { AdminReports } from "./Reports";
 
-type AdminNavItem = [id: string, label: string];
-type AdminNavSection = { label: string; items: AdminNavItem[] };
-type AdminNavGroup = {
-  label: string;
-  items: AdminNavItem[];
-  sections?: AdminNavSection[];
-  trailingItems?: AdminNavItem[];
-};
-
-const moduleGroups: AdminNavGroup[] = [
+const moduleGroups = [
   {
     label: "Operação",
     items: [
@@ -46,23 +37,18 @@ const moduleGroups: AdminNavGroup[] = [
       ["news", "Novidades"],
       ["events", "Eventos"],
       ["partnerStores", "Lojas parceiras"],
+      ["policies", "Políticas"],
     ],
-    sections: [
-      {
-        label: "Análise",
-        items: [["reports", "Relatórios"]],
-      },
-    ],
-    trailingItems: [["policies", "Políticas"]],
+  },
+  {
+    label: "Análise",
+    items: [["reports", "Relatórios"]],
   },
 ];
 
-const allNavigationItems = moduleGroups.flatMap((group) => [
-  ...group.items,
-  ...(group.sections?.flatMap((section) => section.items) ?? []),
-  ...(group.trailingItems ?? []),
-]);
-const validTabs = allNavigationItems.map(([id]) => id);
+const validTabs = moduleGroups.flatMap((group) =>
+  group.items.map(([id]) => id),
+);
 
 export function Admin() {
   const session = useContext(SessionContext);
@@ -96,7 +82,8 @@ export function AdminPanel() {
   const tab =
     requestedTab && validTabs.includes(requestedTab) ? requestedTab : "orders";
   const activeTabLabel =
-    allNavigationItems.find(([id]) => id === tab)?.[1] ?? "Pedidos";
+    moduleGroups.flatMap((group) => group.items).find(([id]) => id === tab)?.[1] ??
+    "Pedidos";
   const conversations = useAdminConversations();
   const adminOrders = useAdminOrders();
   const unreadCount = conversations.data.reduce(
@@ -132,29 +119,6 @@ export function AdminPanel() {
     setMobileNavOpen(false);
   }
 
-  function renderNavItems(items: AdminNavItem[]) {
-    return items.map(([id, label]) => (
-      <button
-        type="button"
-        className={`admin-nav-item ${tab === id ? "selected" : ""}`}
-        disabled={catalogUploadBusy}
-        aria-current={tab === id ? "page" : undefined}
-        onClick={() => selectTab(id)}
-        key={id}
-      >
-        <span>{label}</span>
-        {id === "chat" && unreadCount > 0 && (
-          <span
-            className="unread-badge"
-            aria-label={`${unreadCount} mensagens não lidas`}
-          >
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
-      </button>
-    ));
-  }
-
   return (
     <div className="page">
       <div className="eyebrow">ÁREA RESTRITA</div>
@@ -183,21 +147,27 @@ export function AdminPanel() {
             <section className="admin-nav-group" key={group.label}>
               <h2>{group.label}</h2>
               <div className="admin-nav-items">
-                {renderNavItems(group.items)}
+                {group.items.map(([id, label]) => (
+                  <button
+                    type="button"
+                    className={`admin-nav-item ${tab === id ? "selected" : ""}`}
+                    disabled={catalogUploadBusy}
+                    aria-current={tab === id ? "page" : undefined}
+                    onClick={() => selectTab(id)}
+                    key={id}
+                  >
+                    <span>{label}</span>
+                    {id === "chat" && unreadCount > 0 && (
+                      <span
+                        className="unread-badge"
+                        aria-label={`${unreadCount} mensagens não lidas`}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-              {group.sections?.map((section) => (
-                <div className="admin-nav-subgroup" key={section.label}>
-                  <h3>{section.label}</h3>
-                  <div className="admin-nav-items">
-                    {renderNavItems(section.items)}
-                  </div>
-                </div>
-              ))}
-              {group.trailingItems && (
-                <div className="admin-nav-items admin-nav-trailing-items">
-                  {renderNavItems(group.trailingItems)}
-                </div>
-              )}
             </section>
           ))}
         </nav>

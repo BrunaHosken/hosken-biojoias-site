@@ -42,6 +42,7 @@ export function CustomerChat() {
       !user ||
       session.admin ||
       chat.loading ||
+      !chat.serverReady ||
       chat.error ||
       chat.conversation ||
       attemptedUsers.current.has(user.uid)
@@ -52,7 +53,9 @@ export function CustomerChat() {
       user.uid,
       user.displayName || "Cliente",
       user.email || "",
-    ).catch(() => {
+    ).catch((cause) => {
+      if (import.meta.env.DEV)
+        console.error("Customer conversation creation failed", cause);
       notify(
         "Não foi possível abrir o chat. Recarregue a página para tentar novamente.",
         "error",
@@ -63,6 +66,7 @@ export function CustomerChat() {
     session.user,
     session.admin,
     chat.loading,
+    chat.serverReady,
     chat.error,
     chat.conversation,
     notify,

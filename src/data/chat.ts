@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   collection,
   doc,
+  getDoc,
   increment,
   limitToLast,
   onSnapshot,
@@ -21,9 +22,11 @@ export function useCustomerConversation(uid: string | undefined) {
   const [data, setData] = useState<ChatConversation[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(Boolean(uid));
+  const [serverReady, setServerReady] = useState(false);
   useEffect(() => {
     setData([]);
     setError("");
+    setServerReady(false);
     if (!uid) {
       setLoading(false);
       return;
@@ -35,25 +38,28 @@ export function useCustomerConversation(uid: string | undefined) {
     );
     const unsubscribe = onSnapshot(
       conversationQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
         setData(
           snapshot.docs.map(
             (item) => ({ id: item.id, ...item.data() }) as ChatConversation,
           ),
         );
+        setServerReady(!snapshot.metadata.fromCache);
         setError("");
         setLoading(false);
       },
       (cause) => {
         if (import.meta.env.DEV)
           console.error("Chat conversation listener failed", cause);
+        setServerReady(false);
         setError("Não foi possível carregar a conversa. Tente novamente.");
         setLoading(false);
       },
     );
     return unsubscribe;
   }, [uid]);
-  return { conversation: data[0], error, loading };
+  return { conversation: data[0], error, loading, serverReady };
 }
 export function useAdminConversations(enabled = true) {
   const [data, setData] = useState<ChatConversation[]>([]);
@@ -140,22 +146,33 @@ export async function createCustomerConversation(
   customerName: string,
   customerEmail: string,
 ) {
-  await setDoc(doc(db, "conversations", uid), {
-    customerId: uid,
-    customerName: customerName.trim().slice(0, 100) || "Cliente",
-    customerEmail: customerEmail.trim().slice(0, 254),
-    status: "open",
-    lastMessage: "",
-    lastMessageId: "",
-    lastMessageSenderRole: "",
-    lastDeletedMessageId: "",
-    unreadForAdmin: 0,
-    unreadForCustomer: 0,
-    adminLastReadAt: serverTimestamp(),
-    customerLastReadAt: serverTimestamp(),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  const conversationRef = doc(db, "conversations", uid);
+  try {
+    await setDoc(conversationRef, {
+      customerId: uid,
+      customerName: customerName.trim().slice(0, 100) || "Cliente",
+      customerEmail: customerEmail.trim().slice(0, 254),
+      status: "open",
+      lastMessage: "",
+      lastMessageId: "",
+      lastMessageSenderRole: "",
+      lastDeletedMessageId: "",
+      unreadForAdmin: 0,
+      unreadForCustomer: 0,
+      adminLastReadAt: serverTimestamp(),
+      customerLastReadAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (cause) {
+    try {
+      const existing = await getDoc(conversationRef);
+      if (existing.exists() && existing.data().customerId === uid) return;
+    } catch {
+      // Preserve the creation error if an existing conversation cannot be confirmed.
+    }
+    throw cause;
+  }
 }
 export async function sendChatMessage(
   conversationId: string,
