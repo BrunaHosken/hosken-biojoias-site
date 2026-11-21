@@ -87,17 +87,13 @@ export function chatTopicDraft(topic: ChatIntakeTopic) {
 
 export function ChatStartFlow({
   onStart,
-  onFinish,
-  initialFollowup = false,
 }: {
   onStart: (topic: IntakeTopic) => void;
-  onFinish?: () => void;
-  initialFollowup?: boolean;
 }) {
   const faqs = useRecords<Content>("faqs");
   const [topic, setTopic] = useState<IntakeTopic | null>(null);
   const [selectedFaq, setSelectedFaq] = useState<Content | null>(null);
-  const [answeredFaq, setAnsweredFaq] = useState(initialFollowup);
+  const [answeredFaq, setAnsweredFaq] = useState(false);
   const [finished, setFinished] = useState(false);
   const selectedTopic = topicOptions.find((item) => item.id === topic);
   const directTopic = selectedTopic?.query === null;
@@ -180,7 +176,6 @@ export function ChatStartFlow({
                 className="button"
                 onClick={() => {
                   setFinished(true);
-                  onFinish?.();
                 }}
               >
                 Não, obrigada

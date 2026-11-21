@@ -339,8 +339,6 @@ export function CustomerChat() {
             senderRole="customer"
             otherPartyName="Hosken Biojoias"
             initialDraft={initialDraft}
-            suppressExistingFollowup={Boolean(contextTopic)}
-            onConversationClosed={() => setConversationEndedHere(true)}
           />
         )}
     </div>
@@ -352,16 +350,12 @@ export function ChatThread({
   senderRole,
   otherPartyName,
   initialDraft = "",
-  suppressExistingFollowup = false,
-  onConversationClosed,
 }: {
   conversation: ChatConversation;
   senderId: string;
   senderRole: ChatMessage["senderRole"];
   otherPartyName: string;
   initialDraft?: string;
-  suppressExistingFollowup?: boolean;
-  onConversationClosed?: () => void;
 }) {
   const conversationId = conversation.id;
   const unreadCount =
@@ -375,14 +369,8 @@ export function ChatThread({
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState("");
   const [now, setNow] = useState(Date.now());
-  const [dismissedFollowupMessageId, setDismissedFollowupMessageId] =
-    useState("");
-  const [initialFollowupBaseline, setInitialFollowupBaseline] = useState<
-    string | null
-  >(suppressExistingFollowup ? null : "");
   const listRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imagePreviewUrl = useImagePreview(imageFile);
   const timelineItems = [
     ...messages.data.map((message, index) => ({
@@ -397,29 +385,6 @@ export function ChatThread({
       quote,
     })),
   ].sort((first, second) => first.timestamp - second.timestamp);
-  const latestTimelineItem = timelineItems[timelineItems.length - 1];
-  const latestAdminMessageId =
-    senderRole === "customer" &&
-    latestTimelineItem?.type === "message" &&
-    latestTimelineItem.message.senderRole === "admin"
-      ? latestTimelineItem.message.id
-      : "";
-  useEffect(() => {
-    if (
-      !suppressExistingFollowup ||
-      messages.loading ||
-      quotes.loading ||
-      initialFollowupBaseline !== null
-    )
-      return;
-    setInitialFollowupBaseline(latestAdminMessageId);
-  }, [
-    suppressExistingFollowup,
-    messages.loading,
-    quotes.loading,
-    initialFollowupBaseline,
-    latestAdminMessageId,
-  ]);
   useEffect(() => {
     if (initialDraft) {
       setText((current) => (current.trim() ? current : initialDraft));
@@ -588,37 +553,6 @@ export function ChatThread({
           adminId={senderId}
         />
       )}
-      {latestAdminMessageId &&
-        conversation.status === "open" &&
-        (initialFollowupBaseline === "" ||
-          (initialFollowupBaseline !== null &&
-            latestAdminMessageId !== initialFollowupBaseline)) &&
-        latestAdminMessageId !== dismissedFollowupMessageId && (
-          <ChatStartFlow
-            key={latestAdminMessageId}
-            initialFollowup
-            onStart={(topic) => {
-              setDismissedFollowupMessageId(latestAdminMessageId);
-              setText(chatTopicDraft(topic));
-              startCustomerConversation(conversationId, topic).catch(() =>
-                setSendError(
-                  "Não foi possível reabrir o atendimento. Tente novamente.",
-                ),
-              );
-              window.setTimeout(() => textareaRef.current?.focus(), 0);
-            }}
-            onFinish={() => {
-              setDismissedFollowupMessageId(latestAdminMessageId);
-              closeConversation(conversationId)
-                .then(() => onConversationClosed?.())
-                .catch(() =>
-                  setSendError(
-                    "Não foi possível encerrar a conversa. Tente novamente.",
-                  ),
-                );
-            }}
-          />
-        )}
       {conversation.status === "open" && (
         <form className="chat-composer" onSubmit={submit}>
           <input
@@ -645,7 +579,6 @@ export function ChatThread({
           </label>
           <div className="chat-composer-main">
             <textarea
-              ref={textareaRef}
               id={`message-${conversationId}`}
               value={text}
               onChange={(e) => setText(e.target.value)}
