@@ -10,7 +10,7 @@
   min-width: 0;
   border: 1px solid var(--border);
   padding: 24px;
-  background: #fff;
+  background: var(--surface);
 }
 .account-setting-header {
   height: auto;
@@ -105,6 +105,6 @@
 }
 .account-success {
   margin: 14px 0 0;
-  color: #416d4b;
+  color: var(--success-text);
   font-size: 12px;
 }

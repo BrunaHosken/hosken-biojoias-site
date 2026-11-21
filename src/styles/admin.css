@@ -44,7 +44,7 @@
 }
 .content-card-title > svg {
   flex: 0 0 auto;
-  color: #9d6c78;
+  color: var(--floral);
 }
 .content-card-title h2 {
   margin: 0;
@@ -72,7 +72,7 @@
   font-size: 12px;
 }
 .event-details .event-schedule-public {
-  color: #50443e;
+  color: var(--text);
   font-weight: 600;
 }
 .event-details a {
@@ -93,7 +93,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   border: 1px solid var(--border);
-  background: #f4eee6;
+  background: var(--surface-soft);
 }
 .mini-map a {
   justify-self: start;
@@ -106,7 +106,7 @@
   margin-bottom: 12px;
   padding: 6px 9px;
   border: 1px solid var(--border);
-  color: #806545;
+  color: var(--muted);
   font-size: 9px;
   letter-spacing: 1.2px;
   text-transform: uppercase;
@@ -139,23 +139,23 @@ label {
   font-size: 11px;
   gap: 9px;
   margin-bottom: 18px;
-  color: #6b5e56;
+  color: var(--muted);
 }
 input,
 textarea,
 select {
   width: 100%;
-  border: 1px solid #d8cec2;
-  background: #fffdf9;
+  border: 1px solid var(--border);
+  background: var(--surface);
   padding: 12px 13px;
   border-radius: 0;
-  color: #342e2d;
+  color: var(--text);
   min-height: 44px;
 }
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid #ad7b89;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 textarea {
@@ -163,10 +163,10 @@ textarea {
   resize: vertical;
 }
 .notice {
-  border: 1px solid #d9c5b0;
+  border: 1px solid var(--border);
   padding: 15px 18px;
-  background: #fbf3e7;
-  color: #705333;
+  background: var(--surface-warning);
+  color: var(--warning-text);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -216,7 +216,7 @@ textarea {
 }
 .cart-summary {
   padding: 30px;
-  background: #f4eee6;
+  background: var(--surface-soft);
 }
 .cart-summary h2 {
   font-size: 31px;
@@ -246,7 +246,7 @@ textarea {
   gap: 18px;
   padding: 20px 14px;
   border: 1px solid var(--border);
-  background: #fbf7f1;
+  background: var(--surface-elevated);
 }
 .admin-nav-group {
   width: 100%;
@@ -260,7 +260,7 @@ textarea {
 .admin-nav-group h2 {
   margin: 0 0 9px;
   padding: 0;
-  color: #806c5a;
+  color: var(--muted);
   font-family: "DM Sans", sans-serif;
   font-size: 9px;
   font-weight: 600;
@@ -286,7 +286,7 @@ textarea {
   padding: 9px 10px;
   border: 1px solid transparent;
   background: transparent;
-  color: #6b5e56;
+  color: var(--muted);
   font-size: 12px;
   text-align: left;
   transition:
@@ -295,17 +295,17 @@ textarea {
 }
 .admin-nav-item:hover:not(:disabled):not(.selected) {
   border-color: var(--border);
-  background: #fffdf9;
+  background: var(--surface);
   color: var(--wine);
 }
 .admin-nav-item.selected {
   border-color: var(--wine);
-  background: var(--wine);
+  background: var(--wine-fill);
   color: white;
 }
 .admin-nav-item .unread-badge {
   flex: 0 0 auto;
-  background: #fffdf9;
+  background: var(--surface);
   color: var(--wine);
 }
 .admin-content {
@@ -335,7 +335,7 @@ textarea {
 }
 .admin-variant-fields legend {
   padding: 0 6px;
-  color: #6b5e56;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -384,8 +384,8 @@ textarea {
   padding: 8px;
 }
 .admin-total-stock-field input[readonly] {
-  background: #f6f1ec;
-  color: #50443e;
+  background: var(--surface-soft);
+  color: var(--text);
   cursor: default;
 }
 .product-shipping-fields {
@@ -396,7 +396,7 @@ textarea {
 }
 .product-shipping-fields legend {
   padding: 0 6px;
-  color: #6b5e56;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -420,7 +420,7 @@ textarea {
   box-sizing: border-box;
   object-fit: contain;
   padding: 5px;
-  background: #f1e8e0;
+  background: var(--surface-image);
   border: 1px solid var(--border);
 }
 .admin-product-image .text-button {
@@ -439,7 +439,7 @@ textarea {
   margin-bottom: 18px;
 }
 .admin-field-label {
-  color: #6b5e56;
+  color: var(--muted);
   font-size: 11px;
 }
 .admin-image-upload-button {
@@ -469,7 +469,7 @@ textarea {
   box-sizing: border-box;
   object-fit: contain;
   padding: 5px;
-  background: #f1e8e0;
+  background: var(--surface-image);
   border: 1px solid var(--border);
 }
 .admin-line-image-grid .text-button {
@@ -566,18 +566,18 @@ textarea {
 }
 .admin-stock-low {
   border-color: #e2ca75;
-  color: #705600;
-  background: #fff4c9;
+  color: var(--warning-text);
+  background: var(--surface-warning);
 }
 .admin-stock-ok {
   border-color: #a8c7d9;
-  color: #285775;
-  background: #e8f3f9;
+  color: var(--info-text);
+  background: var(--surface-info);
 }
 .admin-stock-empty {
   border-color: #c8cccf;
-  color: #5e6265;
-  background: #eef0f1;
+  color: var(--muted);
+  background: var(--surface-neutral);
 }
 .admin-row > div:last-child {
   display: flex;
@@ -614,16 +614,16 @@ textarea {
   align-items: center;
   gap: 7px;
   padding: 8px 11px;
-  color: #705333;
-  background: #fbf3e7;
+  color: var(--warning-text);
+  background: var(--surface-warning);
   font-size: 10px;
   white-space: nowrap;
 }
 .report-demo-note {
   padding: 12px 15px;
   border-left: 2px solid #b58b55;
-  background: #fbf7ee;
-  color: #705f49;
+  background: var(--surface-warning);
+  color: var(--muted);
   font-size: 11px;
   line-height: 1.6;
 }
@@ -633,7 +633,7 @@ textarea {
   gap: 12px;
   padding: 18px;
   border: 1px solid var(--border);
-  background: #fffdf9;
+  background: var(--surface);
 }
 .report-filters label {
   min-width: 0;
@@ -657,10 +657,10 @@ textarea {
   min-width: 0;
   padding: 18px;
   border: 1px solid var(--border);
-  background: #fffdf9;
+  background: var(--surface);
 }
 .report-metrics small {
-  color: #8c7767;
+  color: var(--muted);
   font-size: 9px;
   letter-spacing: 1.3px;
 }
@@ -679,7 +679,7 @@ textarea {
 .report-chart-card {
   padding: 22px;
   border: 1px solid var(--border);
-  background: #fffdf9;
+  background: var(--surface);
 }
 .report-card-heading {
   align-items: flex-start;
@@ -713,7 +713,7 @@ textarea {
   position: absolute;
   inset: 20%;
   border-radius: inherit;
-  background: #fffdf9;
+  background: var(--surface);
   content: "";
 }
 .report-donut > span {
@@ -783,7 +783,7 @@ textarea {
 .report-bar-track {
   height: 9px;
   overflow: hidden;
-  background: #f0ebe5;
+  background: var(--surface-soft);
 }
 .report-bar-track > span {
   display: block;
@@ -813,8 +813,8 @@ textarea {
   border-bottom: 1px solid var(--border);
 }
 .report-table thead {
-  color: #8c7767;
-  background: #fbf8f2;
+  color: var(--muted);
+  background: var(--surface-elevated);
   font-size: 9px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -864,8 +864,8 @@ textarea {
   padding: 14px 16px;
   border: 1px solid var(--toast-border);
   border-left: 4px solid var(--toast-accent);
-  background: #fffdf9;
-  color: #342e2d;
+  background: var(--surface);
+  color: var(--text);
   box-shadow: 0 12px 38px #342e2d24;
   animation: toast-in 180ms ease-out;
 }
@@ -917,7 +917,7 @@ textarea {
   width: min(460px, 100%);
   padding: 30px;
   border: 1px solid var(--border);
-  background: #fffdf9;
+  background: var(--surface);
   box-shadow: 0 20px 65px #1b111633;
   animation: modal-in 160ms ease-out;
 }

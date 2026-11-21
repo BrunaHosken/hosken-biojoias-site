@@ -1,18 +1,43 @@
 :root {
   font-family: "DM Sans", sans-serif;
-  color: #342e2d;
-  background: #fffdf9;
+  color: var(--text);
+  background: var(--page-bg);
   font-synthesis: none;
   font-weight: 400;
+  color-scheme: light;
+  --page-bg: #fffdf9;
+  --surface: #fffdf9;
+  --surface-soft: #f7f1e9;
+  --surface-elevated: #fbf8f2;
+  --surface-rose: #f2e2e4;
+  --surface-image: #f1e8e0;
+  --surface-green: #eef0e8;
+  --surface-warning: #fff4c9;
+  --surface-info: #e8f3f9;
+  --surface-neutral: #eef0f1;
+  --surface-overlay: #fffdf9e8;
+  --text: #342e2d;
+  --text-soft: #514843;
+  --success-text: #416d4b;
+  --warning-text: #705333;
+  --info-text: #285775;
+  --error-text: #8a4c51;
+  --floral: #965361;
+  --sage: #797e51;
   --wine: #701b34;
+  --wine-fill: #701b34;
+  --decorative: #a6886b;
   --muted: #7c746e;
   --border: #e8e1d8;
+  --focus-ring: #a47834;
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
 }
 a {
   color: inherit;
@@ -40,7 +65,7 @@ button:disabled {
 }
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid #a47834;
+  outline: 3px solid var(--focus-ring);
   outline-offset: 5px;
 }
 h1,
@@ -79,7 +104,7 @@ small,
   color: var(--muted);
 }
 .local-banner {
-  background: var(--wine);
+  background: var(--wine-fill);
   color: #fff;
   text-align: center;
   padding: 9px 20px;
@@ -99,7 +124,7 @@ header {
   padding: 0 5%;
   border-bottom: 1px solid var(--border);
   gap: 24px;
-  background: #fffdf9;
+  background: var(--surface);
 }
 .site-header {
   position: sticky;
@@ -145,7 +170,7 @@ header {
   font-size: 8px;
   letter-spacing: 2px;
   margin-top: 8px;
-  color: #73634f;
+  color: var(--muted);
 }
 nav,
 .header-actions {
@@ -162,6 +187,24 @@ nav a:hover,
 nav a.active {
   color: var(--wine);
   border-color: var(--wine);
+}
+.header-actions .theme-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+.header-actions .theme-toggle:hover {
+  color: var(--wine);
+  background: var(--surface-soft);
 }
 .header-actions {
   gap: 23px;

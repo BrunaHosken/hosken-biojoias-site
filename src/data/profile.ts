@@ -5,6 +5,7 @@ import { db } from "../firebase";
 export type CustomerProfile = {
   displayName?: string;
   phone?: string;
+  theme?: "light" | "dark";
 };
 
 export function useCustomerProfile(uid: string | undefined) {

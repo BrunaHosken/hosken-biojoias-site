@@ -9,7 +9,7 @@ import {
   updatePassword,
   updateProfile,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { deleteField, doc, setDoc } from "firebase/firestore";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { SessionContext, useToast } from "../../app/contexts";
 import { useCustomerProfile } from "../../data";
@@ -68,10 +68,14 @@ export function Account() {
       if (name !== session.user.displayName) {
         await updateProfile(session.user, { displayName: name });
       }
-      await setDoc(doc(db, "users", session.user.uid), {
-        displayName: name,
-        ...(phone ? { phone } : {}),
-      });
+      await setDoc(
+        doc(db, "users", session.user.uid),
+        {
+          displayName: name,
+          phone: phone || deleteField(),
+        },
+        { merge: true },
+      );
       notify("Seus dados foram atualizados.", "success");
       setEditingProfile(false);
     } catch (cause) {
@@ -169,6 +173,7 @@ export function Account() {
       await setDoc(doc(db, "users", credential.user.uid), {
         displayName,
         ...(phone ? { phone } : {}),
+        theme: "light",
       });
       notify("Sua conta foi criada.", "success");
       if (returnTo) navigate(returnTo, { replace: true });

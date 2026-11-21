@@ -5,7 +5,7 @@
   margin-top: 25px;
 }
 .empty > svg {
-  color: #a47b84;
+  color: var(--floral);
   width: 38px;
   height: 38px;
   margin-bottom: 18px;
@@ -30,7 +30,7 @@
 .order-card {
   border: 1px solid var(--border);
   padding: 24px 28px;
-  background: #fffdf9;
+  background: var(--surface);
 }
 .order-card-header {
   height: auto;
@@ -59,24 +59,24 @@
 .order-status {
   border-radius: 30px;
   padding: 8px 12px;
-  color: #73552f;
-  background: #f6efe3;
+  color: var(--warning-text);
+  background: var(--surface-warning);
   font-size: 11px;
 }
 .status-completed,
 .status-delivered {
-  color: #52683f;
-  background: #edf2e8;
+  color: var(--success-text);
+  background: var(--surface-green);
 }
 .status-in_transit,
 .status-shipped {
-  color: #426476;
-  background: #eaf1f4;
+  color: var(--info-text);
+  background: var(--surface-info);
 }
 .status-cancelled,
 .status-refunded {
-  color: #8a4c51;
-  background: #f7ebeb;
+  color: var(--error-text);
+  background: var(--surface-rose);
 }
 .order-items {
   display: grid;
@@ -108,7 +108,7 @@
 .order-tracking {
   padding: 12px 14px;
   margin: 0 0 16px;
-  background: #f4f0e9;
+  background: var(--surface-soft);
   font-size: 12px;
 }
 .order-total {

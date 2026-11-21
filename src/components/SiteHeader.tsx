@@ -1,8 +1,16 @@
 import { useContext, useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { LogOut, Menu, ShoppingBag, UserRound, X } from "lucide-react";
-import { BasketContext, SessionContext } from "../app/contexts";
+import {
+  LogOut,
+  Menu,
+  Moon,
+  ShoppingBag,
+  Sun,
+  UserRound,
+  X,
+} from "lucide-react";
+import { BasketContext, SessionContext, ThemeContext } from "../app/contexts";
 import { auth } from "../firebase";
 import {
   AdminHeaderNotificationBell,
@@ -21,6 +29,7 @@ const navigation = [
 export function SiteHeader() {
   const session = useContext(SessionContext);
   const basket = useContext(BasketContext);
+  const theme = useContext(ThemeContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const [compact, setCompact] = useState(false);
   const itemCount = Object.values(basket.items).reduce(
@@ -67,6 +76,27 @@ export function SiteHeader() {
         {session.admin && <AdminHeaderNotificationBell />}
         {session.user && !session.admin && (
           <CustomerHeaderNotificationBell uid={session.user.uid} />
+        )}
+        {session.user && theme.ready && (
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={
+              theme.theme === "dark"
+                ? "Ativar tema claro"
+                : "Ativar tema escuro"
+            }
+            title={
+              theme.theme === "dark"
+                ? "Ativar tema claro"
+                : "Ativar tema escuro"
+            }
+            onClick={() =>
+              void theme.chooseTheme(theme.theme === "dark" ? "light" : "dark")
+            }
+          >
+            {theme.theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
         )}
         {!session.admin && (
           <Link

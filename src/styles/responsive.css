@@ -63,7 +63,7 @@
     width: 100%;
     padding: 0 14px;
     border: 1px solid var(--border);
-    background: #fbf7f1;
+    background: var(--surface-elevated);
     color: var(--wine);
     font: inherit;
     font-size: 13px;
@@ -104,7 +104,7 @@
     margin: 0;
     padding: 11px;
     border: 1px solid var(--border);
-    background: #fffdf9;
+    background: var(--surface);
   }
   .local-banner {
     font-size: 8px;
@@ -179,7 +179,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    background: #fffdf9;
+    background: var(--surface);
     z-index: 10;
     padding: 20px 6%;
     border-bottom: 1px solid var(--border);
@@ -216,8 +216,20 @@
   .header-actions .bag {
     order: 4;
   }
-  .header-actions .header-logout {
+  .header-actions .theme-toggle {
+    order: 4;
+    width: 30px;
+    height: 30px;
+  }
+  .header-actions .theme-toggle svg {
+    width: 17px;
+    height: 17px;
+  }
+  .header-actions .bag {
     order: 5;
+  }
+  .header-actions .header-logout {
+    order: 6;
   }
   .site-header .notification-panel {
     position: fixed;
@@ -422,7 +434,7 @@
     width: 100%;
     padding: 0 13px;
     border: 1px solid var(--border);
-    background: #fbf7f1;
+    background: var(--surface-elevated);
     color: var(--wine);
     font-size: 12px;
     text-align: left;
@@ -443,7 +455,7 @@
     width: 100%;
     max-height: min(42dvh, 320px);
     overflow-y: auto;
-    background: #fffdf9;
+    background: var(--surface);
     box-shadow: 0 14px 30px #342e2d24;
   }
   .admin-inbox-layout.show-conversations .conversation-list {
@@ -601,12 +613,12 @@
 }
 @media (hover: none) {
   .notification-bell-button:hover:not(.has-notifications) {
-    color: #342e2d;
+    color: var(--text);
   }
   .product-card:visited:hover h3,
   .product-card:visited:hover p,
   .product-card:visited:hover > small {
-    color: #342e2d;
+    color: var(--text);
   }
 }
 @media (max-width: 380px) {
@@ -634,6 +646,14 @@
   .site-header .header-actions .notification-bell-button {
     width: 26px;
     height: 26px;
+  }
+  .site-header .header-actions .theme-toggle {
+    width: 26px;
+    height: 26px;
+  }
+  .site-header .header-actions .theme-toggle svg {
+    width: 15px;
+    height: 15px;
   }
   .site-header .header-actions .bag svg {
     width: 17px;

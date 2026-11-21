@@ -6,15 +6,18 @@ import {
   type ReactNode,
 } from "react";
 import { onIdTokenChanged } from "firebase/auth";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import {
   BasketContext,
   SessionContext,
   ToastContext,
+  ThemeContext,
+  type Theme,
   type Session,
   type ToastKind,
   type ToastMessage,
 } from "./contexts";
-import { auth, localMode } from "../firebase";
+import { auth, db, localMode } from "../firebase";
 import { ToastNotice } from "../components/Feedback";
 import { normalizeBasketItems } from "../data/basket";
 
@@ -44,6 +47,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
     ready: false,
   });
   const [items, setItems] = useState(readBasket);
+  const [theme, setTheme] = useState<Theme>("light");
+  const [themeReady, setThemeReady] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastId = useRef(0);
 
@@ -63,16 +68,74 @@ export function AppProviders({ children }: { children: ReactNode }) {
       onIdTokenChanged(auth, async (user) => {
         try {
           const token = await user?.getIdTokenResult();
+          if (!user) {
+            setTheme("light");
+            setThemeReady(true);
+            document.documentElement.dataset.theme = "light";
+          }
           setSession({
             user,
             admin: token?.claims.admin === true,
             ready: true,
           });
         } catch {
+          setTheme("light");
+          setThemeReady(true);
+          document.documentElement.dataset.theme = "light";
           setSession({ user: null, admin: false, ready: true });
         }
       }),
     [],
+  );
+
+  useEffect(() => {
+    const uid = session.user?.uid;
+    if (!uid) {
+      setTheme("light");
+      setThemeReady(true);
+      return;
+    }
+    setTheme("light");
+    document.documentElement.dataset.theme = "light";
+    setThemeReady(false);
+    return onSnapshot(
+      doc(db, "users", uid),
+      (snapshot) => {
+        setTheme(snapshot.data()?.theme === "dark" ? "dark" : "light");
+        setThemeReady(true);
+      },
+      () => {
+        setTheme("light");
+        setThemeReady(true);
+      },
+    );
+  }, [session.user?.uid]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const chooseTheme = useCallback(
+    async (nextTheme: Theme) => {
+      const user = session.user;
+      if (!user) {
+        setTheme("light");
+        return;
+      }
+      const previousTheme = theme;
+      setTheme(nextTheme);
+      try {
+        await setDoc(
+          doc(db, "users", user.uid),
+          { theme: nextTheme },
+          { merge: true },
+        );
+      } catch {
+        setTheme(previousTheme);
+        notify("Não foi possível salvar a preferência de tema.", "error");
+      }
+    },
+    [notify, session.user, theme],
   );
 
   useEffect(() => {
@@ -94,24 +157,28 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={notify}>
       <SessionContext.Provider value={session}>
-        <BasketContext.Provider
-          value={{ items, change, clear: () => setItems({}) }}
+        <ThemeContext.Provider
+          value={{ theme, ready: themeReady, chooseTheme }}
         >
-          {(localMode || publicPreview) && (
-            <div className="local-banner">
-              {publicPreview ? "PRÉVIA DO ATELIÊ" : "ATELIÊ EM CONSTRUÇÃO"}{" "}
-              <span>
-                {publicPreview
-                  ? "Versão de demonstração · dados ilustrativos · compras desativadas"
-                  : "Ambiente local · produtos e valores de exemplo · compras simuladas no emulador"}
-              </span>
-            </div>
-          )}
-          {toast && (
-            <ToastNotice toast={toast} onDismiss={() => setToast(null)} />
-          )}
-          {children}
-        </BasketContext.Provider>
+          <BasketContext.Provider
+            value={{ items, change, clear: () => setItems({}) }}
+          >
+            {(localMode || publicPreview) && (
+              <div className="local-banner">
+                {publicPreview ? "PRÉVIA DO ATELIÊ" : "ATELIÊ EM CONSTRUÇÃO"}{" "}
+                <span>
+                  {publicPreview
+                    ? "Versão de demonstração · dados ilustrativos · compras desativadas"
+                    : "Ambiente local · produtos e valores de exemplo · compras simuladas no emulador"}
+                </span>
+              </div>
+            )}
+            {toast && (
+              <ToastNotice toast={toast} onDismiss={() => setToast(null)} />
+            )}
+            {children}
+          </BasketContext.Provider>
+        </ThemeContext.Provider>
       </SessionContext.Provider>
     </ToastContext.Provider>
   );

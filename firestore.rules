@@ -131,10 +131,11 @@ service cloud.firestore {
     }
     match /users/{uid} {
       function validProfile(data) {
-        return data.keys().hasOnly(['displayName','phone'])
-          && text(data.displayName, 100)
+        return data.keys().hasOnly(['displayName','phone','theme'])
+          && (!('displayName' in data) || text(data.displayName, 100))
           && (!('phone' in data)
-            || (data.phone is string && data.phone.matches('^[0-9]{11}$')));
+            || (data.phone is string && data.phone.matches('^[0-9]{11}$')))
+          && (!('theme' in data) || data.theme in ['light','dark']);
       }
       allow read: if signedIn() && (request.auth.uid == uid || admin());
       allow create, update: if signedIn() && request.auth.uid == uid

@@ -10,7 +10,7 @@
   font-size: 10px;
   letter-spacing: 2px;
   font-weight: 500;
-  color: #876d50;
+  color: var(--muted);
   margin-bottom: 24px;
   line-height: 1.8;
 }
@@ -23,7 +23,7 @@
   display: inline-block;
   width: 18px;
   height: 1px;
-  background: #a6886b;
+  background: var(--decorative);
 }
 .hero h1 {
   font-size: clamp(46px, 4.9vw, 76px);
@@ -31,12 +31,12 @@
 .hero-copy > p {
   max-width: 400px;
   font-size: 14px;
-  color: #756b64;
+  color: var(--muted);
   margin: 25px 0 31px;
 }
 .button {
   border: 1px solid var(--wine);
-  background: var(--wine);
+  background: var(--wine-fill);
   color: white;
   display: inline-flex;
   align-items: center;
@@ -62,7 +62,7 @@
   align-items: center;
   gap: 10px;
   font-size: 11px;
-  color: #8c8175;
+  color: var(--muted);
   margin-top: 35px;
 }
 .hero-copy > .button.hero-custom-order-link {
@@ -80,7 +80,7 @@
   margin: 20px 0 28px;
   padding: 20px 24px;
   border: 1px solid var(--border);
-  background: #fbf8f2;
+  background: var(--surface-elevated);
 }
 .custom-order-callout p {
   margin: 5px 0 0;
@@ -88,7 +88,7 @@
   font-size: 12px;
 }
 .hero-art {
-  background: #f4eee6;
+  background: var(--surface-soft);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -107,7 +107,7 @@
 .art-bottom {
   font-size: 9px;
   letter-spacing: 3px;
-  color: #8c7767;
+  color: var(--muted);
 }
 .art-bottom {
   letter-spacing: 2px;
@@ -121,12 +121,12 @@
   padding: 22px 20px;
   font-size: 11px;
   letter-spacing: 0.4px;
-  color: #736957;
+  color: var(--muted);
 }
 .intro-strip span:before {
   content: "✧";
   margin-right: 13px;
-  color: #9f7968;
+  color: var(--muted);
 }
 .page {
   max-width: 1320px;
@@ -164,7 +164,7 @@
 }
 .line-card {
   padding: 28px;
-  background: #f4eee6;
+  background: var(--surface-soft);
   position: relative;
   overflow: hidden;
   transition: transform 0.2s;
@@ -173,33 +173,33 @@
   transform: translateY(-4px);
 }
 .line-eletroformacao {
-  background: #eef0e8;
+  background: var(--surface-green);
 }
 .line-flores-secas {
-  background: #f5eaec;
+  background: var(--surface-rose);
 }
 .line-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: #87746b;
+  color: var(--muted);
 }
 .tag {
   display: inline-block;
-  background: #fffdf9d9;
-  border: 1px solid #e4d8c9;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border);
   padding: 6px 9px;
   font:
     9px "DM Sans",
     sans-serif;
   letter-spacing: 1px;
-  color: #735f4c;
+  color: var(--muted);
 }
 .line-flower {
   width: 100%;
   height: 145px;
-  color: #965361;
+  color: var(--floral);
   margin: 25px 0 17px;
 }
 .line-card-gallery {
@@ -215,16 +215,16 @@
   height: 100%;
   min-width: 0;
   object-fit: contain;
-  background: #f1e8e0;
+  background: var(--surface-image);
 }
 .line-card-gallery-single img {
   grid-column: 1 / -1;
 }
 .line-eletroformacao .line-flower {
-  color: #797e51;
+  color: var(--sage);
 }
 .line-flores-secas .line-flower {
-  color: #ad7081;
+  color: var(--floral);
 }
 .line-card h3 {
   display: flex;
@@ -234,12 +234,12 @@
 }
 .line-card p {
   font-size: 12px;
-  color: #7f7268;
+  color: var(--muted);
   margin: 0;
 }
 .story-band {
   text-align: center;
-  background: #f4f0e9;
+  background: var(--surface-soft);
   padding: 65px 24px;
 }
 .story-band h2 {
@@ -274,7 +274,7 @@
   gap: 30px;
 }
 .piece-art {
-  background: #f1e8e0;
+  background: var(--surface-image);
   aspect-ratio: 4/4.5;
   position: relative;
   display: flex;
@@ -287,13 +287,13 @@
 .piece-art > svg {
   width: 55%;
   height: 55%;
-  color: #827c6a;
+  color: var(--muted);
 }
 .piece-art > small {
   font-size: 8px;
   letter-spacing: 2px;
   margin-top: 20px;
-  color: #957e6d;
+  color: var(--muted);
 }
 .piece-art .tag {
   position: absolute;
@@ -328,7 +328,7 @@
 .product-card:visited h3,
 .product-card:visited p,
 .product-card:visited > small {
-  color: #342e2d;
+  color: var(--text);
 }
 .product-card:hover h3 {
   color: var(--wine);
@@ -358,7 +358,7 @@
   flex: 0 0 auto;
   padding: 0;
   border: 1px solid var(--border);
-  background: #f1e8e0;
+  background: var(--surface-image);
 }
 .product-thumbnails button.selected {
   border: 2px solid var(--wine);
@@ -421,7 +421,7 @@
   min-width: 116px;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  background: #fffdf9;
+  background: var(--surface);
   text-align: left;
 }
 .product-color-option.is-selected {
@@ -463,7 +463,7 @@
 .description {
   white-space: pre-wrap;
   font-size: 14px;
-  color: #70665f;
+  color: var(--muted);
 }
 .price {
   font-size: 23px;

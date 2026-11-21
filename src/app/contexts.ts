@@ -27,3 +27,15 @@ export const BasketContext = createContext<Basket>({
   change: () => {},
   clear: () => {},
 });
+
+export type Theme = "light" | "dark";
+export type ThemeSettings = {
+  theme: Theme;
+  ready: boolean;
+  chooseTheme: (theme: Theme) => Promise<void>;
+};
+export const ThemeContext = createContext<ThemeSettings>({
+  theme: "light",
+  ready: false,
+  chooseTheme: async () => {},
+});

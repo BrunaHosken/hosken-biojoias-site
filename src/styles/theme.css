@@ -1,0 +1,95 @@
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page-bg: #171416;
+  --surface: #211b1e;
+  --surface-soft: #2a2326;
+  --surface-elevated: #30282b;
+  --surface-rose: #40282f;
+  --surface-image: #30282b;
+  --surface-green: #27352b;
+  --surface-warning: #3a301d;
+  --surface-info: #243641;
+  --surface-neutral: #323033;
+  --surface-overlay: #211b1ee8;
+  --text: #f2e9e5;
+  --text-soft: #d5c8c3;
+  --success-text: #a8d2ae;
+  --warning-text: #e8cb83;
+  --info-text: #a9d1e5;
+  --error-text: #e6a1a8;
+  --floral: #d49aa8;
+  --sage: #b7c493;
+  --wine: #dc91a4;
+  --wine-fill: #762039;
+  --logo-surface: #f8f3ec;
+  --decorative: #b7a38e;
+  --muted: #b6a8a2;
+  --border: #4b3f43;
+  --focus-ring: #e2b56c;
+}
+
+:root[data-theme="dark"] body {
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  border-color: var(--border);
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+:root[data-theme="dark"] .site-header.header-compact {
+  box-shadow: 0 6px 18px #0005;
+}
+
+:root[data-theme="dark"] .header-actions .theme-toggle {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .header-actions .theme-toggle:hover {
+  color: var(--wine);
+  background: var(--surface-elevated);
+}
+
+:root[data-theme="dark"] .hero-art img {
+  mix-blend-mode: normal;
+  padding: 10px;
+  background: var(--logo-surface);
+  box-shadow: 0 14px 40px #0005;
+}
+
+:root[data-theme="dark"] .about img {
+  mix-blend-mode: normal;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--logo-surface);
+  box-shadow: 0 14px 40px #0005;
+}
+
+:root[data-theme="dark"] .admin-nav-group,
+:root[data-theme="dark"] .admin-nav-group + .admin-nav-group {
+  background: var(--surface-elevated);
+}
+
+:root[data-theme="dark"] .notification-panel,
+:root[data-theme="dark"] .notification-panel > header {
+  box-shadow: 0 15px 45px #0006;
+}
+
+:root[data-theme="dark"] .image-lightbox {
+  background: rgb(8 6 7 / 92%);
+}
+
+:root[data-theme="dark"] .status-badge,
+:root[data-theme="dark"] .stock-badge {
+  color: var(--text-soft);
+}
