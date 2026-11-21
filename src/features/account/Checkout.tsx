@@ -92,7 +92,7 @@ export function Checkout() {
   const [draftReady, setDraftReady] = useState(false);
   const [draftOwnerUid, setDraftOwnerUid] = useState("");
   const [paymentMethod, setPaymentMethod] =
-    useState<CheckoutPaymentMethod>("credit_card");
+    useState<CheckoutPaymentMethod>("debit_card");
   const [installments, setInstallments] = useState(1);
   const [busy, setBusy] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
