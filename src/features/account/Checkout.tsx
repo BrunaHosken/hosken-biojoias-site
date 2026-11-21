@@ -33,6 +33,7 @@ import { CheckoutDeliveryStep } from "./CheckoutDeliveryStep";
 import { CheckoutPaymentStep } from "./CheckoutPaymentStep";
 import { CheckoutSummary } from "./CheckoutSummary";
 import {
+  basketCheckoutFingerprint,
   checkoutDraftStorageKey,
   DEMO_INSTALLMENT_RATE,
   emptyCheckoutDraft,
@@ -54,6 +55,10 @@ export function Checkout() {
   const customQuoteId = searchParams.get("customQuote") || "";
   const conversationId = searchParams.get("conversation") || "";
   const customCheckoutRequested = Boolean(customQuoteId || conversationId);
+  const basketFingerprint = useMemo(
+    () => basketCheckoutFingerprint(basket.items),
+    [basket.items],
+  );
   const customCheckoutValid = Boolean(customQuoteId && conversationId);
   const customChatParams = customCheckoutValid
     ? `&customQuote=${encodeURIComponent(customQuoteId)}&conversation=${encodeURIComponent(conversationId)}`
@@ -106,11 +111,17 @@ export function Checkout() {
         session.user.displayName || "",
         session.user.email || "",
         customCheckoutRequested ? customQuoteId : "",
+        basketFingerprint,
       ),
     );
     setDraftOwnerUid(session.user.uid);
     setDraftReady(true);
-  }, [session.user?.uid, customQuoteId, customCheckoutRequested]);
+  }, [
+    session.user?.uid,
+    customQuoteId,
+    customCheckoutRequested,
+    basketFingerprint,
+  ]);
 
   useEffect(() => {
     if (!session.user || customerProfile.loading) return;
@@ -160,13 +171,19 @@ export function Checkout() {
   }, [session.user?.uid]);
 
   useEffect(() => {
-    if (!session.user || !draftReady || draftOwnerUid !== session.user.uid)
+    if (
+      !session.user ||
+      !draftReady ||
+      draftOwnerUid !== session.user.uid ||
+      busy
+    )
       return;
     try {
       localStorage.setItem(
         checkoutDraftStorageKey(
           session.user.uid,
           customCheckoutRequested ? customQuoteId : "",
+          basketFingerprint,
         ),
         JSON.stringify(draft),
       );
@@ -180,6 +197,8 @@ export function Checkout() {
     session.user,
     customQuoteId,
     customCheckoutRequested,
+    basketFingerprint,
+    busy,
   ]);
 
   const basketLines: CheckoutLine[] = useMemo(
@@ -543,6 +562,7 @@ export function Checkout() {
         checkoutDraftStorageKey(
           session.user.uid,
           customCheckoutRequested ? customQuoteId : "",
+          basketFingerprint,
         ),
         JSON.stringify(currentDraft),
       );
@@ -580,12 +600,14 @@ export function Checkout() {
           checkoutDraftStorageKey(
             session.user.uid,
             customCheckoutRequested ? customQuoteId : "",
+            basketFingerprint,
           ),
         );
         sessionStorage.removeItem(
           checkoutDraftStorageKey(
             session.user.uid,
             customCheckoutRequested ? customQuoteId : "",
+            basketFingerprint,
           ),
         );
       } catch {

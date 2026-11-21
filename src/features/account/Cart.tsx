@@ -18,6 +18,7 @@ import {
   getProductStock,
   isNecklaceCategory,
 } from "../../data/productAvailability";
+import { clearBasketCheckoutDrafts } from "./checkoutModel";
 
 export function Cart() {
   const session = useContext(SessionContext);
@@ -34,6 +35,12 @@ export function Cart() {
     .filter((product): product is Product => Boolean(product));
   if (session.admin) return <Navigate to="/admin" replace />;
   const entries = Object.entries(items);
+  function changeQuantity(id: string, delta: number) {
+    if (delta < 0 && session.user) {
+      clearBasketCheckoutDrafts(session.user.uid);
+    }
+    change(id, delta);
+  }
   const total = entries.reduce((sum, [id, quantity]) => {
     const selection = parseBasketItemId(id);
     const product = visibleProducts.find(
@@ -143,7 +150,7 @@ export function Cart() {
                     <button
                       className="icon"
                       aria-label="Diminuir quantidade"
-                      onClick={() => change(id, -1)}
+                      onClick={() => changeQuantity(id, -1)}
                     >
                       <Minus size={16} />
                     </button>
@@ -164,7 +171,7 @@ export function Cart() {
                   </div>
                   <button
                     className="text-button"
-                    onClick={() => change(id, -q)}
+                    onClick={() => changeQuantity(id, -q)}
                   >
                     Remover
                   </button>

@@ -393,6 +393,51 @@
   gap: 11px;
   margin-top: 23px;
 }
+.product-added-note {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 15px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+.product-added-check {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  color: var(--wine);
+  background: var(--surface-rose);
+  border-radius: 50%;
+}
+.product-added-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.product-added-copy strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.product-added-copy small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.product-added-note > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--wine);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.product-added-note > a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 .product-chat-link {
   gap: 12px;
 }

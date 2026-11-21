@@ -391,6 +391,12 @@
     grid-template-columns: 1fr;
     gap: 30px;
   }
+  .product-added-note {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .product-added-note > a {
+    grid-column: 2;
+  }
   .form-pair {
     grid-template-columns: 1fr;
     gap: 0;

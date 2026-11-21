@@ -73,10 +73,47 @@ export function emptyCheckoutDraft(name = "", email = ""): CheckoutDraft {
   };
 }
 
-export function checkoutDraftStorageKey(uid: string, customQuoteId = "") {
-  return customQuoteId
-    ? `hosken-checkout-draft:${uid}:custom:${customQuoteId}`
-    : `hosken-checkout-draft:${uid}`;
+export function checkoutDraftStorageKey(
+  uid: string,
+  customQuoteId = "",
+  basketFingerprint?: string,
+) {
+  if (customQuoteId)
+    return `hosken-checkout-draft:${uid}:custom:${customQuoteId}`;
+  return basketFingerprint === undefined
+    ? `hosken-checkout-draft:${uid}`
+    : `hosken-checkout-draft:${uid}:basket:${encodeURIComponent(basketFingerprint)}`;
+}
+
+export function basketCheckoutFingerprint(items: Record<string, number>) {
+  return JSON.stringify(
+    Object.entries(items).sort(([first], [second]) =>
+      first.localeCompare(second),
+    ),
+  );
+}
+
+export function clearBasketCheckoutDrafts(uid: string) {
+  clearBasketCheckoutDraftsExcept(uid, "");
+}
+
+function clearBasketCheckoutDraftsExcept(uid: string, keepKey: string) {
+  const baseKey = checkoutDraftStorageKey(uid);
+  try {
+    for (const storage of [localStorage, sessionStorage]) {
+      for (let index = storage.length - 1; index >= 0; index -= 1) {
+        const key = storage.key(index);
+        if (
+          key !== keepKey &&
+          (key === baseKey || key?.startsWith(`${baseKey}:basket:`))
+        ) {
+          storage.removeItem(key);
+        }
+      }
+    }
+  } catch {
+    // O carrinho continua funcionando se o navegador bloquear o armazenamento.
+  }
 }
 
 export function loadCheckoutDraft(
@@ -84,9 +121,17 @@ export function loadCheckoutDraft(
   name: string,
   email: string,
   customQuoteId = "",
+  basketFingerprint = "",
 ): CheckoutDraft {
   try {
-    const storageKey = checkoutDraftStorageKey(uid, customQuoteId);
+    const storageKey = checkoutDraftStorageKey(
+      uid,
+      customQuoteId,
+      customQuoteId ? undefined : basketFingerprint,
+    );
+    if (!customQuoteId && basketFingerprint) {
+      clearBasketCheckoutDraftsExcept(uid, storageKey);
+    }
     const localSaved = localStorage.getItem(storageKey);
     const sessionSaved = sessionStorage.getItem(storageKey);
     const savedDraft = localSaved || sessionSaved;

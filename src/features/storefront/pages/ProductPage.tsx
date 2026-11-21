@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { MessageCircle, ShoppingBag } from "lucide-react";
+import { ArrowRight, Check, MessageCircle, ShoppingBag } from "lucide-react";
 import { BasketContext, SessionContext } from "../../../app/contexts";
 import { availability } from "../../../app/constants";
 import { Notice } from "../../../components/Feedback";
@@ -192,10 +192,24 @@ export function ProductPage() {
               </div>
             )}
             {!session.admin && !!selectedBasketQuantity && (
-              <p role="status">
-                {selectedBasketQuantity} nesta opção na sacola.{" "}
-                <Link to="/carrinho">Ver carrinho →</Link>
-              </p>
+              <div className="product-added-note" role="status">
+                <span className="product-added-check" aria-hidden="true">
+                  <Check size={18} />
+                </span>
+                <span className="product-added-copy">
+                  <strong>
+                    {selectedBasketQuantity === 1
+                      ? "1 peça adicionada à sacola"
+                      : `${selectedBasketQuantity} peças adicionadas à sacola`}
+                  </strong>
+                  {selectedVariant && (
+                    <small>Cor escolhida: {selectedVariant.colorName}</small>
+                  )}
+                </span>
+                <Link to="/carrinho">
+                  Ver sacola <ArrowRight size={16} />
+                </Link>
+              </div>
             )}
           </div>
         </div>
