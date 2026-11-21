@@ -44,7 +44,7 @@ export function AdminProductManager() {
   const products = useRecords<Product>("products", true);
   const categories = useRecords<Taxonomy>("categories", true);
   const lines = useRecords<Taxonomy>("collections", true);
-  const colors = useRecords<Taxonomy>("colors");
+  const colors = useRecords<Taxonomy>("colors", true);
   const [editing, setEditing] = useState("");
   const [product, setProduct] = useState(blankProduct);
   const [loadingShipping, setLoadingShipping] = useState(false);
@@ -188,15 +188,34 @@ export function AdminProductManager() {
     const productCategory = categories.data.find(
       (category) => category.id === product.categoryId,
     );
-    if (!productCategory) {
+    if (productCategory?.status !== "published") {
+      notify("Selecione um tipo de peça publicado antes de salvar.", "warning");
+      setBusy(false);
+      return;
+    }
+    const productLine = lines.data.find(
+      (line) => line.id === product.collectionId,
+    );
+    if (productLine?.status !== "published") {
+      notify("Selecione uma linha publicada antes de salvar.", "warning");
+      setBusy(false);
+      return;
+    }
+    const colorVariants = product.colorVariants || [];
+    if (
+      colorVariants.some(
+        (variant) =>
+          colors.data.find((color) => color.id === variant.colorId)?.status !==
+          "published",
+      )
+    ) {
       notify(
-        "Selecione um tipo de peça cadastrado antes de salvar.",
+        "Remova as cores não publicadas ou publique-as antes de salvar o produto.",
         "warning",
       );
       setBusy(false);
       return;
     }
-    const colorVariants = product.colorVariants || [];
     const variantStock = colorVariants.reduce(
       (total, variant) => total + variant.stock,
       0,

@@ -9,4 +9,5 @@ export * from "./data/chat";
 export * from "./data/customOrders";
 export * from "./data/formatting";
 export * from "./data/productAvailability";
+export * from "./data/productVisibility";
 export * from "./data/pricing";

@@ -52,6 +52,13 @@ export function AdminProductFields({
       color.status === "published" ||
       product.colorVariants?.some((variant) => variant.colorId === color.id),
   );
+  const productLines = lines.filter(
+    (line) => line.status === "published" || line.id === product.collectionId,
+  );
+  const productCategories = categories.filter(
+    (category) =>
+      category.status === "published" || category.id === product.categoryId,
+  );
   const selectedCategory = categories.find(
     (category) => category.id === product.categoryId,
   );
@@ -62,7 +69,7 @@ export function AdminProductFields({
         id: variant.colorId,
         name: variant.colorName,
         slug: variant.colorId,
-        status: "published",
+        status: "draft",
       });
     }
   }
@@ -158,7 +165,11 @@ export function AdminProductFields({
                         updateColorVariants(next);
                       }}
                     />
-                    <span>{color.name}</span>
+                    <span>
+                      {color.name}
+                      {color.status !== "published" &&
+                        " (não publicada; desmarque para salvar)"}
+                    </span>
                   </label>
                   {variant ? (
                     <label className="admin-color-stock-input">
@@ -168,6 +179,7 @@ export function AdminProductFields({
                         type="number"
                         min="0"
                         step="1"
+                        disabled={color.status !== "published"}
                         value={variant.stock}
                         onChange={(event) =>
                           updateColorVariants(
@@ -240,9 +252,10 @@ export function AdminProductFields({
           }
         >
           <option value="">Selecione</option>
-          {lines.map((t) => (
-            <option key={t.id} value={t.id}>
+          {productLines.map((t) => (
+            <option key={t.id} value={t.id} disabled={t.status !== "published"}>
               {t.name}
+              {t.status !== "published" ? " (não publicada)" : ""}
             </option>
           ))}
         </select>
@@ -258,9 +271,10 @@ export function AdminProductFields({
           }}
         >
           <option value="">Selecione</option>
-          {categories.map((t) => (
-            <option key={t.id} value={t.id}>
+          {productCategories.map((t) => (
+            <option key={t.id} value={t.id} disabled={t.status !== "published"}>
               {t.name}
+              {t.status !== "published" ? " (não publicado)" : ""}
             </option>
           ))}
         </select>

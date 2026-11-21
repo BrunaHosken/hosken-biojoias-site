@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { MessageCircle, ShoppingBag } from "lucide-react";
 import { BasketContext, SessionContext } from "../../../app/contexts";
@@ -11,6 +11,7 @@ import {
   money,
   getBasketQuantityForVariant,
   makeBasketItemId,
+  getStorefrontProduct,
   useRecords,
   type Product,
   type Taxonomy,
@@ -26,9 +27,23 @@ export function ProductPage() {
   const session = useContext(SessionContext);
   const products = useRecords<Product>("products");
   const categories = useRecords<Taxonomy>("categories");
+  const lines = useRecords<Taxonomy>("collections");
+  const colors = useRecords<Taxonomy>("colors");
   const { items, change } = useContext(BasketContext);
   const [selectedColorId, setSelectedColorId] = useState("");
-  const product = products.data.find((p) => p.id === id);
+  const productRecord = products.data.find((p) => p.id === id);
+  const product = useMemo(
+    () =>
+      productRecord
+        ? getStorefrontProduct(
+            productRecord,
+            categories.data,
+            lines.data,
+            colors.data,
+          )
+        : undefined,
+    [productRecord, categories.data, lines.data, colors.data],
+  );
   const colorVariants = product?.colorVariants || [];
   const hasColorChoices = colorVariants.length > 0;
   const selectedVariant = colorVariants.find(
@@ -38,10 +53,7 @@ export function ProductPage() {
     ? selectedVariant?.stock || 0
     : (product?.stock ?? 0);
   const basketItemId = product
-    ? makeBasketItemId(
-        product.id,
-        hasColorChoices ? selectedColorId : "",
-      )
+    ? makeBasketItemId(product.id, hasColorChoices ? selectedColorId : "")
     : "";
   const selectedBasketQuantity = basketItemId ? items[basketItemId] || 0 : 0;
   const basketQuantityForVariant = product
@@ -99,6 +111,7 @@ export function ProductPage() {
                       key={variant.colorId}
                       className={`product-color-option${selectedColorId === variant.colorId ? " is-selected" : ""}`}
                       aria-pressed={selectedColorId === variant.colorId}
+                      disabled={variant.stock <= 0}
                       onClick={() => setSelectedColorId(variant.colorId)}
                     >
                       <strong>{variant.colorName}</strong>
@@ -187,7 +200,11 @@ export function ProductPage() {
           </div>
         </div>
       ) : (
-        !products.loading && !products.error && <h1>Peça não encontrada</h1>
+        !products.loading &&
+        !categories.loading &&
+        !lines.loading &&
+        !colors.loading &&
+        !products.error && <h1>Peça não encontrada</h1>
       )}
     </div>
   );

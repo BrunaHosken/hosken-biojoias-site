@@ -7,6 +7,7 @@ import {
   getProductAvailability,
   getProductTotalPriceCents,
   money,
+  getStorefrontProduct,
   useRecords,
   type Product,
   type Taxonomy,
@@ -23,12 +24,18 @@ export function Shop() {
   const products = useRecords<Product>("products");
   const lines = useRecords<Taxonomy>("collections");
   const cats = useRecords<Taxonomy>("categories");
+  const colors = useRecords<Taxonomy>("colors");
   const [line, setLine] = useState(
     new URLSearchParams(location.search).get("linha") || "",
   );
   const [cat, setCat] = useState("");
   const [search, setSearch] = useState("");
-  const filtered = products.data.filter(
+  const visibleProducts = products.data
+    .map((product) =>
+      getStorefrontProduct(product, cats.data, lines.data, colors.data),
+    )
+    .filter((product): product is Product => Boolean(product));
+  const filtered = visibleProducts.filter(
     (p) =>
       (!line || p.collectionId === line) &&
       (!cat || p.categoryId === cat) &&
@@ -112,23 +119,28 @@ export function Shop() {
           </Link>
         ))}
       </div>
-      {!products.loading && !products.error && !filtered.length && (
-        <div className="empty">
-          <Flower2 />
-          <h2>Novas flores estão a caminho.</h2>
-          <p>Ainda não há peças publicadas nesta seleção.</p>
-          <button
-            className="button secondary"
-            onClick={() => {
-              setCat("");
-              setLine("");
-              setSearch("");
-            }}
-          >
-            Ver todas as peças
-          </button>
-        </div>
-      )}
+      {!products.loading &&
+        !lines.loading &&
+        !cats.loading &&
+        !colors.loading &&
+        !products.error &&
+        !filtered.length && (
+          <div className="empty">
+            <Flower2 />
+            <h2>Novas flores estão a caminho.</h2>
+            <p>Ainda não há peças publicadas nesta seleção.</p>
+            <button
+              className="button secondary"
+              onClick={() => {
+                setCat("");
+                setLine("");
+                setSearch("");
+              }}
+            >
+              Ver todas as peças
+            </button>
+          </div>
+        )}
     </div>
   );
 }

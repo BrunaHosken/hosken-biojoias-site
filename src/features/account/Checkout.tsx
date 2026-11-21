@@ -14,6 +14,7 @@ import {
   getBasketQuantityForVariant,
   getProductTotalPriceCents,
   parseBasketItemId,
+  getStorefrontProduct,
   useRecords,
   useConversationQuotes,
   watchSavedAddresses,
@@ -65,6 +66,22 @@ export function Checkout() {
   );
   const products = useRecords<Product>("products");
   const categories = useRecords<Taxonomy>("categories");
+  const collections = useRecords<Taxonomy>("collections");
+  const colors = useRecords<Taxonomy>("colors");
+  const visibleProducts = useMemo(
+    () =>
+      products.data
+        .map((product) =>
+          getStorefrontProduct(
+            product,
+            categories.data,
+            collections.data,
+            colors.data,
+          ),
+        )
+        .filter((product): product is Product => Boolean(product)),
+    [products.data, categories.data, collections.data, colors.data],
+  );
   const customerProfile = useCustomerProfile(session.user?.uid);
   const [draft, setDraft] = useState<CheckoutDraft>(() => emptyCheckoutDraft());
   const [draftReady, setDraftReady] = useState(false);
@@ -169,7 +186,7 @@ export function Checkout() {
     () =>
       Object.entries(basket.items).map(([basketItemId, quantity]) => {
         const selection = parseBasketItemId(basketItemId);
-        const product = products.data.find(
+        const product = visibleProducts.find(
           (item) => item.id === selection.productId,
         );
         const variant = product?.colorVariants?.find(
@@ -191,7 +208,7 @@ export function Checkout() {
           product,
         };
       }),
-    [basket.items, products.data, categories.data],
+    [basket.items, visibleProducts, categories.data],
   );
   const customQuoteLine: CheckoutLine | undefined = customQuote
     ? {
@@ -206,8 +223,7 @@ export function Checkout() {
           slug: customQuote.categorySlug,
         }),
         unitPriceCents:
-          customQuote.basePriceCents +
-          (customQuote.chainAddonPriceCents || 0),
+          customQuote.basePriceCents + (customQuote.chainAddonPriceCents || 0),
         quantity: 1,
         product: undefined,
         displayName: customQuote.title,
@@ -265,12 +281,15 @@ export function Checkout() {
       });
   const checkoutItemsLoading = customCheckoutRequested
     ? customCheckoutValid && customQuotes.loading
-    : products.loading;
+    : products.loading ||
+      categories.loading ||
+      collections.loading ||
+      colors.loading;
   const checkoutItemsError = customCheckoutRequested
     ? customCheckoutValid
       ? customQuotes.error
       : "Não foi possível abrir esta proposta personalizada. Volte ao chat e tente novamente."
-    : products.error;
+    : products.error || categories.error || collections.error || colors.error;
   const cardTotalCents = Math.round(
     subtotalCents * (1 + DEMO_INSTALLMENT_RATE * Math.max(0, installments - 1)),
   );

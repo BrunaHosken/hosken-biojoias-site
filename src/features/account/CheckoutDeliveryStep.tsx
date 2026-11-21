@@ -109,7 +109,7 @@ export function CheckoutDeliveryStep({
       </div>
       {draft.deliveryMethod === "sedex" && (
         <p className="checkout-sedex-note">
-          Pedidos com Sedex são enviados em até 48 horas úteis após a confirmação
+          Pedidos com Sedex são enviados em até 2 dias úteis após a confirmação
           do pagamento.
         </p>
       )}

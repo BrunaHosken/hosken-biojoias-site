@@ -9,6 +9,7 @@ import {
   isProductAvailable,
   money,
   parseBasketItemId,
+  getStorefrontProduct,
   useRecords,
   type Product,
   type Taxonomy,
@@ -24,11 +25,18 @@ export function Cart() {
   const navigate = useNavigate();
   const products = useRecords<Product>("products");
   const categories = useRecords<Taxonomy>("categories");
+  const lines = useRecords<Taxonomy>("collections");
+  const colors = useRecords<Taxonomy>("colors");
+  const visibleProducts = products.data
+    .map((product) =>
+      getStorefrontProduct(product, categories.data, lines.data, colors.data),
+    )
+    .filter((product): product is Product => Boolean(product));
   if (session.admin) return <Navigate to="/admin" replace />;
   const entries = Object.entries(items);
   const total = entries.reduce((sum, [id, quantity]) => {
     const selection = parseBasketItemId(id);
-    const product = products.data.find(
+    const product = visibleProducts.find(
       (item) => item.id === selection.productId,
     );
     const chainPrice = isNecklaceCategory(
@@ -40,10 +48,13 @@ export function Cart() {
   const canCheckout =
     entries.length > 0 &&
     !products.loading &&
+    !categories.loading &&
+    !lines.loading &&
+    !colors.loading &&
     !products.error &&
     entries.every(([id]) => {
       const selection = parseBasketItemId(id);
-      const product = products.data.find(
+      const product = visibleProducts.find(
         (item) => item.id === selection.productId,
       );
       if (!product) return false;
@@ -85,7 +96,7 @@ export function Cart() {
           <div>
             {entries.map(([id, q]) => {
               const selection = parseBasketItemId(id);
-              const p = products.data.find(
+              const p = visibleProducts.find(
                 (product) => product.id === selection.productId,
               );
               const variant = p?.colorVariants?.find(
@@ -105,7 +116,9 @@ export function Cart() {
                 quantityForVariant <= variantStock,
               );
               const necklace = isNecklaceCategory(
-                categories.data.find((category) => category.id === p?.categoryId),
+                categories.data.find(
+                  (category) => category.id === p?.categoryId,
+                ),
               );
               const itemPrice = getProductTotalPriceCents(p, necklace);
               return (

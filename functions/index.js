@@ -324,7 +324,8 @@ export const createDemoOrder = onCall({ region }, async (request) => {
           );
         }
         const unitPriceCents =
-          quote.basePriceCents + (hasChainOption ? quote.chainAddonPriceCents : 0);
+          quote.basePriceCents +
+          (hasChainOption ? quote.chainAddonPriceCents : 0);
         if (!Number.isSafeInteger(unitPriceCents)) {
           throw new HttpsError(
             "failed-precondition",
@@ -378,6 +379,14 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         const collectionName = collectionSnapshot.exists
           ? String(collectionSnapshot.get("name") || "").trim()
           : "";
+        if (
+          !categorySnapshot.exists ||
+          categorySnapshot.get("status") !== "published" ||
+          !collectionSnapshot.exists ||
+          collectionSnapshot.get("status") !== "published"
+        ) {
+          throw new HttpsError("failed-precondition", "catalog-unavailable");
+        }
         const isNecklace = /(^|-)colar(es)?(-|$)/.test(categorySlug);
         const colorVariants = Array.isArray(product.colorVariants)
           ? product.colorVariants
@@ -400,6 +409,19 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         );
         if (variantsById.size !== colorVariants.length) {
           throw new HttpsError("failed-precondition", "invalid-product-stock");
+        }
+        for (const colorId of new Set(
+          productItems.map((item) => item.variantId).filter(Boolean),
+        )) {
+          const colorSnapshot = await transaction.get(
+            db.collection("colors").doc(colorId),
+          );
+          if (
+            !colorSnapshot.exists ||
+            colorSnapshot.get("status") !== "published"
+          ) {
+            throw new HttpsError("failed-precondition", "color-unavailable");
+          }
         }
         if (
           product.status !== "published" ||
