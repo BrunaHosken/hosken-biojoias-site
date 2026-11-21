@@ -15,6 +15,7 @@ import { SessionContext, useToast } from "../../app/contexts";
 import { useCustomerProfile } from "../../data";
 import { auth, db, localMode } from "../../firebase";
 import { formatBrazilianMobile } from "./checkoutModel";
+import { PushNotificationSettings } from "../notifications/PushNotificationSettings";
 
 export function Account() {
   const session = useContext(SessionContext);
@@ -245,6 +246,7 @@ export function Account() {
                 </div>
               </>
             )}
+            <PushNotificationSettings uid={session.user.uid} />
             <section className="account-setting-card">
               <header className="account-setting-header">
                 <div>

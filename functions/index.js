@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 initializeApp();
@@ -9,6 +11,89 @@ const db = getFirestore();
 const region = "southamerica-east1";
 const installmentRate = 0.02;
 const maxItems = 20;
+
+function pushTokenDocumentId(token) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function validatePushToken(value) {
+  if (typeof value !== "string" || value.length < 40 || value.length > 4096) {
+    throw new HttpsError("invalid-argument", "Invalid push token.");
+  }
+  return value;
+}
+
+export const registerPushToken = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const token = validatePushToken(request.data?.token);
+  const tokenId = pushTokenDocumentId(token);
+  await db.collection("pushSubscriptions").doc(tokenId).set({
+    uid: request.auth.uid,
+    isAdmin: request.auth.token.admin === true,
+    token,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  return { registered: true };
+});
+
+export const unregisterPushToken = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const token = validatePushToken(request.data?.token);
+  const subscriptionRef = db.collection("pushSubscriptions").doc(pushTokenDocumentId(token));
+  const subscription = await subscriptionRef.get();
+  if (subscription.exists && subscription.get("uid") === request.auth.uid) {
+    await subscriptionRef.delete();
+  }
+  return { unregistered: true };
+});
+
+async function sendPushToSubscriptions(query, notification) {
+  const snapshot = await query.get();
+  if (snapshot.empty) return;
+
+  const subscriptions = snapshot.docs.filter((item) => {
+    const token = item.get("token");
+    return typeof token === "string" && token.length > 0;
+  });
+  for (let offset = 0; offset < subscriptions.length; offset += 500) {
+    const batch = subscriptions.slice(offset, offset + 500);
+    const response = await getMessaging().sendEachForMulticast({
+      tokens: batch.map((item) => item.get("token")),
+      data: {
+        title: notification.title,
+        body: notification.body,
+        path: notification.path,
+        tag: notification.tag,
+      },
+      webpush: { headers: { TTL: "3600", Urgency: "high" } },
+    });
+    const staleSubscriptions = [];
+    response.responses.forEach((result, index) => {
+      if (
+        !result.success &&
+        ["messaging/invalid-registration-token", "messaging/registration-token-not-registered"].includes(result.error?.code)
+      ) {
+        staleSubscriptions.push(batch[index].ref.delete());
+      }
+    });
+    await Promise.all(staleSubscriptions);
+  }
+}
+
+function notifyAdmins(title, body, path, tag) {
+  return sendPushToSubscriptions(
+    db.collection("pushSubscriptions").where("isAdmin", "==", true),
+    { title, body, path, tag },
+  );
+}
+
+function notifyCustomer(uid, title, body, path, tag) {
+  if (typeof uid !== "string" || !uid) return Promise.resolve();
+  return sendPushToSubscriptions(
+    db.collection("pushSubscriptions").where("uid", "==", uid),
+    { title, body, path, tag },
+  );
+}
 
 function requireDemoTester(request) {
   if (process.env.FUNCTIONS_EMULATOR === "true") return;
@@ -1229,3 +1314,152 @@ export const setHomepageReviewLimit = onCall({ region }, async (request) => {
     throw new HttpsError("internal", "Could not update homepage review limit.");
   }
 });
+
+export const notifyAdminsOfNewOrder = onDocumentCreated(
+  { document: "orders/{orderId}", region },
+  async (event) => {
+    const order = event.data?.data();
+    if (!order || (order.isDemo && order.notificationEligible !== true)) return;
+    await notifyAdmins(
+      "Novo pedido",
+      "Um pedido novo está aguardando no painel.",
+      "admin?tab=orders",
+      `order-${event.params.orderId}`,
+    );
+  },
+);
+
+export const notifyUsersOfOrderUpdates = onDocumentUpdated(
+  { document: "orders/{orderId}", region },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    if (!before.customerConfirmedAt && after.customerConfirmedAt) {
+      await notifyAdmins(
+        "Recebimento confirmado",
+        "Um cliente confirmou o recebimento do pedido.",
+        "admin?tab=orders",
+        `delivery-${event.params.orderId}`,
+      );
+    }
+
+    if (
+      before.status !== after.status ||
+      (before.trackingCode || "") !== (after.trackingCode || "")
+    ) {
+      await notifyCustomer(
+        after.userId,
+        "Atualização do pedido",
+        "O andamento do seu pedido foi atualizado.",
+        "pedidos",
+        `order-${event.params.orderId}`,
+      );
+    }
+  },
+);
+
+export const notifyAdminsOfNewConversation = onDocumentCreated(
+  { document: "conversations/{conversationId}", region },
+  async (event) => {
+    const conversation = event.data?.data();
+    if (!conversation?.customerId) return;
+    await notifyAdmins(
+      "Novo atendimento",
+      "Uma pessoa iniciou uma conversa com o ateliê.",
+      "admin?tab=chat",
+      `chat-${event.params.conversationId}`,
+    );
+  },
+);
+
+export const notifyAdminsOfReopenedConversation = onDocumentUpdated(
+  { document: "conversations/{conversationId}", region },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    const beforeRequestedAt = before?.customerRequestedAt?.toMillis?.() || 0;
+    const afterRequestedAt = after?.customerRequestedAt?.toMillis?.() || 0;
+    if (
+      !after?.customerId ||
+      after.status !== "open" ||
+      afterRequestedAt <= beforeRequestedAt
+    ) return;
+    await notifyAdmins(
+      "Novo atendimento",
+      "Uma pessoa iniciou ou retomou uma conversa com o ateliê.",
+      "admin?tab=chat",
+      `chat-${event.params.conversationId}`,
+    );
+  },
+);
+
+export const notifyParticipantsOfNewChatMessage = onDocumentCreated(
+  { document: "conversations/{conversationId}/messages/{messageId}", region },
+  async (event) => {
+    const message = event.data?.data();
+    if (!message) return;
+    const conversationSnapshot = await db
+      .collection("conversations")
+      .doc(event.params.conversationId)
+      .get();
+    if (!conversationSnapshot.exists) return;
+    const conversation = conversationSnapshot.data();
+    const tag = `chat-${event.params.conversationId}`;
+
+    if (message.senderRole === "customer") {
+      await notifyAdmins(
+        "Nova mensagem no atendimento",
+        "Uma pessoa enviou uma mensagem ao ateliê.",
+        "admin?tab=chat",
+        tag,
+      );
+    } else if (message.senderRole === "admin") {
+      await notifyCustomer(
+        conversation.customerId,
+        "Mensagem nova do ateliê",
+        "O ateliê enviou uma mensagem para você.",
+        "chat",
+        tag,
+      );
+    }
+  },
+);
+
+export const notifyAdminsOfLowStock = onDocumentUpdated(
+  { document: "products/{productId}", region },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after || after.status !== "published") return;
+    const beforeThreshold = Number.isInteger(before.lowStockThreshold)
+      ? before.lowStockThreshold
+      : 2;
+    const afterThreshold = Number.isInteger(after.lowStockThreshold)
+      ? after.lowStockThreshold
+      : 2;
+    const wasLow = Number.isInteger(before.stock) && before.stock <= beforeThreshold;
+    const isLow = Number.isInteger(after.stock) && after.stock > 0 && after.stock <= afterThreshold;
+    if (!isLow || wasLow) return;
+    await notifyAdmins(
+      "Estoque baixo",
+      "Uma peça chegou ao limite mínimo de estoque.",
+      "admin?tab=products",
+      `stock-${event.params.productId}`,
+    );
+  },
+);
+
+export const notifyAdminsOfNewReview = onDocumentCreated(
+  { document: "reviews/{reviewId}", region },
+  async (event) => {
+    if (!event.data?.exists) return;
+    await notifyAdmins(
+      "Nova avaliação recebida",
+      "Uma avaliação nova está disponível no painel.",
+      "admin?tab=reviews",
+      "admin-new-reviews",
+    );
+  },
+);

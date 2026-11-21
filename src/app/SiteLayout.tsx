@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { SessionContext } from "./contexts";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
@@ -8,9 +8,19 @@ import {
   FloatingChatButton,
 } from "../features/notifications/NotificationCenter";
 import { AppRoutes } from "./AppRoutes";
+import {
+  listenForPushMessages,
+  syncPushForUser,
+} from "../features/notifications/pushNotifications";
 
 export function SiteLayout() {
   const session = useContext(SessionContext);
+
+  useEffect(() => {
+    if (!session.user) return;
+    void syncPushForUser(session.user.uid);
+    return listenForPushMessages();
+  }, [session.user]);
 
   return (
     <>

@@ -12,6 +12,13 @@
   padding: 24px;
   background: var(--surface);
 }
+.push-notification-setting > .muted {
+  margin: 0 0 16px;
+  font-size: 12px;
+}
+.push-notification-setting .button {
+  gap: 12px;
+}
 .account-setting-header {
   height: auto;
   min-height: 0;

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { BasketContext, SessionContext, ThemeContext } from "../app/contexts";
 import { auth } from "../firebase";
+import { clearPushOnSignOut } from "../features/notifications/pushNotifications";
 import {
   AdminHeaderNotificationBell,
   CustomerHeaderNotificationBell,
@@ -114,7 +115,16 @@ export function SiteHeader() {
             type="button"
             aria-label="Sair da conta"
             title="Sair da conta"
-            onClick={() => void signOut(auth)}
+            onClick={() => {
+              const uid = session.user?.uid;
+              if (!uid) {
+                void signOut(auth);
+                return;
+              }
+              void clearPushOnSignOut(uid)
+                .catch(() => {})
+                .finally(() => signOut(auth));
+            }}
           >
             <LogOut size={17} />
             <span>Sair</span>

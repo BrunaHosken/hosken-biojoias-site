@@ -76,8 +76,8 @@ export function ProductReviews({
           </div>
         </>
       )}
-      <Notice {...result} />
-      {!result.loading && !result.error && reviews.length === 0 && (
+      <Notice loading={result.loading} error="" />
+      {!result.loading && reviews.length === 0 && (
         <p className="muted">Esta peça ainda não recebeu avaliações.</p>
       )}
       {reviews.length > 0 && (

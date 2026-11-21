@@ -1,0 +1,19 @@
+{
+  "name": "Hosken Biojoias",
+  "short_name": "Hosken",
+  "description": "Peças artesanais com flores naturais.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fffdfa",
+  "theme_color": "#6b182c",
+  "icons": [
+    {
+      "src": "orquidea-favicon.webp",
+      "sizes": "256x256",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}
