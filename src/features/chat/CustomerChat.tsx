@@ -339,6 +339,7 @@ export function CustomerChat() {
             senderRole="customer"
             otherPartyName="Hosken Biojoias"
             initialDraft={initialDraft}
+            suppressExistingFollowup={Boolean(contextTopic)}
             onConversationClosed={() => setConversationEndedHere(true)}
           />
         )}
@@ -351,6 +352,7 @@ export function ChatThread({
   senderRole,
   otherPartyName,
   initialDraft = "",
+  suppressExistingFollowup = false,
   onConversationClosed,
 }: {
   conversation: ChatConversation;
@@ -358,6 +360,7 @@ export function ChatThread({
   senderRole: ChatMessage["senderRole"];
   otherPartyName: string;
   initialDraft?: string;
+  suppressExistingFollowup?: boolean;
   onConversationClosed?: () => void;
 }) {
   const conversationId = conversation.id;
@@ -374,6 +377,9 @@ export function ChatThread({
   const [now, setNow] = useState(Date.now());
   const [dismissedFollowupMessageId, setDismissedFollowupMessageId] =
     useState("");
+  const [initialFollowupBaseline, setInitialFollowupBaseline] = useState<
+    string | null
+  >(suppressExistingFollowup ? null : "");
   const listRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -398,6 +404,22 @@ export function ChatThread({
     latestTimelineItem.message.senderRole === "admin"
       ? latestTimelineItem.message.id
       : "";
+  useEffect(() => {
+    if (
+      !suppressExistingFollowup ||
+      messages.loading ||
+      quotes.loading ||
+      initialFollowupBaseline !== null
+    )
+      return;
+    setInitialFollowupBaseline(latestAdminMessageId);
+  }, [
+    suppressExistingFollowup,
+    messages.loading,
+    quotes.loading,
+    initialFollowupBaseline,
+    latestAdminMessageId,
+  ]);
   useEffect(() => {
     if (initialDraft) {
       setText((current) => (current.trim() ? current : initialDraft));
@@ -568,6 +590,9 @@ export function ChatThread({
       )}
       {latestAdminMessageId &&
         conversation.status === "open" &&
+        (initialFollowupBaseline === "" ||
+          (initialFollowupBaseline !== null &&
+            latestAdminMessageId !== initialFollowupBaseline)) &&
         latestAdminMessageId !== dismissedFollowupMessageId && (
           <ChatStartFlow
             key={latestAdminMessageId}
