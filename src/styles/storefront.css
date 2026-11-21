@@ -205,10 +205,10 @@
 .line-card-gallery {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 145px;
   gap: 7px;
-  height: 145px;
+  min-height: 145px;
   margin: 25px 0 17px;
-  overflow: hidden;
 }
 .line-card-gallery img {
   width: 100%;

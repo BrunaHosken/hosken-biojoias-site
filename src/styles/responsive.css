@@ -329,7 +329,8 @@
     margin: 10px 0;
   }
   .line-card-gallery {
-    height: 120px;
+    grid-auto-rows: 120px;
+    min-height: 120px;
     margin: 12px 0;
   }
   .line-card h3 {

@@ -461,6 +461,11 @@
   display: block;
   max-width: 100%;
   margin-bottom: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: zoom-in;
 }
 .chat-image-link img,
 .chat-edit-image-preview {

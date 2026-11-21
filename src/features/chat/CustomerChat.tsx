@@ -10,6 +10,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, ImagePlus, MessageCircle, Send, X } from "lucide-react";
 import { SessionContext, useToast } from "../../app/contexts";
 import { ConfirmationModal } from "../../components/Feedback";
+import { ImageLightbox } from "../../components/ImageLightbox";
 import { auth, localMode } from "../../firebase";
 import {
   createCustomerConversation,
@@ -510,6 +511,7 @@ function ChatMessageBubble({
   const [replacementImage, setReplacementImage] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState("");
   const editImageInputRef = useRef<HTMLInputElement>(null);
   const replacementPreviewUrl = useImagePreview(replacementImage);
   const date = message.createdAt?.toDate();
@@ -634,14 +636,14 @@ function ChatMessageBubble({
       ) : (
         <>
           {message.imageUrl && (
-            <a
+            <button
               className="chat-image-link"
-              href={message.imageUrl}
-              target="_blank"
-              rel="noreferrer"
+              type="button"
+              onClick={() => setLightboxImage(message.imageUrl || "")}
+              aria-label="Ampliar imagem enviada na conversa"
             >
               <img src={message.imageUrl} alt="Imagem enviada na conversa" />
-            </a>
+            </button>
           )}
           {message.text && <p>{message.text}</p>}
         </>
@@ -681,6 +683,13 @@ function ChatMessageBubble({
           busy={busy}
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => void remove()}
+        />
+      )}
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          alt="Imagem enviada na conversa"
+          onClose={() => setLightboxImage("")}
         />
       )}
     </article>
