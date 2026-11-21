@@ -350,6 +350,24 @@ service cloud.firestore {
           && request.resource.data.status == 'closed'
           && request.resource.data.updatedAt == request.time;
       }
+      function allowedConversationUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return changed.hasOnly(['status','customerRequestedAt','customerRequestedTopic','updatedAt'])
+          ? (changed.hasAll(['customerRequestedAt','customerRequestedTopic','updatedAt'])
+            ? startCustomerConversation()
+            : closeCustomerConversation())
+          : changed.hasOnly(['unreadForCustomer','customerLastReadAt'])
+            ? markCustomerRead()
+            : changed.hasOnly(['unreadForAdmin','adminLastReadAt'])
+              ? markAdminRead()
+              : (changed.hasOnly(['lastMessage','updatedAt']) && changed.hasAll(['updatedAt']))
+                ? isMessageEditUpdate()
+                : changed.hasAny(['lastDeletedMessageId'])
+                  ? isMessageDeleteUpdate()
+                  : changed.hasOnly(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt','unreadForAdmin','unreadForCustomer'])
+                    ? isMessageUpdate()
+                    : false;
+      }
       function validQuoteImage(data, index) {
         return data.imageUrls[index] is string
           && text(data.imageUrls[index], 2048)
@@ -452,16 +470,9 @@ service cloud.firestore {
             && request.resource.data.customerRequestedTopic in ['question','order','exchange','custom','pickup','other','product']))
         && (!('customerRequestedTopic' in request.resource.data)
           || ('customerRequestedAt' in request.resource.data));
-      // Keep low-cost conversation actions first. Message updates perform
-      // several getAfter checks and can hit Firestore's rule-expression limit
-      // if evaluated for a simple reopen/close/read update.
-      allow update: if startCustomerConversation()
-        || closeCustomerConversation()
-        || markCustomerRead()
-        || markAdminRead()
-        || isMessageUpdate()
-        || isMessageEditUpdate()
-        || isMessageDeleteUpdate();
+      // Dispatch by changed fields so simple conversation updates do not also
+      // evaluate the expensive getAfter checks used for message validation.
+      allow update: if allowedConversationUpdate();
       allow delete: if false;
 
       match /quotes/{quoteId} {
