@@ -242,10 +242,16 @@ textarea {
 .admin-navigation {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 18px;
   padding: 20px 14px;
   border: 1px solid var(--border);
   background: #fbf7f1;
+}
+.admin-nav-group {
+  width: 100%;
+  min-width: 0;
+  text-align: left;
 }
 .admin-nav-group + .admin-nav-group {
   padding-top: 16px;
@@ -253,16 +259,21 @@ textarea {
 }
 .admin-nav-group h2 {
   margin: 0 0 9px;
+  padding: 0;
   color: #806c5a;
   font-family: "DM Sans", sans-serif;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 1.5px;
   line-height: 1.5;
+  text-align: left;
   text-transform: uppercase;
 }
 .admin-nav-items {
   display: grid;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   gap: 3px;
 }
 .admin-nav-item {
