@@ -66,6 +66,47 @@ const relatedTerms: Record<string, string[]> = {
   devolucao: ["troca", "trocar", "cancelamento"],
 };
 
+const faqIntentTerms = {
+  order: [
+    "pedido",
+    "pedidos",
+    "compra",
+    "compras",
+    "entrega",
+    "entregas",
+    "envio",
+    "envios",
+    "frete",
+    "correios",
+    "sedex",
+    "rastreio",
+    "rastreamento",
+    "pagamento",
+    "pagamentos",
+    "pix",
+    "debito",
+    "credito",
+    "prazo",
+    "reenvio",
+  ],
+  exchange: [
+    "troca",
+    "trocas",
+    "trocar",
+    "devolucao",
+    "devolucoes",
+    "devolver",
+    "cancelamento",
+    "cancelamentos",
+    "cancelar",
+    "reembolso",
+    "reembolsos",
+    "estorno",
+    "defeito",
+    "defeitos",
+  ],
+} as const;
+
 function normalize(value: string) {
   return value
     .normalize("NFD")
@@ -139,4 +180,28 @@ export function rankFaqs(
         : a.faq.title.localeCompare(b.faq.title),
     )
     .map(({ faq }) => faq);
+}
+
+export function rankFaqsForChatTopic(
+  faqs: Content[],
+  query: string,
+  intent: keyof typeof faqIntentTerms,
+  limit = 3,
+) {
+  const competingIntent = intent === "order" ? "exchange" : "order";
+  const candidates = faqs.filter((faq) => {
+    const titleAndCategory = normalize(`${faq.title} ${faq.category || ""}`);
+    const searchableMetadata = normalize(
+      `${titleAndCategory} ${faq.keywords || ""}`,
+    );
+    const hasRequestedIntent = faqIntentTerms[intent].some((term) =>
+      searchableMetadata.split(" ").includes(term),
+    );
+    const hasCompetingIntent = faqIntentTerms[competingIntent].some((term) =>
+      titleAndCategory.split(" ").includes(term),
+    );
+    return hasRequestedIntent && !hasCompetingIntent;
+  });
+
+  return rankFaqs(candidates, query, 3).slice(0, limit);
 }

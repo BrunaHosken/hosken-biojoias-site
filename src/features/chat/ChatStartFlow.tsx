@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { FaqAnswerModal } from "../../components/FaqAnswerModal";
 import { useRecords, type Content } from "../../data";
-import { rankFaqs } from "../storefront/faqSearch";
+import { rankFaqs, rankFaqsForChatTopic } from "../storefront/faqSearch";
 
 export type ChatIntakeTopic =
   "question" | "order" | "exchange" | "custom" | "pickup" | "other" | "product";
@@ -100,6 +100,12 @@ export function ChatStartFlow({
   const suggestions = useMemo(() => {
     if (!selectedTopic || selectedTopic.query === null) return [];
     if (!selectedTopic.query) return rankFaqs(faqs.data, "");
+    if (selectedTopic.id === "order" || selectedTopic.id === "exchange")
+      return rankFaqsForChatTopic(
+        faqs.data,
+        selectedTopic.query,
+        selectedTopic.id,
+      );
     return rankFaqs(faqs.data, selectedTopic.query, 3);
   }, [faqs.data, selectedTopic]);
 
