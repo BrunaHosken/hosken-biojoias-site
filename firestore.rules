@@ -91,6 +91,21 @@ service cloud.firestore {
           || existsAfter(/databases/$(database)/documents/products/$(productId)));
       allow delete: if admin();
     }
+    match /faqs/{id} {
+      function validFaq(data) {
+        return data.keys().hasOnly(['title','body','status','category','keywords'])
+          && data.keys().hasAll(['title','body','status','category'])
+          && text(data.title, 160)
+          && text(data.body, 5000)
+          && text(data.category, 60)
+          && (!('keywords' in data)
+            || (data.keywords is string && data.keywords.size() <= 500))
+          && data.status in ['published','draft'];
+      }
+      allow read: if resource.data.status == 'published' || admin();
+      allow create, update: if admin() && validFaq(request.resource.data);
+      allow delete: if admin();
+    }
     match /{contentCollection}/{id} {
       allow read: if contentCollection in ['news','events','partnerStores','policies'] && (resource.data.status == 'published' || admin());
       allow create, update: if admin()

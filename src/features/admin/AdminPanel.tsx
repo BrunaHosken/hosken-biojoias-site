@@ -39,6 +39,7 @@ const moduleGroups = [
       ["events", "Eventos"],
       ["partnerStores", "Lojas parceiras"],
       ["policies", "Políticas"],
+      ["faqs", "Perguntas frequentes"],
     ],
   },
   {

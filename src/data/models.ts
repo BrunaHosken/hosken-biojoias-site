@@ -70,6 +70,8 @@ export type Content = {
   mapUrl?: string;
   partnerType?: "partner_store" | "physical_store";
   policyType?: string;
+  category?: string;
+  keywords?: string;
 };
 export type EventScheduleEntry = { date: string; time: string };
 export type OrderItem = {

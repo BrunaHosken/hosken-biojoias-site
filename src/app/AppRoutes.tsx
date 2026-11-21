@@ -4,6 +4,7 @@ import { Shop } from "../features/storefront/pages/Shop";
 import { ProductPage } from "../features/storefront/pages/ProductPage";
 import { ContentPage } from "../features/storefront/pages/ContentPage";
 import { PoliciesPage } from "../features/storefront/pages/PoliciesPage";
+import { FaqPage } from "../features/storefront/pages/FaqPage";
 import { About } from "../features/storefront/pages/About";
 import { Contact } from "../features/storefront/Contact";
 import { Account } from "../features/account/Account";
@@ -52,6 +53,7 @@ export function AppRoutes() {
       <Route path="/sobre" element={<About />} />
       <Route path="/contato" element={<Contact />} />
       <Route path="/politicas" element={<PoliciesPage />} />
+      <Route path="/duvidas" element={<FaqPage />} />
       <Route path="/conta" element={<Account />} />
       <Route path="/pedidos" element={<OrdersPage />} />
       <Route path="/chat" element={<CustomerChat />} />

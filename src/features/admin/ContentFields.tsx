@@ -42,7 +42,9 @@ export function AdminContentFields({
       <label>
         {["categories", "collections", "colors"].includes(tab)
           ? "Nome"
-          : "Título"}
+          : tab === "faqs"
+            ? "Pergunta"
+            : "Título"}
         <input
           name="name"
           required
@@ -58,6 +60,33 @@ export function AdminContentFields({
           }
         />
       </label>
+      {tab === "faqs" && (
+        <>
+          <label>
+            Categoria
+            <input
+              name="category"
+              required
+              maxLength={60}
+              defaultValue={editingContent?.category || ""}
+              placeholder="Ex.: Compras, produtos, encomendas"
+            />
+          </label>
+          <label>
+            Termos relacionados para a busca (opcional)
+            <input
+              name="keywords"
+              maxLength={500}
+              defaultValue={editingContent?.keywords || ""}
+              placeholder="Separe por vírgulas. Ex.: prazo, entrega, envio"
+            />
+            <small className="field-hint">
+              Inclua palavras que as pessoas podem usar para encontrar esta
+              resposta.
+            </small>
+          </label>
+        </>
+      )}
       {tab === "collections" && (
         <>
           <label>
@@ -122,7 +151,11 @@ export function AdminContentFields({
       )}
       {!["categories", "collections", "colors"].includes(tab) && (
         <label>
-          {tab === "policies" ? "Texto da política" : "Texto"}
+          {tab === "policies"
+            ? "Texto da política"
+            : tab === "faqs"
+              ? "Resposta"
+              : "Texto"}
           <textarea
             name="body"
             required
@@ -131,7 +164,9 @@ export function AdminContentFields({
             placeholder={
               tab === "policies"
                 ? "Insira o texto revisado pelo ateliê."
-                : undefined
+                : tab === "faqs"
+                  ? "Escreva uma resposta aprovada pelo ateliê."
+                  : undefined
             }
           />
           {tab === "policies" && (

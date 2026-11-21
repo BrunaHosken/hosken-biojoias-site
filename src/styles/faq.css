@@ -1,0 +1,240 @@
+.faq-page {
+  max-width: 980px;
+}
+
+.faq-page > h1 {
+  margin-bottom: 12px;
+}
+
+.faq-search {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  max-width: 760px;
+  margin: 34px 0 20px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--muted);
+}
+
+.faq-search input {
+  min-width: 0;
+  min-height: 58px;
+  padding: 12px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.faq-search input:focus-visible {
+  outline: 0;
+}
+
+.faq-search:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.faq-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 25px;
+}
+
+.faq-categories button {
+  min-height: 40px;
+  padding: 8px 15px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.faq-categories button.selected {
+  border-color: var(--wine);
+  background: var(--wine-fill);
+  color: #fff;
+}
+
+.faq-result-count {
+  margin: 28px 0 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.faq-list {
+  border-top: 1px solid var(--border);
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-question {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 76px;
+  padding: 18px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.faq-question > svg {
+  flex: 0 0 auto;
+  color: var(--wine);
+}
+
+.faq-question small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.faq-question:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.faq-answer {
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.faq-answer p {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+}
+
+.faq-answer p:last-child {
+  margin-bottom: 0;
+}
+
+.faq-empty {
+  margin-top: 35px;
+}
+
+.faq-empty .button {
+  margin-top: 8px;
+}
+
+.faq-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(22 16 18 / 62%);
+  backdrop-filter: blur(2px);
+}
+
+.faq-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(680px, calc(100vw - 32px));
+  height: min(620px, calc(100dvh - 40px));
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text);
+  box-shadow: 0 24px 80px #0004;
+}
+
+.faq-modal-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 68px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-modal-header .eyebrow {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 1.5px;
+}
+
+.faq-modal-close {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.faq-modal-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 28px 34px 36px;
+  scrollbar-color: var(--muted) var(--surface-soft);
+  scrollbar-width: thin;
+}
+
+.faq-modal-scroll h2 {
+  margin: 0 0 22px;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.12;
+}
+
+.faq-modal-scroll .faq-answer {
+  max-width: none;
+  text-align: justify;
+}
+
+@media (max-width: 640px) {
+  .faq-search {
+    margin-top: 26px;
+  }
+
+  .faq-question {
+    align-items: flex-start;
+    min-height: 68px;
+    font-size: 17px;
+  }
+
+  .faq-question small {
+    display: none;
+  }
+
+  .faq-modal {
+    width: calc(100vw - 24px);
+    height: min(620px, calc(100dvh - 24px));
+  }
+
+  .faq-modal-backdrop {
+    padding: 12px;
+  }
+
+  .faq-modal-header {
+    padding: 12px 16px;
+  }
+
+  .faq-modal-scroll {
+    padding: 23px 20px 28px;
+  }
+}

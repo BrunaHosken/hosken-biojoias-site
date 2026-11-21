@@ -24,6 +24,7 @@ export function SiteFooter() {
           WhatsApp ↗
         </a>
         <a href="mailto:hoskenbiojoias2026@gmail.com">E-mail ↗</a>
+        <Link to="/duvidas">Perguntas frequentes</Link>
         <Link to="/politicas">Políticas da loja</Link>
         {admin && <Link to="/admin">Administrar</Link>}
       </div>

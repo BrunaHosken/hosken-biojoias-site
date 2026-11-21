@@ -45,6 +45,9 @@ export function AdminRecordList({
               {"policyType" in record
                 ? ` · ${POLICY_TYPES.find((type) => type.id === record.policyType)?.label || "Geral"}`
                 : ""}
+              {"category" in record && record.category
+                ? ` · ${record.category}`
+                : ""}
               {"stock" in record
                 ? ` · Estoque: ${record.stock} · aviso em: ${record.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD} · Disponibilidade: ${availability[getProductAvailability(record)]}`
                 : ""}
@@ -112,7 +115,7 @@ export function AdminRecordList({
                   </button>
                 </>
               )}
-            {["news", "events", "partnerStores", "policies"].includes(tab) && (
+            {["news", "events", "partnerStores", "policies", "faqs"].includes(tab) && (
               <button
                 className="text-button"
                 disabled={uploadingImages}

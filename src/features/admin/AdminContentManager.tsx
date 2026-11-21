@@ -235,6 +235,12 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
                   policyType: String(fields.get("policyType") || "general"),
                 }
               : {}),
+            ...(tab === "faqs"
+              ? {
+                  category: String(fields.get("category") || "").trim(),
+                  keywords: String(fields.get("keywords") || "").trim(),
+                }
+              : {}),
           };
 
       if (editing) {
@@ -353,8 +359,12 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
                 ? "Editar linha"
                 : tab === "colors"
                   ? "Editar cor"
-                  : "Editar conteúdo"
-            : "Novo cadastro"}
+                  : tab === "faqs"
+                    ? "Editar pergunta frequente"
+                    : "Editar conteúdo"
+            : tab === "faqs"
+              ? "Nova pergunta frequente"
+              : "Novo cadastro"}
         </h2>
         <AdminContentFields
           tab={tab}

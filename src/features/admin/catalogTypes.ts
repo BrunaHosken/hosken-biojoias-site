@@ -6,6 +6,7 @@ export type AdminCatalogTab =
   | "news"
   | "events"
   | "partnerStores"
-  | "policies";
+  | "policies"
+  | "faqs";
 
 export type AdminContentTab = Exclude<AdminCatalogTab, "products">;
