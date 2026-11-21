@@ -13,7 +13,14 @@ import { ConfirmationModal } from "../../components/Feedback";
 import { ImageLightbox } from "../../components/ImageLightbox";
 import { auth, localMode } from "../../firebase";
 import {
+  ChatStartFlow,
+  chatTopicDraft,
+  type ChatIntakeTopic,
+} from "./ChatStartFlow";
+import {
+  closeConversation,
   createCustomerConversation,
+  startCustomerConversation,
   useCustomerConversation,
   useConversationMessages,
   useConversationQuotes,
@@ -63,23 +70,70 @@ export function CustomerChat() {
   const checkoutReturn = searchParams.get("voltar") === "checkout";
   const returnCustomQuoteId = searchParams.get("customQuote") || "";
   const returnConversationId = searchParams.get("conversation") || "";
+  const quoteReturn = Boolean(returnCustomQuoteId && returnConversationId);
   const checkoutReturnPath =
     returnCustomQuoteId && returnConversationId
       ? `/checkout?customQuote=${encodeURIComponent(returnCustomQuoteId)}&conversation=${encodeURIComponent(returnConversationId)}`
       : "/checkout";
   const customOrderRequest = searchParams.get("encomenda") === "personalizada";
   const productContext = productId && productName ? productName : "";
-  const initialDraft = productContext
-    ? `Olá! Tenho uma dúvida sobre a peça ${productContext}.`
-    : customOrderRequest
-      ? "Olá! Gostaria de encomendar uma peça personalizada. Vou explicar a ideia por aqui."
-      : checkoutReturn
-        ? "Olá! Quero combinar uma retirada presencial para um pedido que estou finalizando."
-        : "";
+  const contextTopic: ChatIntakeTopic | null = quoteReturn
+    ? "custom"
+    : checkoutReturn
+      ? "pickup"
+      : customOrderRequest
+        ? "custom"
+        : productContext
+          ? "product"
+          : null;
+  const [helpTopic, setHelpTopic] = useState<ChatIntakeTopic | null>(
+    contextTopic,
+  );
+  const [intakeStarted, setIntakeStarted] = useState(Boolean(contextTopic));
+  const [conversationEndedHere, setConversationEndedHere] = useState(false);
+  const initialDraft = quoteReturn
+    ? ""
+    : productContext
+      ? `Olá! Tenho uma dúvida sobre a peça ${productContext}.`
+      : customOrderRequest
+        ? "Olá! Gostaria de encomendar uma peça personalizada. Vou explicar a ideia por aqui."
+        : checkoutReturn
+          ? "Olá! Quero combinar uma retirada presencial para um pedido que estou finalizando."
+          : intakeStarted && helpTopic
+            ? chatTopicDraft(helpTopic)
+            : "";
   const chatPath = searchParams.size
     ? `/chat?${searchParams.toString()}`
     : "/chat";
   const chat = useCustomerConversation(session.user?.uid);
+  const openConversationId = useRef("");
+  useEffect(() => {
+    const current = chat.conversation;
+    if (!current) return;
+    if (current.status === "open") {
+      openConversationId.current = current.id;
+    } else if (
+      current.status === "closed" &&
+      openConversationId.current === current.id
+    ) {
+      openConversationId.current = "";
+      setConversationEndedHere(true);
+    }
+  }, [chat.conversation?.id, chat.conversation?.status]);
+  const hasConversationActivity = Boolean(
+    chat.conversation?.lastMessageId || chat.conversation?.lastMessage,
+  );
+  const showIntake = Boolean(
+    !session.admin &&
+    !chat.loading &&
+    chat.serverReady &&
+    !chat.error &&
+    (!chat.conversation ||
+      chat.conversation.status === "closed" ||
+      !hasConversationActivity) &&
+    !intakeStarted &&
+    !conversationEndedHere,
+  );
   const attemptedUsers = useRef(new Set<string>());
   useEffect(() => {
     const user = session.user;
@@ -90,18 +144,32 @@ export function CustomerChat() {
       chat.loading ||
       !chat.serverReady ||
       chat.error ||
-      chat.conversation ||
-      attemptedUsers.current.has(user.uid)
+      !intakeStarted ||
+      (chat.conversation
+        ? !contextTopic ||
+          attemptedUsers.current.has(
+            `request:${chat.conversation.id}:${contextTopic}`,
+          )
+        : attemptedUsers.current.has(`create:${user.uid}`))
     )
       return;
-    attemptedUsers.current.add(user.uid);
-    createCustomerConversation(
-      user.uid,
-      user.displayName || "Cliente",
-      user.email || "",
-    ).catch((cause) => {
+    const attemptKey = chat.conversation
+      ? `request:${chat.conversation.id}:${contextTopic}`
+      : `create:${user.uid}`;
+    attemptedUsers.current.add(attemptKey);
+    const startRequest = chat.conversation
+      ? startCustomerConversation(chat.conversation.id, contextTopic!)
+      : createCustomerConversation(
+          user.uid,
+          user.displayName || "Cliente",
+          user.email || "",
+          helpTopic || "other",
+        );
+    startRequest.catch((cause) => {
       if (import.meta.env.DEV)
         console.error("Customer conversation creation failed", cause);
+      attemptedUsers.current.delete(attemptKey);
+      setIntakeStarted(false);
       notify(
         "Não foi possível abrir o chat. Recarregue a página para tentar novamente.",
         "error",
@@ -115,6 +183,9 @@ export function CustomerChat() {
     chat.serverReady,
     chat.error,
     chat.conversation,
+    helpTopic,
+    contextTopic,
+    intakeStarted,
     notify,
   ]);
   if (!session.ready) return <div className="page">Carregando sua conta…</div>;
@@ -164,20 +235,49 @@ export function CustomerChat() {
       <div className="eyebrow">ATENDIMENTO HOSKEN BIOJOIAS</div>
       <h1>Fale com o ateliê</h1>
       <p className="lead">
-        Envie sua mensagem. Nossa equipe responderá por aqui.
+        {chat.conversation?.status === "open" && hasConversationActivity
+          ? "Acompanhe sua conversa com a artesã por aqui."
+          : "Escolha um assunto. Talvez já exista uma resposta pronta; se precisar, você pode conversar com a artesã."}
       </p>
-      {checkoutReturn && (
+      {conversationEndedHere && (
+        <section className="chat-start chat-start-ended" aria-live="polite">
+          <MessageCircle size={28} />
+          <h2>Conversa encerrada</h2>
+          <p>Obrigada por falar com o ateliê.</p>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => {
+              setConversationEndedHere(false);
+              setIntakeStarted(false);
+              setHelpTopic(null);
+            }}
+          >
+            Preciso de mais alguma coisa <ArrowRight size={17} />
+          </button>
+        </section>
+      )}
+      {(checkoutReturn || quoteReturn) && (
         <div className="chat-checkout-return">
           <p>
-            Depois de combinar a retirada com a artesã, volte ao checkout e
-            marque a confirmação para continuar.
+            {quoteReturn
+              ? "Você pode continuar a conversa sobre sua proposta ou voltar ao checkout quando quiser."
+              : "Depois de combinar a retirada com a artesã, volte ao checkout e marque a confirmação para continuar."}
           </p>
           <Link className="button secondary" to={checkoutReturnPath}>
             Voltar ao checkout <ArrowRight size={17} />
           </Link>
         </div>
       )}
-      {customOrderRequest && (
+      {helpTopic === "pickup" && !checkoutReturn && (
+        <div className="chat-checkout-return">
+          <p>
+            O assunto desta conversa já está definido como retirada presencial.
+            Conte para a artesã quando e onde prefere combinar.
+          </p>
+        </div>
+      )}
+      {(customOrderRequest || (helpTopic === "custom" && !quoteReturn)) && (
         <div className="chat-custom-order-context">
           <strong>Encomenda personalizada</strong>
           <p>
@@ -204,22 +304,44 @@ export function CustomerChat() {
           {chat.error}
         </p>
       )}
-      {!chat.loading && !chat.error && !chat.conversation && (
-        <section className="chat-start" role="status">
-          <MessageCircle size={28} />
-          <h2>Abrindo sua conversa…</h2>
-          <p>Estamos preparando o atendimento com a Hosken Biojoias.</p>
-        </section>
-      )}
-      {chat.conversation && (
-        <ChatThread
-          conversation={chat.conversation}
-          senderId={session.user.uid}
-          senderRole="customer"
-          otherPartyName="Hosken Biojoias"
-          initialDraft={initialDraft}
+      {showIntake && (
+        <ChatStartFlow
+          onStart={(topic) => {
+            setHelpTopic(topic);
+            setIntakeStarted(true);
+            if (chat.conversation) {
+              startCustomerConversation(chat.conversation.id, topic).catch(() =>
+                notify(
+                  "Não foi possível reabrir o atendimento. Tente novamente.",
+                  "error",
+                ),
+              );
+            }
+          }}
         />
       )}
+      {!chat.loading &&
+        !chat.error &&
+        (!chat.conversation || chat.conversation.status === "closed") &&
+        intakeStarted && (
+          <section className="chat-start" role="status">
+            <MessageCircle size={28} />
+            <h2>Abrindo sua conversa…</h2>
+            <p>Estamos preparando o atendimento com a Hosken Biojoias.</p>
+          </section>
+        )}
+      {chat.conversation &&
+        chat.conversation.status === "open" &&
+        !showIntake && (
+          <ChatThread
+            conversation={chat.conversation}
+            senderId={session.user.uid}
+            senderRole="customer"
+            otherPartyName="Hosken Biojoias"
+            initialDraft={initialDraft}
+            onConversationClosed={() => setConversationEndedHere(true)}
+          />
+        )}
     </div>
   );
 }
@@ -229,12 +351,14 @@ export function ChatThread({
   senderRole,
   otherPartyName,
   initialDraft = "",
+  onConversationClosed,
 }: {
   conversation: ChatConversation;
   senderId: string;
   senderRole: ChatMessage["senderRole"];
   otherPartyName: string;
   initialDraft?: string;
+  onConversationClosed?: () => void;
 }) {
   const conversationId = conversation.id;
   const unreadCount =
@@ -248,8 +372,11 @@ export function ChatThread({
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [dismissedFollowupMessageId, setDismissedFollowupMessageId] =
+    useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imagePreviewUrl = useImagePreview(imageFile);
   const timelineItems = [
     ...messages.data.map((message, index) => ({
@@ -264,6 +391,13 @@ export function ChatThread({
       quote,
     })),
   ].sort((first, second) => first.timestamp - second.timestamp);
+  const latestTimelineItem = timelineItems[timelineItems.length - 1];
+  const latestAdminMessageId =
+    senderRole === "customer" &&
+    latestTimelineItem?.type === "message" &&
+    latestTimelineItem.message.senderRole === "admin"
+      ? latestTimelineItem.message.id
+      : "";
   useEffect(() => {
     if (initialDraft) {
       setText((current) => (current.trim() ? current : initialDraft));
@@ -364,6 +498,19 @@ export function ChatThread({
           <strong>{otherPartyName}</strong>
           <small>Atendimento Hosken Biojoias</small>
         </div>
+        {senderRole === "admin" && conversation.status === "open" && (
+          <button
+            type="button"
+            className="chat-close-button"
+            onClick={() =>
+              closeConversation(conversationId).catch(() =>
+                setSendError("Não foi possível encerrar o atendimento."),
+              )
+            }
+          >
+            <X size={16} /> Encerrar conversa
+          </button>
+        )}
       </header>
       <div className="chat-messages" ref={listRef} aria-live="polite">
         {(messages.loading || quotes.loading) && (
@@ -407,81 +554,118 @@ export function ChatThread({
           ),
         )}
       </div>
-      {senderRole === "admin" && (
+      {conversation.status === "closed" && (
+        <p className="chat-closed-notice" role="status">
+          Atendimento encerrado. A cliente verá os assuntos disponíveis quando
+          abrir o chat novamente.
+        </p>
+      )}
+      {senderRole === "admin" && conversation.status === "open" && (
         <CustomQuoteComposer
           conversationId={conversationId}
           adminId={senderId}
         />
       )}
-      <form className="chat-composer" onSubmit={submit}>
-        <input
-          ref={imageInputRef}
-          className="sr-only"
-          type="file"
-          accept="image/*"
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            const file = event.currentTarget.files?.[0];
-            if (!file) return;
-            const validation = validateChatImage(file);
-            if (validation) {
-              setSendError(validation);
-              event.currentTarget.value = "";
-              return;
-            }
-            event.currentTarget.value = "";
-            setSendError("");
-            setImageFile(file);
-          }}
-        />
-        <label className="sr-only" htmlFor={`message-${conversationId}`}>
-          Escreva sua mensagem
-        </label>
-        <div className="chat-composer-main">
-          <textarea
-            id={`message-${conversationId}`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={2000}
-            rows={2}
-            placeholder="Escreva sua mensagem…"
+      {latestAdminMessageId &&
+        conversation.status === "open" &&
+        latestAdminMessageId !== dismissedFollowupMessageId && (
+          <ChatStartFlow
+            key={latestAdminMessageId}
+            initialFollowup
+            onStart={(topic) => {
+              setDismissedFollowupMessageId(latestAdminMessageId);
+              setText(chatTopicDraft(topic));
+              startCustomerConversation(conversationId, topic).catch(() =>
+                setSendError(
+                  "Não foi possível reabrir o atendimento. Tente novamente.",
+                ),
+              );
+              window.setTimeout(() => textareaRef.current?.focus(), 0);
+            }}
+            onFinish={() => {
+              setDismissedFollowupMessageId(latestAdminMessageId);
+              closeConversation(conversationId)
+                .then(() => onConversationClosed?.())
+                .catch(() =>
+                  setSendError(
+                    "Não foi possível encerrar a conversa. Tente novamente.",
+                  ),
+                );
+            }}
           />
-          <div className="chat-composer-actions">
-            <button
-              className="chat-attach-button"
-              type="button"
-              onClick={() => imageInputRef.current?.click()}
-              aria-label="Anexar imagem"
-              title="Anexar imagem"
-            >
-              <ImagePlus size={19} />
-            </button>
-            <button
-              className="button"
-              disabled={busy || (!text.trim() && !imageFile)}
-              aria-label="Enviar mensagem"
-            >
-              <span>{busy ? "Enviando…" : "Enviar"}</span>
-              <Send size={17} />
-            </button>
-          </div>
-        </div>
-        {imageFile && (
-          <div className="chat-image-selection">
-            <img src={imagePreviewUrl} alt="Prévia da imagem anexada" />
-            <span>{imageFile.name} · será enviada em WebP</span>
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setImageFile(null);
-                if (imageInputRef.current) imageInputRef.current.value = "";
-              }}
-            >
-              Remover
-            </button>
-          </div>
         )}
-      </form>
+      {conversation.status === "open" && (
+        <form className="chat-composer" onSubmit={submit}>
+          <input
+            ref={imageInputRef}
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              const file = event.currentTarget.files?.[0];
+              if (!file) return;
+              const validation = validateChatImage(file);
+              if (validation) {
+                setSendError(validation);
+                event.currentTarget.value = "";
+                return;
+              }
+              event.currentTarget.value = "";
+              setSendError("");
+              setImageFile(file);
+            }}
+          />
+          <label className="sr-only" htmlFor={`message-${conversationId}`}>
+            Escreva sua mensagem
+          </label>
+          <div className="chat-composer-main">
+            <textarea
+              ref={textareaRef}
+              id={`message-${conversationId}`}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={2000}
+              rows={2}
+              placeholder="Escreva sua mensagem…"
+            />
+            <div className="chat-composer-actions">
+              <button
+                className="chat-attach-button"
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                aria-label="Anexar imagem"
+                title="Anexar imagem"
+              >
+                <ImagePlus size={19} />
+              </button>
+              <button
+                className="button"
+                disabled={busy || (!text.trim() && !imageFile)}
+                aria-label="Enviar mensagem"
+              >
+                <span>{busy ? "Enviando…" : "Enviar"}</span>
+                <Send size={17} />
+              </button>
+            </div>
+          </div>
+          {imageFile && (
+            <div className="chat-image-selection">
+              <img src={imagePreviewUrl} alt="Prévia da imagem anexada" />
+              <span>{imageFile.name} · será enviada em WebP</span>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setImageFile(null);
+                  if (imageInputRef.current) imageInputRef.current.value = "";
+                }}
+              >
+                Remover
+              </button>
+            </div>
+          )}
+        </form>
+      )}
       {sendError && (
         <p className="notice" role="alert">
           {sendError}

@@ -183,6 +183,7 @@ export async function createCustomerConversation(
   uid: string,
   customerName: string,
   customerEmail: string,
+  topic: ChatRequestTopic = "other",
 ) {
   const conversationRef = doc(db, "conversations", uid);
   try {
@@ -197,6 +198,8 @@ export async function createCustomerConversation(
       lastDeletedMessageId: "",
       unreadForAdmin: 0,
       unreadForCustomer: 0,
+      customerRequestedAt: serverTimestamp(),
+      customerRequestedTopic: topic,
       adminLastReadAt: serverTimestamp(),
       customerLastReadAt: serverTimestamp(),
       createdAt: serverTimestamp(),
@@ -205,13 +208,38 @@ export async function createCustomerConversation(
   } catch (cause) {
     try {
       const existing = await getDoc(conversationRef);
-      if (existing.exists() && existing.data().customerId === uid) return;
+      if (existing.exists() && existing.data().customerId === uid) {
+        await startCustomerConversation(uid, topic);
+        return;
+      }
     } catch {
       // Preserve the creation error if an existing conversation cannot be confirmed.
     }
     throw cause;
   }
 }
+export type ChatRequestTopic =
+  "question" | "order" | "exchange" | "custom" | "pickup" | "other" | "product";
+
+export async function startCustomerConversation(
+  conversationId: string,
+  topic: ChatRequestTopic,
+) {
+  await updateDoc(doc(db, "conversations", conversationId), {
+    status: "open",
+    customerRequestedAt: serverTimestamp(),
+    customerRequestedTopic: topic,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function closeConversation(conversationId: string) {
+  await updateDoc(doc(db, "conversations", conversationId), {
+    status: "closed",
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function sendChatMessage(
   conversationId: string,
   senderId: string,

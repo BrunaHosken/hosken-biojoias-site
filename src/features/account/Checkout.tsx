@@ -60,6 +60,12 @@ export function Checkout() {
     [basket.items],
   );
   const customCheckoutValid = Boolean(customQuoteId && conversationId);
+  const customChatPath = customCheckoutValid
+    ? `/chat?${new URLSearchParams({
+        customQuote: customQuoteId,
+        conversation: conversationId,
+      })}`
+    : "/chat";
   const customChatParams = customCheckoutValid
     ? `&customQuote=${encodeURIComponent(customQuoteId)}&conversation=${encodeURIComponent(conversationId)}`
     : "";
@@ -344,7 +350,7 @@ export function Checkout() {
         <p className="lead">
           Volte ao chat e abra o checkout pela proposta personalizada.
         </p>
-        <Link className="button" to="/chat">
+        <Link className="button" to={customChatPath}>
           Voltar ao chat <ArrowRight size={18} />
         </Link>
       </div>
@@ -358,7 +364,7 @@ export function Checkout() {
       <div className="page narrow">
         <h1>Não foi possível abrir a proposta</h1>
         <p className="lead">Volte ao chat e tente novamente.</p>
-        <Link className="button" to="/chat">
+        <Link className="button" to={customChatPath}>
           Voltar ao chat <ArrowRight size={18} />
         </Link>
       </div>
@@ -372,7 +378,7 @@ export function Checkout() {
       <div className="page narrow">
         <h1>Proposta não encontrada</h1>
         <p className="lead">Confira a proposta no chat com a artesã.</p>
-        <Link className="button" to="/chat">
+        <Link className="button" to={customChatPath}>
           Voltar ao chat <ArrowRight size={18} />
         </Link>
       </div>
@@ -389,7 +395,7 @@ export function Checkout() {
         </p>
         <Link
           className="button"
-          to={`/chat?${new URLSearchParams({ customQuote: customQuoteId, conversation: conversationId })}`}
+          to={customChatPath}
         >
           Abrir proposta no chat <ArrowRight size={18} />
         </Link>
@@ -689,7 +695,7 @@ export function Checkout() {
           </h2>
           <Link
             className="button"
-            to={customCheckoutRequested ? "/chat" : "/loja"}
+            to={customCheckoutRequested ? customChatPath : "/loja"}
           >
             {customCheckoutRequested ? "Voltar ao chat" : "Conhecer as peças"}{" "}
             <ArrowRight size={18} />

@@ -126,6 +126,8 @@ export type ChatConversation = {
   lastDeletedMessageId: string;
   unreadForAdmin: number;
   unreadForCustomer: number;
+  customerRequestedAt?: Timestamp;
+  customerRequestedTopic?: string;
   adminLastReadAt: Timestamp;
   customerLastReadAt: Timestamp;
   createdAt: Timestamp;

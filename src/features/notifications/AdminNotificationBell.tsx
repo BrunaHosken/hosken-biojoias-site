@@ -25,6 +25,13 @@ import {
 } from "./notificationStorage";
 import { useDismissNotificationOnOutside } from "./useDismissNotificationOnOutside";
 
+function conversationNotificationId(conversation: ChatConversation) {
+  const requestedAt = conversation.customerRequestedAt?.toMillis();
+  return requestedAt
+    ? `${conversation.id}:request:${requestedAt}`
+    : conversation.id;
+}
+
 function AdminNotificationBell({
   orders,
   conversations,
@@ -63,7 +70,13 @@ function AdminNotificationBell({
   const newConversations = conversations.filter(
     (conversation) =>
       conversation.unreadForAdmin > 0 ||
-      !seenConversations.has(conversation.id),
+      (conversation.status === "open" &&
+        Boolean(
+          conversation.customerRequestedAt ||
+          conversation.lastMessageId ||
+          conversation.lastMessage,
+        ) &&
+        !seenConversations.has(conversationNotificationId(conversation))),
   );
   const lowStockProducts = products.filter(
     (product) =>
@@ -142,7 +155,7 @@ function AdminNotificationBell({
                     newConversations.forEach((conversation) =>
                       markAdminNotificationSeen(
                         ADMIN_SEEN_CONVERSATIONS,
-                        conversation.id,
+                        conversationNotificationId(conversation),
                       ),
                     );
                     setOpen(false);

@@ -21,9 +21,16 @@ export function AdminChatInbox({
   onSelectConversation: (id: string) => void;
 }) {
   const [showConversations, setShowConversations] = useState(false);
+  const activeConversations = conversations.filter(
+    (conversation) =>
+      conversation.customerRequestedAt ||
+      conversation.lastMessageId ||
+      conversation.lastMessage ||
+      conversation.unreadForAdmin > 0,
+  );
   const selected =
-    conversations.find((item) => item.id === selectedConversationId) ||
-    conversations[0];
+    activeConversations.find((item) => item.id === selectedConversationId) ||
+    activeConversations[0];
   return (
     <section className="admin-inbox">
       <div className="admin-inbox-heading">
@@ -45,7 +52,7 @@ export function AdminChatInbox({
       )}
       {loading ? (
         <p role="status">Carregando atendimentos…</p>
-      ) : conversations.length === 0 ? (
+      ) : activeConversations.length === 0 ? (
         <div className="empty">
           <MessageCircle />
           <h2>Nenhum atendimento ainda.</h2>
@@ -60,7 +67,7 @@ export function AdminChatInbox({
             aria-controls="admin-conversation-list"
             onClick={() => setShowConversations((open) => !open)}
           >
-            <span>Conversas ({conversations.length})</span>
+            <span>Conversas ({activeConversations.length})</span>
             <ChevronDown size={17} aria-hidden="true" />
           </button>
           <div
@@ -71,7 +78,7 @@ export function AdminChatInbox({
               id="admin-conversation-list"
               aria-label="Lista de atendimentos"
             >
-              {conversations.map((conversation) => (
+              {activeConversations.map((conversation) => (
                 <button
                   type="button"
                   key={conversation.id}

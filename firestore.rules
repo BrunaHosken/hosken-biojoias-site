@@ -219,6 +219,7 @@ service cloud.firestore {
         let customerMessage = request.resource.data.lastMessageSenderRole == 'customer';
         let adminMessage = request.resource.data.lastMessageSenderRole == 'admin';
         return signedIn()
+          && resource.data.status == 'open'
           && changed.hasOnly(['lastMessage','lastMessageId','lastMessageSenderRole','updatedAt','unreadForAdmin','unreadForCustomer'])
           && changed.hasAll(['lastMessageId','updatedAt'])
           && request.resource.data.lastMessage is string
@@ -327,6 +328,28 @@ service cloud.firestore {
           && request.resource.data.unreadForCustomer == 0
           && request.resource.data.customerLastReadAt == request.time;
       }
+      function startCustomerConversation() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return signedIn()
+          && resource.data.customerId == request.auth.uid
+          && resource.data.status in ['open','closed']
+          && changed.hasOnly(['status','customerRequestedAt','customerRequestedTopic','updatedAt'])
+          && changed.hasAll(['customerRequestedAt','customerRequestedTopic','updatedAt'])
+          && request.resource.data.status == 'open'
+          && request.resource.data.customerRequestedAt == request.time
+          && request.resource.data.customerRequestedTopic in ['question','order','exchange','custom','pickup','other','product']
+          && request.resource.data.updatedAt == request.time;
+      }
+      function closeCustomerConversation() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return signedIn()
+          && (admin() || resource.data.customerId == request.auth.uid)
+          && resource.data.status == 'open'
+          && changed.hasOnly(['status','updatedAt'])
+          && changed.hasAll(['status','updatedAt'])
+          && request.resource.data.status == 'closed'
+          && request.resource.data.updatedAt == request.time;
+      }
       function validQuoteImage(data, index) {
         return data.imageUrls[index] is string
           && text(data.imageUrls[index], 2048)
@@ -405,7 +428,7 @@ service cloud.firestore {
       allow read: if admin() || (signedIn() && resource.data.customerId == request.auth.uid);
       allow create: if signedIn()
         && conversationId == request.auth.uid
-        && request.resource.data.keys().hasOnly(['customerId','customerName','customerEmail','status','lastMessage','lastMessageId','lastMessageSenderRole','lastDeletedMessageId','unreadForAdmin','unreadForCustomer','adminLastReadAt','customerLastReadAt','createdAt','updatedAt'])
+        && request.resource.data.keys().hasOnly(['customerId','customerName','customerEmail','status','lastMessage','lastMessageId','lastMessageSenderRole','lastDeletedMessageId','unreadForAdmin','unreadForCustomer','customerRequestedAt','customerRequestedTopic','adminLastReadAt','customerLastReadAt','createdAt','updatedAt'])
         && request.resource.data.keys().hasAll(['customerId','customerName','customerEmail','status','lastMessage','lastMessageId','lastMessageSenderRole','lastDeletedMessageId','unreadForAdmin','unreadForCustomer','adminLastReadAt','customerLastReadAt','createdAt','updatedAt'])
         && request.resource.data.customerId == request.auth.uid
         && text(request.resource.data.customerName, 100)
@@ -422,8 +445,14 @@ service cloud.firestore {
         && request.resource.data.adminLastReadAt == request.time
         && request.resource.data.customerLastReadAt == request.time
         && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-      allow update: if isMessageUpdate() || isMessageEditUpdate() || isMessageDeleteUpdate() || markAdminRead() || markCustomerRead();
+        && request.resource.data.updatedAt == request.time
+        && (!('customerRequestedAt' in request.resource.data)
+          || (request.resource.data.customerRequestedAt == request.time
+            && 'customerRequestedTopic' in request.resource.data
+            && request.resource.data.customerRequestedTopic in ['question','order','exchange','custom','pickup','other','product']))
+        && (!('customerRequestedTopic' in request.resource.data)
+          || ('customerRequestedAt' in request.resource.data));
+      allow update: if isMessageUpdate() || isMessageEditUpdate() || isMessageDeleteUpdate() || markAdminRead() || markCustomerRead() || startCustomerConversation() || closeCustomerConversation();
       allow delete: if false;
 
       match /quotes/{quoteId} {
