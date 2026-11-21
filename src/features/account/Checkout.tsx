@@ -580,7 +580,9 @@ export function Checkout() {
         orderId,
         customerName: draft.contact.name.trim(),
         customerEmail: draft.contact.email.trim(),
-        customerPhone: draft.contact.phone.trim(),
+        ...(draft.contact.phone.trim()
+          ? { customerPhone: draft.contact.phone.trim() }
+          : {}),
         items: customCheckoutRequested
           ? []
           : lines.map(({ productId, variantId, quantity }) => ({

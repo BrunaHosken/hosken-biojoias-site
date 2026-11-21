@@ -379,15 +379,14 @@ export function CheckoutDeliveryStep({
             />
           </label>
           <label>
-            Celular
+            Celular (opcional)
             <input
-              required
               type="tel"
               autoComplete="tel"
               inputMode="tel"
               maxLength={15}
-              pattern="\([0-9]{2}\) [0-9]{5}-[0-9]{4}"
-              title="Digite um celular com DDD, por exemplo (22) 99999-9999."
+              pattern="(\([0-9]{2}\) [0-9]{5}-[0-9]{4})?"
+              title="Se informar, digite um celular com DDD, por exemplo (22) 99999-9999."
               placeholder="(22) 99999-9999"
               value={draft.contact.phone}
               onChange={(event) =>

@@ -46,19 +46,18 @@
 .chat-start-ended {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 .chat-start-ended > svg {
   grid-column: 1;
-  grid-row: 1 / span 2;
+  grid-row: 1;
   align-self: center;
 }
 .chat-start-ended h2,
-.chat-start-ended p,
-.chat-start-ended .button {
+.chat-start-ended p {
   grid-column: 2;
-}
-.chat-start-ended .button {
-  justify-self: start;
 }
 .chat-intake {
   display: grid;

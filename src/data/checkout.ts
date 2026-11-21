@@ -6,7 +6,7 @@ export type CreateDemoOrderInput = {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  customerPhone: string;
+  customerPhone?: string;
   items: {
     productId: string;
     variantId?: string;

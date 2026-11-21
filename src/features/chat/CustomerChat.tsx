@@ -90,18 +90,23 @@ export function CustomerChat() {
     contextTopic,
   );
   const [intakeStarted, setIntakeStarted] = useState(Boolean(contextTopic));
+  const [directContextActive, setDirectContextActive] = useState(
+    Boolean(contextTopic),
+  );
   const [conversationEndedHere, setConversationEndedHere] = useState(false);
-  const initialDraft = quoteReturn
-    ? ""
-    : productContext
-      ? `Olá! Tenho uma dúvida sobre a peça ${productContext}.`
-      : customOrderRequest
-        ? "Olá! Gostaria de encomendar uma peça personalizada. Vou explicar a ideia por aqui."
-        : checkoutReturn
-          ? "Olá! Quero combinar uma retirada presencial para um pedido que estou finalizando."
-          : intakeStarted && helpTopic
-            ? chatTopicDraft(helpTopic)
-            : "";
+  const initialDraft = directContextActive
+    ? quoteReturn
+      ? ""
+      : productContext
+        ? `Olá! Tenho uma dúvida sobre a peça ${productContext}.`
+        : customOrderRequest
+          ? "Olá! Gostaria de encomendar uma peça personalizada. Vou explicar a ideia por aqui."
+          : checkoutReturn
+            ? "Olá! Quero combinar uma retirada presencial para um pedido que estou finalizando."
+            : ""
+    : intakeStarted && helpTopic
+      ? chatTopicDraft(helpTopic)
+      : "";
   const chatPath = searchParams.size
     ? `/chat?${searchParams.toString()}`
     : "/chat";
@@ -118,6 +123,10 @@ export function CustomerChat() {
     ) {
       openConversationId.current = "";
       setConversationEndedHere(true);
+      setIntakeStarted(false);
+      setHelpTopic(null);
+      setDirectContextActive(false);
+      attemptedUsers.current.clear();
     }
   }, [chat.conversation?.id, chat.conversation?.status]);
   const hasConversationActivity = Boolean(
@@ -131,10 +140,10 @@ export function CustomerChat() {
     (!chat.conversation ||
       chat.conversation.status === "closed" ||
       !hasConversationActivity) &&
-    !intakeStarted &&
-    !conversationEndedHere,
+    !intakeStarted,
   );
   const attemptedUsers = useRef(new Set<string>());
+  const requestTopic = directContextActive ? contextTopic : helpTopic;
   useEffect(() => {
     const user = session.user;
     if (
@@ -146,24 +155,24 @@ export function CustomerChat() {
       chat.error ||
       !intakeStarted ||
       (chat.conversation
-        ? !contextTopic ||
+        ? !requestTopic ||
           attemptedUsers.current.has(
-            `request:${chat.conversation.id}:${contextTopic}`,
+            `request:${chat.conversation.id}:${requestTopic}`,
           )
         : attemptedUsers.current.has(`create:${user.uid}`))
     )
       return;
     const attemptKey = chat.conversation
-      ? `request:${chat.conversation.id}:${contextTopic}`
+      ? `request:${chat.conversation.id}:${requestTopic}`
       : `create:${user.uid}`;
     attemptedUsers.current.add(attemptKey);
     const startRequest = chat.conversation
-      ? startCustomerConversation(chat.conversation.id, contextTopic!)
+      ? startCustomerConversation(chat.conversation.id, requestTopic!)
       : createCustomerConversation(
           user.uid,
           user.displayName || "Cliente",
           user.email || "",
-          helpTopic || "other",
+          requestTopic || "other",
         );
     startRequest.catch((cause) => {
       if (import.meta.env.DEV)
@@ -185,6 +194,8 @@ export function CustomerChat() {
     chat.conversation,
     helpTopic,
     contextTopic,
+    requestTopic,
+    directContextActive,
     intakeStarted,
     notify,
   ]);
@@ -244,20 +255,9 @@ export function CustomerChat() {
           <MessageCircle size={28} />
           <h2>Conversa encerrada</h2>
           <p>Obrigada por falar com o ateliê.</p>
-          <button
-            className="button secondary"
-            type="button"
-            onClick={() => {
-              setConversationEndedHere(false);
-              setIntakeStarted(false);
-              setHelpTopic(null);
-            }}
-          >
-            Preciso de mais alguma coisa <ArrowRight size={17} />
-          </button>
         </section>
       )}
-      {(checkoutReturn || quoteReturn) && (
+      {directContextActive && (checkoutReturn || quoteReturn) && (
         <div className="chat-checkout-return">
           <p>
             {quoteReturn
@@ -269,7 +269,8 @@ export function CustomerChat() {
           </Link>
         </div>
       )}
-      {helpTopic === "pickup" && !checkoutReturn && (
+      {helpTopic === "pickup" &&
+        !(directContextActive && checkoutReturn) && (
         <div className="chat-checkout-return">
           <p>
             O assunto desta conversa já está definido como retirada presencial.
@@ -277,7 +278,7 @@ export function CustomerChat() {
           </p>
         </div>
       )}
-      {(customOrderRequest || (helpTopic === "custom" && !quoteReturn)) && (
+      {helpTopic === "custom" && !(directContextActive && quoteReturn) && (
         <div className="chat-custom-order-context">
           <strong>Encomenda personalizada</strong>
           <p>
@@ -287,7 +288,7 @@ export function CustomerChat() {
           </p>
         </div>
       )}
-      {productContext && (
+      {helpTopic === "product" && productContext && (
         <div className="chat-product-context">
           <span className="eyebrow">PEÇA EM FOCO</span>
           <Link to={`/produto/${encodeURIComponent(productId)}`}>
@@ -307,16 +308,10 @@ export function CustomerChat() {
       {showIntake && (
         <ChatStartFlow
           onStart={(topic) => {
+            setConversationEndedHere(false);
+            setDirectContextActive(false);
             setHelpTopic(topic);
             setIntakeStarted(true);
-            if (chat.conversation) {
-              startCustomerConversation(chat.conversation.id, topic).catch(() =>
-                notify(
-                  "Não foi possível reabrir o atendimento. Tente novamente.",
-                  "error",
-                ),
-              );
-            }
           }}
         />
       )}

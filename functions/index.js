@@ -42,7 +42,12 @@ function validateCheckout(data) {
   }
 
   const customerName = requireText(data.customerName, "customerName", 100);
-  const customerPhone = requireText(data.customerPhone, "customerPhone", 24);
+  const customerPhone = requireText(
+    data.customerPhone,
+    "customerPhone",
+    24,
+    true,
+  );
   const customerEmail = requireText(data.customerEmail, "customerEmail", 160);
   const deliveryMethod = data.deliveryMethod;
   const paymentMethod = data.paymentMethod;
@@ -166,7 +171,7 @@ function validateCheckout(data) {
     orderId,
     customerName,
     customerEmail,
-    customerPhone,
+    ...(customerPhone ? { customerPhone } : {}),
     deliveryMethod,
     paymentMethod,
     paymentStatus,
@@ -598,7 +603,9 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         userId,
         customerName: checkout.customerName,
         customerEmail: checkout.customerEmail,
-        customerPhone: checkout.customerPhone,
+        ...(checkout.customerPhone
+          ? { customerPhone: checkout.customerPhone }
+          : {}),
         orderNumber,
         items: orderItems,
         totalCents,
