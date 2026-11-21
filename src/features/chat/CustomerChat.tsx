@@ -154,6 +154,9 @@ export function CustomerChat() {
       !chat.serverReady ||
       chat.error ||
       !intakeStarted ||
+      (chat.conversation?.status === "open" &&
+        requestTopic &&
+        chat.conversation.customerRequestedTopic === requestTopic) ||
       (chat.conversation
         ? !requestTopic ||
           attemptedUsers.current.has(
