@@ -107,6 +107,15 @@
   gap: 10px;
   margin-bottom: 22px;
 }
+.checkout-sedex-note {
+  margin: -10px 0 22px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--wine);
+  background: #f7f1e9;
+  color: #514843;
+  font-size: 11px;
+  line-height: 1.6;
+}
 .checkout-gift-fields {
   margin: 0 0 22px;
   padding: 14px 16px;

@@ -147,7 +147,7 @@ export function CheckoutSummary({
       )}
       <p className="checkout-summary-note">
         {draft.deliveryMethod === "sedex"
-          ? "O frete dos Correios ainda não foi calculado e não está incluído no total desta demonstração. O envio será feito em até 48 horas úteis após a confirmação do pagamento."
+          ? "O frete dos Correios ainda não foi calculado e não está incluído no total desta demonstração."
           : "A retirada depende de combinação prévia com a artesã pelo chat."}
       </p>
       <p className="checkout-summary-note">

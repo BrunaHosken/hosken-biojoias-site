@@ -33,6 +33,10 @@ const moduleGroups = [
     ],
   },
   {
+    label: "Análise",
+    items: [["reports", "Relatórios"]],
+  },
+  {
     label: "Conteúdo",
     items: [
       ["news", "Novidades"],
@@ -40,10 +44,6 @@ const moduleGroups = [
       ["partnerStores", "Lojas parceiras"],
       ["policies", "Políticas"],
     ],
-  },
-  {
-    label: "Análise",
-    items: [["reports", "Relatórios"]],
   },
 ];
 

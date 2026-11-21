@@ -78,8 +78,7 @@ export function CheckoutDeliveryStep({
             <strong>Receber pelos Correios (Sedex)</strong>
             <small>
               O valor do frete ainda será combinado; ele não está incluído nesta
-              simulação. Após a confirmação do pagamento, o envio será feito em
-              até 48 horas úteis.
+              simulação.
             </small>
           </span>
         </label>
@@ -108,6 +107,12 @@ export function CheckoutDeliveryStep({
           </span>
         </label>
       </div>
+      {draft.deliveryMethod === "sedex" && (
+        <p className="checkout-sedex-note">
+          Pedidos com Sedex são enviados em até 48 horas úteis após a confirmação
+          do pagamento.
+        </p>
+      )}
 
       <div className="checkout-gift-fields">
         <label className="checkout-checkbox">

@@ -17,11 +17,6 @@ footer p {
   margin: auto;
   color: var(--muted);
 }
-.footer-shipping-note {
-  max-width: 390px;
-  font-size: 11px;
-  line-height: 1.6;
-}
 footer > div:last-of-type {
   display: flex;
   flex-wrap: wrap;
