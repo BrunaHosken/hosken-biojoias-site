@@ -533,7 +533,7 @@ export function ChatThread({
     try {
       await closeConversation(conversationId);
       setCloseSucceeded(true);
-      setCloseFeedback("Conversa encerrada.");
+      setCloseFeedback("");
     } catch (cause) {
       const errorCode =
         typeof cause === "object" && cause !== null && "code" in cause
@@ -550,7 +550,7 @@ export function ChatThread({
   }
   return (
     <section
-      className="chat-thread"
+      className={`chat-thread${closeFeedback && !closeSucceeded ? " has-close-feedback" : ""}`}
       aria-label={`Conversa com ${otherPartyName}`}
     >
       <header className="chat-thread-header">
@@ -561,6 +561,9 @@ export function ChatThread({
           <strong>{otherPartyName}</strong>
           <small>Atendimento Hosken Biojoias</small>
         </div>
+        {senderRole === "admin" && effectivelyClosed && (
+          <span className="chat-closed-badge">Encerrada</span>
+        )}
         {senderRole === "admin" && !effectivelyClosed && (
           <button
             type="button"
@@ -573,10 +576,10 @@ export function ChatThread({
           </button>
         )}
       </header>
-      {senderRole === "admin" && closeFeedback && (
+      {senderRole === "admin" && closeFeedback && !closeSucceeded && (
         <p
-          className={`chat-close-feedback${closeSucceeded ? " is-success" : closing ? " is-pending" : " is-error"}`}
-          role={closeSucceeded || closing ? "status" : "alert"}
+          className={`chat-close-feedback${closing ? " is-pending" : " is-error"}`}
+          role={closing ? "status" : "alert"}
         >
           {closeFeedback}
         </p>
@@ -623,12 +626,6 @@ export function ChatThread({
           ),
         )}
       </div>
-      {effectivelyClosed && (
-        <p className="chat-closed-notice" role="status">
-          Atendimento encerrado. A cliente verá os assuntos disponíveis quando
-          abrir o chat novamente.
-        </p>
-      )}
       {senderRole === "admin" && !effectivelyClosed && (
         <CustomQuoteComposer
           conversationId={conversationId}

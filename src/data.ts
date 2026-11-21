@@ -11,3 +11,4 @@ export * from "./data/formatting";
 export * from "./data/productAvailability";
 export * from "./data/productVisibility";
 export * from "./data/pricing";
+export * from "./data/reviews";

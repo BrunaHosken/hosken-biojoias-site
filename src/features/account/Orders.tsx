@@ -1,23 +1,54 @@
-import { useContext, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, RotateCcw, ShoppingBag } from "lucide-react";
-import { orderStatusLabels } from "../../app/constants";
+import { ArrowRight, Check, RotateCcw, ShoppingBag, Star } from "lucide-react";
+import {
+  orderStatusLabels,
+  orderStatusOptions,
+} from "../../app/constants";
 import { SessionContext, useToast } from "../../app/contexts";
-import { Notice } from "../../components/Feedback";
+import { Pagination } from "../../components/Pagination";
 import {
   cancelDemoOrder,
   canCancelDemoOrder,
+  confirmOrderDelivery,
   money,
   useCustomerOrders,
   type CustomerOrder,
 } from "../../data";
 
+const ORDERS_PER_PAGE = 5;
+
 export function OrdersPage() {
   const session = useContext(SessionContext);
   const orders = useCustomerOrders(session.user?.uid);
   const location = useLocation();
-  const allOrders = [...orders.data].sort(
-    (a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const allOrders = useMemo(
+    () =>
+      [...orders.data].sort(
+        (a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
+      ),
+    [orders.data],
+  );
+  const filteredOrders = useMemo(() => {
+    const start = dateFrom ? new Date(`${dateFrom}T00:00:00`) : undefined;
+    const end = dateTo ? new Date(`${dateTo}T23:59:59.999`) : undefined;
+    return allOrders.filter((order) => {
+      if (statusFilter !== "all" && order.status !== statusFilter) return false;
+      if (!start && !end) return true;
+      const createdAt = order.createdAt?.toDate();
+      if (!createdAt) return false;
+      return (!start || createdAt >= start) && (!end || createdAt <= end);
+    });
+  }, [allOrders, statusFilter, dateFrom, dateTo]);
+  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const visibleOrders = filteredOrders.slice(
+    (safePage - 1) * ORDERS_PER_PAGE,
+    safePage * ORDERS_PER_PAGE,
   );
   const checkoutState = location.state as {
     checkoutDemo?: string;
@@ -49,6 +80,9 @@ export function OrdersPage() {
       <p className="lead">
         Você pode acompanhar o andamento de cada pedido por aqui.
       </p>
+      <Link className="button orders-reviews-link" to="/minhas-avaliacoes">
+        <Star size={17} /> Ver minhas avaliações <ArrowRight size={16} />
+      </Link>
       {checkoutResult === "simulated_paid" && (
         <p className="notice" role="status">
           Pagamento de demonstração confirmado. O pedido aparece como em
@@ -92,23 +126,128 @@ export function OrdersPage() {
           </Link>
         </div>
       )}
+      {!orders.loading && !orders.error && allOrders.length > 0 && (
+        <div className="admin-order-filters">
+          <div
+            className="admin-order-status-filters"
+            role="group"
+            aria-label="Filtrar meus pedidos por andamento"
+          >
+            <button
+              type="button"
+              className={statusFilter === "all" ? "is-active" : ""}
+              aria-pressed={statusFilter === "all"}
+              onClick={() => {
+                setStatusFilter("all");
+                setPage(1);
+              }}
+            >
+              Todos <small>{allOrders.length}</small>
+            </button>
+            {orderStatusOptions.map((value) => {
+              const count = allOrders.filter((order) => order.status === value).length;
+              return (
+                <button
+                  type="button"
+                  key={value}
+                  className={statusFilter === value ? "is-active" : ""}
+                  aria-pressed={statusFilter === value}
+                  onClick={() => {
+                    setStatusFilter(value);
+                    setPage(1);
+                  }}
+                >
+                  {orderStatusLabels[value]} <small>{count}</small>
+                </button>
+              );
+            })}
+          </div>
+          <div className="admin-order-date-filters">
+            <label>
+              De
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => {
+                  setDateFrom(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </label>
+            <label>
+              Até
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(event) => {
+                  setDateTo(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </label>
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  setDateFrom("");
+                  setDateTo("");
+                  setPage(1);
+                }}
+              >
+                Limpar datas
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {!orders.loading && !orders.error && filteredOrders.length > 0 && (
+        <p className="muted admin-order-result-count">
+          Mostrando {Math.min((safePage - 1) * ORDERS_PER_PAGE + 1, filteredOrders.length)}–
+          {Math.min(safePage * ORDERS_PER_PAGE, filteredOrders.length)} de {filteredOrders.length} pedidos.
+        </p>
+      )}
       <div className="order-list">
-        {allOrders.map((order) => (
+        {visibleOrders.map((order) => (
           <OrderCard key={order.id} order={order} />
         ))}
       </div>
+      {!orders.loading && !orders.error && allOrders.length > 0 && filteredOrders.length === 0 && (
+        <p className="muted">Nenhum pedido encontrado com esses filtros.</p>
+      )}
+      {!orders.loading && !orders.error && (
+        <Pagination
+          page={safePage}
+          pageCount={pageCount}
+          onChange={setPage}
+          label="Paginação dos meus pedidos"
+        />
+      )}
     </div>
   );
 }
 export function OrderCard({ order }: { order: CustomerOrder }) {
   const notify = useToast();
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [deliveryBusy, setDeliveryBusy] = useState(false);
   const status =
     order.isDemo && order.status === "preparing"
       ? "Em produção (simulação)"
       : orderStatusLabels[order.status] || "Em atualização";
   const createdAt = order.createdAt?.toDate();
   const isCustomOrder = order.items.some((item) => Boolean(item.customQuoteId));
+
+  async function confirmDelivery() {
+    setDeliveryBusy(true);
+    try {
+      await confirmOrderDelivery(order.id);
+      notify("Recebimento confirmado. Obrigada pela compra!", "success");
+    } catch {
+      notify("Não foi possível confirmar o recebimento. Tente novamente.", "error");
+    } finally {
+      setDeliveryBusy(false);
+    }
+  }
 
   async function cancelOrder() {
     if (
@@ -264,6 +403,17 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
         <p className="order-tracking">
           Encomenda personalizada; não altera o estoque do catálogo.
         </p>
+      )}
+      {order.status === "in_transit" && (
+        <button
+          className="button secondary order-delivery-button"
+          type="button"
+          disabled={deliveryBusy}
+          onClick={() => void confirmDelivery()}
+        >
+          <Check size={16} />
+          {deliveryBusy ? "Confirmando…" : "Confirmar que recebi o pedido"}
+        </button>
       )}
       {canCancelDemoOrder(order) && (
         <button

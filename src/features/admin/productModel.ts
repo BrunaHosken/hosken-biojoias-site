@@ -9,6 +9,7 @@ export const blankProduct: ProductDraft = {
   description: "",
   priceCents: 0,
   stock: 0,
+  soldCount: 0,
   lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
   categoryId: "",
   collectionId: "",

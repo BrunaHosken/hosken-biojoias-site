@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { orderStatusLabels, orderStatusOptions } from "../../app/constants";
 import { useToast } from "../../app/contexts";
 import { Notice } from "../../components/Feedback";
+import { Pagination } from "../../components/Pagination";
 import { auth, db } from "../../firebase";
 import {
   cancelDemoOrder,
@@ -12,6 +13,8 @@ import {
   type CustomerOrder,
 } from "../../data";
 
+const ORDERS_PER_PAGE = 10;
+
 export function AdminOrders({
   orders,
   focusOrderId,
@@ -19,15 +22,44 @@ export function AdminOrders({
   orders: ReturnType<typeof useAdminOrders>;
   focusOrderId: string;
 }) {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const filteredOrders = useMemo(() => {
+    const start = dateFrom ? new Date(`${dateFrom}T00:00:00`) : undefined;
+    const end = dateTo ? new Date(`${dateTo}T23:59:59.999`) : undefined;
+    return orders.data.filter((order) => {
+      if (statusFilter !== "all" && order.status !== statusFilter) return false;
+      if (!start && !end) return true;
+      const createdAt = order.createdAt?.toDate();
+      if (!createdAt) return false;
+      return (!start || createdAt >= start) && (!end || createdAt <= end);
+    });
+  }, [orders.data, statusFilter, dateFrom, dateTo]);
+  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const visibleOrders = filteredOrders.slice(
+    (safePage - 1) * ORDERS_PER_PAGE,
+    safePage * ORDERS_PER_PAGE,
+  );
+  const focusOrderIndex = orders.data.findIndex((order) => order.id === focusOrderId);
+
   useEffect(() => {
     if (!focusOrderId || orders.loading) return;
+    if (focusOrderIndex < 0) return;
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+    setPage(Math.floor(focusOrderIndex / ORDERS_PER_PAGE) + 1);
     const timer = window.setTimeout(() => {
       document
         .getElementById(`admin-order-${focusOrderId}`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 0);
+    }, 80);
     return () => window.clearTimeout(timer);
-  }, [focusOrderId, orders.data.length, orders.loading]);
+  }, [focusOrderId, focusOrderIndex, orders.loading]);
+
   return (
     <section className="admin-orders">
       <h2>Pedidos recebidos</h2>
@@ -36,12 +68,64 @@ export function AdminOrders({
         não são alterados aqui.
       </p>
       <Notice {...orders} />
-      {orders.data.map((order) => (
+      {orders.data.length > 0 && (
+        <div className="admin-order-filters">
+          <div className="admin-order-status-filters" role="group" aria-label="Filtrar pedidos por andamento">
+            <button
+              type="button"
+              className={statusFilter === "all" ? "is-active" : ""}
+              aria-pressed={statusFilter === "all"}
+              onClick={() => { setStatusFilter("all"); setPage(1); }}
+            >
+              Todos <small>{orders.data.length}</small>
+            </button>
+            {orderStatusOptions.map((value) => {
+              const count = orders.data.filter((order) => order.status === value).length;
+              return (
+                <button
+                  type="button"
+                  key={value}
+                  className={statusFilter === value ? "is-active" : ""}
+                  aria-pressed={statusFilter === value}
+                  onClick={() => { setStatusFilter(value); setPage(1); }}
+                >
+                  {orderStatusLabels[value]} <small>{count}</small>
+                </button>
+              );
+            })}
+          </div>
+          <div className="admin-order-date-filters">
+            <label>
+              De
+              <input type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); setPage(1); }} />
+            </label>
+            <label>
+              Até
+              <input type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); setPage(1); }} />
+            </label>
+            {(dateFrom || dateTo) && (
+              <button type="button" className="button secondary" onClick={() => { setDateFrom(""); setDateTo(""); setPage(1); }}>
+                Limpar datas
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {filteredOrders.length > 0 && (
+        <p className="muted admin-order-result-count">
+          Mostrando {Math.min((safePage - 1) * ORDERS_PER_PAGE + 1, filteredOrders.length)}–{Math.min(safePage * ORDERS_PER_PAGE, filteredOrders.length)} de {filteredOrders.length} pedidos.
+        </p>
+      )}
+      {visibleOrders.map((order) => (
         <AdminOrderCard key={order.id} order={order} />
       ))}
       {!orders.loading && !orders.error && orders.data.length === 0 && (
         <p className="muted">Nenhum pedido cadastrado ainda.</p>
       )}
+      {!orders.loading && !orders.error && orders.data.length > 0 && filteredOrders.length === 0 && (
+        <p className="muted">Nenhum pedido encontrado com esses filtros.</p>
+      )}
+      <Pagination page={safePage} pageCount={pageCount} onChange={setPage} label="Paginação de pedidos" />
     </section>
   );
 }
@@ -53,6 +137,12 @@ export function AdminOrderCard({ order }: { order: CustomerOrder }) {
   const [busy, setBusy] = useState(false);
   const createdAt = order.createdAt?.toDate();
   const isCustomOrder = order.items.some((item) => Boolean(item.customQuoteId));
+
+  useEffect(() => {
+    setStatus(order.status);
+    setTrackingCode(order.trackingCode || "");
+  }, [order.status, order.trackingCode]);
+
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);

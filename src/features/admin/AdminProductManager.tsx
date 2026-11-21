@@ -288,6 +288,11 @@ export function AdminProductManager() {
       const productToSave = {
         ...productDetails,
         stock: totalStock,
+        soldCount: editing
+          ? products.data.find((item) => item.id === editing)?.soldCount ??
+            product.soldCount ??
+            0
+          : 0,
         ...(colorVariants.length
           ? {
               colorVariants: colorVariants.map((variant) => ({

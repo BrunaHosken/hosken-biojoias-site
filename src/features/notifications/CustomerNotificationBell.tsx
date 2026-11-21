@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, MessageCircle, ShoppingBag, X } from "lucide-react";
-import { useCustomerConversation, useCustomerOrders } from "../../data";
+import { useCustomerConversation, useCustomerOrders, useCustomerReviews } from "../../data";
 import {
   CUSTOMER_NOTIFICATIONS_EVENT,
   readCustomerNotificationState,
@@ -12,6 +12,7 @@ import { useDismissNotificationOnOutside } from "./useDismissNotificationOnOutsi
 
 export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
   const orders = useCustomerOrders(uid);
+  const reviews = useCustomerReviews(uid);
   const conversation = useCustomerConversation(uid);
   const [open, setOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
@@ -84,7 +85,23 @@ export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
   const unreadMessages = conversation.conversation?.unreadForCustomer || 0;
   const unreadConversations = unreadMessages > 0 ? 1 : 0;
   const pendingOrders = Object.entries(notificationState.pendingOrders);
-  const count = unreadConversations + pendingOrders.length;
+  const reviewedItems = new Set(
+    reviews.data.map((review) => `${review.orderId}:${review.itemIndex}`),
+  );
+  const pendingReviews =
+    orders.loading || orders.error || reviews.loading || reviews.error
+      ? []
+      : orders.data.flatMap((order) =>
+          order.status === "completed"
+            ? order.items.flatMap((item, itemIndex) =>
+                item.productId !== "custom" &&
+                !reviewedItems.has(`${order.id}:${itemIndex}`)
+                  ? [{ order, item, itemIndex }]
+                  : [],
+              )
+            : [],
+        );
+  const count = unreadConversations + pendingOrders.length + pendingReviews.length;
 
   function clearOrderNotifications() {
     const acknowledgedOrderUpdates = {
@@ -160,6 +177,19 @@ export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
                   </span>
                 </Link>
               )}
+              {pendingReviews.map(({ order, item, itemIndex }) => (
+                <Link
+                  to={`/avaliar?pedido=${encodeURIComponent(order.id)}&item=${itemIndex}`}
+                  key={`${order.id}:${itemIndex}`}
+                  onClick={() => setOpen(false)}
+                >
+                  <span className="notification-icon"><ShoppingBag size={17} /></span>
+                  <span>
+                    <strong>Conte como foi sua experiência</strong>
+                    <small>{item.name} · pedido {order.orderNumber || order.id.slice(-8).toUpperCase()}</small>
+                  </span>
+                </Link>
+              ))}
               {unreadConversations > 0 && (
                 <Link to="/chat" onClick={() => setOpen(false)}>
                   <span className="notification-icon">

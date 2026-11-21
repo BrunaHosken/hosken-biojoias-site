@@ -32,6 +32,94 @@
 .admin-order-form .notice {
   margin-top: 14px;
 }
+.admin-order-filters {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0 12px;
+}
+.admin-order-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-order-status-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-order-status-filters button.is-active {
+  border-color: var(--wine-fill);
+  background: var(--wine-fill);
+  color: #fff;
+}
+.admin-order-status-filters small {
+  color: inherit;
+  opacity: 0.8;
+  font-size: 10px;
+}
+.admin-order-status-filters button.is-active small {
+  opacity: 1;
+}
+.admin-order-date-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.admin-order-date-filters label {
+  width: min(190px, 100%);
+  margin: 0;
+}
+.admin-order-date-filters .button {
+  min-height: 44px;
+  margin-bottom: 0;
+}
+.admin-order-result-count {
+  margin: 0 0 14px;
+}
+.admin-list-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 28px 0;
+}
+.admin-list-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.admin-list-page-numbers button {
+  display: grid;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 8px;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-list-page-numbers button.is-active {
+  border-color: var(--wine-fill);
+  background: var(--wine-fill);
+  color: #fff;
+}
+.admin-list-page-numbers span {
+  padding: 0 3px;
+  color: var(--muted);
+}
 .content-card {
   padding: 30px;
   border: 1px solid var(--border);

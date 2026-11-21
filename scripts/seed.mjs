@@ -165,6 +165,7 @@ const sampleOrders = [
     totalCents: 7400,
   },
 ];
+
 const { users } = await auth.listUsers();
 for (const user of users) {
   for (const order of sampleOrders) {
@@ -194,7 +195,64 @@ for (const user of users) {
     }
   }
 }
+
+async function recalculateProductSalesCounts() {
+  const [ordersSnapshot, productsSnapshot] = await Promise.all([
+    db.collection("orders").get(),
+    db.collection("products").get(),
+  ]);
+  const quantitiesByProduct = new Map();
+  let paidOrdersCount = 0;
+
+  for (const orderDocument of ordersSnapshot.docs) {
+    const order = orderDocument.data();
+    if (
+      orderDocument.id.startsWith("demo-order-") ||
+      !["approved", "simulated_paid"].includes(order.paymentStatus) ||
+      ["cancelled", "refunded"].includes(order.status)
+    ) {
+      continue;
+    }
+    paidOrdersCount++;
+    for (const item of Array.isArray(order.items) ? order.items : []) {
+      if (
+        typeof item.productId !== "string" ||
+        !item.productId ||
+        item.productId === "custom" ||
+        !Number.isSafeInteger(item.quantity) ||
+        item.quantity < 1
+      ) {
+        continue;
+      }
+      quantitiesByProduct.set(
+        item.productId,
+        (quantitiesByProduct.get(item.productId) || 0) + item.quantity,
+      );
+    }
+  }
+
+  let batch = db.batch();
+  let writes = 0;
+  for (const productDocument of productsSnapshot.docs) {
+    batch.update(productDocument.ref, {
+      soldCount: quantitiesByProduct.get(productDocument.id) || 0,
+    });
+    writes++;
+    if (writes === 400) {
+      await batch.commit();
+      batch = db.batch();
+      writes = 0;
+    }
+  }
+  if (writes > 0) await batch.commit();
+  return { paidOrdersCount, quantitiesByProduct };
+}
+
+const { paidOrdersCount } = await recalculateProductSalesCounts();
 console.log(`Pedidos de exemplo associados a ${users.length} contas locais.`);
+console.log(
+  `Contagem de unidades vendidas recalculada a partir de ${paidOrdersCount} pedidos pagos.`,
+);
 console.log(
   `${count} registros criados no emulador. Dados existentes preservados.`,
 );

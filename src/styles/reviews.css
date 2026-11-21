@@ -1,0 +1,676 @@
+.home-review-section {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 76px 5% 82px;
+  border-top: 1px solid var(--border);
+}
+.home-review-grid,
+.product-review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.home-review-carousel {
+  min-width: 0;
+}
+.home-review-grid {
+  margin-bottom: 0;
+}
+.home-review-grid > .review-card {
+  animation: home-review-enter 1000ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes home-review-enter {
+  from {
+    opacity: 0.35;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.home-review-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  margin: 22px 0 24px;
+}
+.home-review-pagination button {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+  transition: background-color 220ms ease, transform 220ms ease;
+}
+.home-review-pagination button.is-active {
+  background: var(--wine);
+  transform: scale(1.2);
+}
+.review-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 210px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+.review-card-carousel {
+  box-sizing: border-box;
+  height: 350px;
+  min-height: 350px;
+  overflow: hidden;
+}
+.review-card-content {
+  min-width: 0;
+}
+.review-card-carousel .review-card-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 7px;
+}
+.review-card-carousel .review-card-content::-webkit-scrollbar {
+  width: 6px;
+}
+.review-card-carousel .review-card-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+.review-card-carousel .review-card-content {
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+.review-card-heading,
+.review-section-heading,
+.review-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.review-card-heading time,
+.review-card footer,
+.review-product-name {
+  color: var(--muted);
+  font-size: 10px;
+}
+.review-stars {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  color: var(--wine);
+}
+.review-card p {
+  margin: 18px 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.review-card footer {
+  justify-content: flex-start;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.review-product-name {
+  display: block;
+  margin-top: 14px;
+  color: var(--wine);
+  font-size: 11px;
+}
+.review-photo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 16px;
+}
+.review-photo-list button,
+.review-photo-list a {
+  display: block;
+  width: 70px;
+  height: 70px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  cursor: pointer;
+}
+.review-photo-list img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.home-review-section > .text-link {
+  color: var(--wine);
+}
+.product-reviews {
+  margin: 80px 0 12px;
+  padding-top: 38px;
+  border-top: 1px solid var(--border);
+}
+.product-review-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: -14px 0 22px;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+.product-review-meta:hover {
+  color: var(--wine);
+}
+.product-review-meta:focus-visible,
+.home-review-pagination button:focus-visible,
+.review-rating-filter button:focus-visible {
+  outline: 2px solid var(--wine);
+  outline-offset: 3px;
+}
+.review-section-heading {
+  align-items: end;
+  margin-bottom: 24px;
+}
+.review-section-heading h2 {
+  margin: 0;
+}
+.review-average {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+.review-average > strong {
+  color: var(--wine);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+}
+.review-average small {
+  font-size: 10px;
+}
+.product-review-grid {
+  margin: 0;
+}
+.product-rating-distribution {
+  margin-bottom: 18px;
+}
+.review-rating-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.review-rating-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.review-rating-filter button.is-active {
+  border-color: var(--wine-fill);
+  background: var(--wine-fill);
+  color: #fff;
+}
+.review-rating-filter small {
+  opacity: 0.78;
+  font-size: 10px;
+}
+.review-rating-filter button.is-active small {
+  color: #fff;
+  opacity: 1;
+}
+.product-review-scroll {
+  box-sizing: border-box;
+  height: 500px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 2px 8px 8px 0;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+.product-review-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+.product-review-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+.product-review-scroll .product-review-grid {
+  padding-bottom: 8px;
+}
+.homepage-review-limit {
+  display: grid;
+  gap: 9px;
+  max-width: 520px;
+  margin: 0 0 26px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+.homepage-review-limit > label,
+.admin-review-filter > span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.homepage-review-limit > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.homepage-review-limit input {
+  width: 100px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.homepage-review-limit > small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.admin-review-filter {
+  display: grid;
+  gap: 9px;
+  margin: 26px 0 18px;
+}
+.review-form-page {
+  max-width: 800px;
+}
+.review-order-reference {
+  display: grid;
+  gap: 5px;
+  margin: 25px 0;
+  padding: 18px 20px;
+  border-left: 3px solid var(--wine);
+  background: var(--surface-soft);
+}
+.review-order-reference small {
+  font-size: 11px;
+}
+.review-form {
+  display: grid;
+  gap: 22px;
+}
+.review-form > label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.review-form textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  padding: 13px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.review-rating-picker {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.review-rating-picker legend {
+  margin-bottom: 9px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.review-rating-picker > div {
+  display: flex;
+  gap: 7px;
+}
+.review-rating-picker button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 0;
+  background: transparent;
+  color: var(--wine);
+}
+.review-photo-input input {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.review-photo-input small,
+.review-privacy-note {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.65;
+}
+.review-upload-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.review-upload-previews > div {
+  position: relative;
+  width: 84px;
+  height: 84px;
+}
+.review-upload-previews img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+.review-upload-previews button {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--wine);
+}
+.review-anonymous-choice {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  margin: 0;
+  gap: 10px !important;
+  text-align: left;
+}
+.review-anonymous-choice input {
+  flex: 0 0 17px;
+  width: 17px;
+  min-width: 17px;
+  height: 17px;
+  min-height: 17px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--wine);
+}
+.review-anonymous-choice span {
+  flex: 1;
+  text-align: left;
+  line-height: 1.5;
+}
+.review-privacy-note {
+  margin: -14px 0 0;
+}
+.review-form-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.review-admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.review-admin-stats article {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+.review-admin-stats strong {
+  color: var(--wine);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+}
+.review-admin-stats span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.review-rating-distribution {
+  display: grid;
+  gap: 7px;
+  max-width: 520px;
+  margin: 0 0 30px;
+}
+.review-rating-distribution > div {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 10px;
+}
+.review-rating-distribution > div > span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--wine);
+  font-size: 11px;
+}
+.review-rating-distribution > div > div {
+  height: 7px;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+.review-rating-distribution i {
+  display: block;
+  height: 100%;
+  background: var(--wine);
+}
+.review-rating-distribution small {
+  text-align: right;
+  font-size: 10px;
+}
+.admin-review-list {
+  display: grid;
+  gap: 14px;
+}
+.admin-review-result-count {
+  margin: 0 0 12px;
+}
+.admin-review-card {
+  display: grid;
+  gap: 12px;
+  padding: 21px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.admin-review-card > header {
+  height: auto;
+  min-height: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.admin-review-card > header > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.admin-review-card > header > span,
+.admin-review-card > small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.admin-review-card h3,
+.admin-review-card p {
+  margin: 0;
+}
+.admin-review-card p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.admin-review-card > .button {
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  .review-admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .home-review-section {
+    padding: 54px 5%;
+  }
+  .home-review-grid,
+  .product-review-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .product-review-scroll {
+    height: 440px;
+  }
+  .review-section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .review-average {
+    justify-items: start;
+  }
+  .review-form-actions {
+    flex-direction: column-reverse;
+  }
+  .review-form-actions .button {
+    width: 100%;
+  }
+  .homepage-review-limit > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .homepage-review-limit input {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-review-grid > .review-card {
+    animation: none;
+  }
+}
+
+.customer-reviews-page > h1 {
+  margin-bottom: 10px;
+}
+.orders-reviews-link {
+  gap: 12px;
+  margin: 4px 0 18px;
+}
+.customer-reviews-back-link {
+  margin: 0 0 12px;
+}
+.customer-review-section {
+  margin-top: 50px;
+}
+.customer-review-section > header {
+  height: auto;
+  min-height: 0;
+  margin-bottom: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.customer-review-section h2 {
+  margin: 4px 0 0;
+}
+.customer-review-section h2 span {
+  display: inline-grid;
+  min-width: 28px;
+  height: 28px;
+  margin-left: 6px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--wine);
+  font-family: inherit;
+  font-size: 12px;
+  vertical-align: middle;
+}
+.customer-review-list {
+  display: grid;
+  gap: 10px;
+}
+.customer-review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+.customer-review-item h3,
+.customer-review-item p {
+  margin: 0;
+}
+.customer-review-item h3 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+.customer-review-item p,
+.customer-review-item > div > small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.customer-review-item .button {
+  flex: 0 0 auto;
+}
+.customer-review-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 9px;
+  color: var(--wine);
+}
+.customer-review-rating small {
+  margin-left: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.customer-review-item .customer-review-text {
+  max-width: 680px;
+  color: var(--text-soft);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.customer-review-submitted {
+  background: var(--surface);
+}
+@media (max-width: 720px) {
+  .customer-review-section {
+    margin-top: 38px;
+  }
+  .customer-review-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+  }
+  .customer-review-item .button {
+    width: 100%;
+  }
+}

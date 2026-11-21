@@ -12,6 +12,7 @@ import {
   getBasketQuantityForVariant,
   makeBasketItemId,
   getStorefrontProduct,
+  useProductReviews,
   useRecords,
   type Product,
   type Taxonomy,
@@ -21,6 +22,16 @@ import {
   isNecklaceCategory,
 } from "../../../data/productAvailability";
 import { ProductGallery } from "./ProductVisuals";
+import { ProductReviews } from "../../reviews/ProductReviews";
+
+function formatSoldCount(value: number | undefined) {
+  const count =
+    typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+      ? value
+      : 0;
+  const displayCount = count >= 100 ? `${Math.floor(count / 100) * 100}+` : count;
+  return `${displayCount} ${count === 1 ? "unidade vendida" : "unidades vendidas"}`;
+}
 
 export function ProductPage() {
   const { id } = useParams();
@@ -29,6 +40,7 @@ export function ProductPage() {
   const categories = useRecords<Taxonomy>("categories");
   const lines = useRecords<Taxonomy>("collections");
   const colors = useRecords<Taxonomy>("colors");
+  const productReviews = useProductReviews(id);
   const { items, change } = useContext(BasketContext);
   const [selectedColorId, setSelectedColorId] = useState("");
   const productRecord = products.data.find((p) => p.id === id);
@@ -91,6 +103,7 @@ export function ProductPage() {
       </Link>
       <Notice {...products} />
       {product ? (
+        <>
         <div className="product-detail">
           <ProductGallery product={product} />
           <div>
@@ -100,6 +113,13 @@ export function ProductPage() {
               {money(selectedPrice)}
               {necklace && <small> · corrente incluída</small>}
             </p>
+            <a className="product-review-meta" href="#product-reviews-title">
+              {productReviews.loading
+                ? "Carregando avaliações"
+                : `${productReviews.data.length} ${productReviews.data.length === 1 ? "avaliação" : "avaliações"}`}
+              <span aria-hidden="true">·</span>
+              {formatSoldCount(product.soldCount)}
+            </a>
             <p className="description">{product.description}</p>
             {hasColorChoices && (
               <fieldset className="product-variant-picker">
@@ -213,6 +233,8 @@ export function ProductPage() {
             )}
           </div>
         </div>
+        <ProductReviews result={productReviews} />
+        </>
       ) : (
         !products.loading &&
         !categories.loading &&

@@ -427,6 +427,20 @@
     gap: 14px;
     padding: 18px 15px;
   }
+  .admin-order-date-filters label {
+    flex: 1 1 135px;
+    width: auto;
+  }
+  .admin-order-date-filters .button {
+    width: 100%;
+  }
+  .admin-list-pagination {
+    gap: 6px;
+  }
+  .admin-list-pagination > .button {
+    min-height: 38px;
+    padding: 8px 10px;
+  }
   .admin-inbox-layout {
     position: relative;
     display: block;
@@ -478,6 +492,9 @@
   .chat-thread {
     min-height: min(58dvh, 510px);
     grid-template-rows: auto minmax(160px, 1fr) auto auto;
+  }
+  .chat-thread.has-close-feedback {
+    grid-template-rows: auto auto minmax(160px, 1fr) auto auto;
   }
   .chat-messages {
     min-height: 160px;

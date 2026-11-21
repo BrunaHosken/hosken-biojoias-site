@@ -21,6 +21,7 @@ export type Product = {
   priceCents: number;
   stock: number;
   colorVariants?: ProductColorVariant[];
+  soldCount?: number;
   /** Legacy additional chain cost; new necklace prices include the chain. */
   chainAddonPriceCents?: number;
   /** Legacy total price with chain, kept for existing catalog records. */
@@ -102,6 +103,7 @@ export type CustomerOrder = {
   notificationEligible?: boolean;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
+  customerConfirmedAt?: Timestamp;
   trackingCode?: string;
   isDemo?: boolean;
   paymentMethod?: "credit_card" | "debit_card" | "pix" | string;
@@ -113,6 +115,37 @@ export type CustomerOrder = {
   reservationStatus?:
     "active" | "released" | "committed" | "not_applicable" | string;
   stockReserved?: boolean;
+};
+export type ReviewPhoto = { url: string; path: string };
+export type ProductReview = {
+  id: string;
+  customerId: string;
+  orderId: string;
+  itemIndex: number;
+  productId: string;
+  productName: string;
+  orderNumber?: string;
+  customerName?: string;
+  displayName?: string;
+  rating: number;
+  text: string;
+  anonymous: boolean;
+  photos: ReviewPhoto[];
+  featuredHome: boolean;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+};
+export type PublicProductReview = {
+  id: string;
+  productId: string;
+  productName?: string;
+  displayName?: string;
+  rating: number;
+  text: string;
+  anonymous: boolean;
+  photos: ReviewPhoto[];
+  featuredHome: boolean;
+  createdAt?: Timestamp;
 };
 export type ChatConversation = {
   id: string;

@@ -550,6 +550,13 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         stockUpdates.push({
           ref: snapshot.ref,
           stock: totalStock,
+          soldCount:
+            (Number.isSafeInteger(product.soldCount) && product.soldCount >= 0
+              ? product.soldCount
+              : 0) +
+            (checkout.paymentStatus === "simulated_paid"
+              ? productItems.reduce((total, item) => total + item.quantity, 0)
+              : 0),
           ...(updatedColorVariants
             ? { colorVariants: updatedColorVariants }
             : {}),
@@ -586,6 +593,7 @@ export const createDemoOrder = onCall({ region }, async (request) => {
       for (const update of stockUpdates) {
         transaction.update(update.ref, {
           stock: update.stock,
+          soldCount: update.soldCount,
           availability: update.stock > 0 ? "available" : "soldout",
           ...(update.colorVariants
             ? { colorVariants: update.colorVariants }
@@ -823,6 +831,15 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
         }
         transaction.update(productSnapshot.ref, {
           stock,
+          soldCount: Math.max(
+            0,
+            (Number.isSafeInteger(product.soldCount) && product.soldCount >= 0
+              ? product.soldCount
+              : 0) -
+              (order.paymentStatus === "simulated_paid"
+                ? items.reduce((total, item) => total + item.quantity, 0)
+                : 0),
+          ),
           availability: ["available", "soldout"].includes(product.availability)
             ? stock > 0
               ? "available"
@@ -856,5 +873,359 @@ export const cancelDemoOrder = onCall({ region }, async (request) => {
     if (error instanceof HttpsError) throw error;
     console.error("Demo cancellation transaction failed", error);
     throw new HttpsError("internal", "Could not cancel the test order.");
+  }
+});
+
+export const confirmOrderDelivery = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const orderId = requireText(request.data?.orderId, "orderId", 80);
+  if (!/^[A-Za-z0-9_-]+$/.test(orderId)) {
+    throw new HttpsError("invalid-argument", "Invalid order id.");
+  }
+  const orderRef = db.collection("orders").doc(orderId);
+
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const orderSnapshot = await transaction.get(orderRef);
+      if (!orderSnapshot.exists) {
+        throw new HttpsError("not-found", "Order not found.");
+      }
+      const order = orderSnapshot.data();
+      if (order.userId !== request.auth.uid) {
+        throw new HttpsError("permission-denied", "This is not your order.");
+      }
+      if (order.status !== "in_transit") {
+        throw new HttpsError(
+          "failed-precondition",
+          "Only orders in transit can be confirmed as delivered.",
+        );
+      }
+      transaction.update(orderRef, {
+        status: "completed",
+        customerConfirmedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { id: orderId, status: "completed" };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Order delivery confirmation failed", error);
+    throw new HttpsError("internal", "Could not confirm order delivery.");
+  }
+});
+
+function validateReviewPhotos(value, uid) {
+  if (!Array.isArray(value) || value.length > 3) {
+    throw new HttpsError("invalid-argument", "Invalid review photos.");
+  }
+  return value.map((photo) => {
+    const path = typeof photo?.path === "string" ? photo.path : "";
+    const urlText = typeof photo?.url === "string" ? photo.url : "";
+    let url;
+    try {
+      url = new URL(urlText);
+    } catch {
+      throw new HttpsError("invalid-argument", "Invalid review photo URL.");
+    }
+    const validHost =
+      url.hostname === "firebasestorage.googleapis.com" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "localhost";
+    let decodedPath = "";
+    try {
+      decodedPath = decodeURIComponent(url.pathname);
+    } catch {
+      throw new HttpsError("invalid-argument", "Invalid review photo URL.");
+    }
+    if (
+      !/^reviews\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+[.]webp$/.test(path) ||
+      !path.startsWith(`reviews/${uid}/`) ||
+      path.length > 300 ||
+      url.protocol !==
+        (url.hostname === "127.0.0.1" || url.hostname === "localhost"
+          ? "http:"
+          : "https:") ||
+      !validHost ||
+      !decodedPath.endsWith(`/${path}`)
+    ) {
+      throw new HttpsError("invalid-argument", "Invalid review photo.");
+    }
+    return { path, url: urlText };
+  });
+}
+
+export const submitProductReview = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const data = request.data || {};
+  const orderId = requireText(data.orderId, "orderId", 80);
+  const itemIndex = data.itemIndex;
+  const rating = data.rating;
+  const text = typeof data.text === "string" ? data.text.trim() : "";
+  const anonymous = data.anonymous === true;
+  if (
+    !/^[A-Za-z0-9_-]+$/.test(orderId) ||
+    !Number.isInteger(itemIndex) ||
+    itemIndex < 0 ||
+    itemIndex > 99 ||
+    !Number.isInteger(rating) ||
+    rating < 1 ||
+    rating > 5 ||
+    typeof data.text !== "string" ||
+    text.length > 3000 ||
+    (data.anonymous !== undefined && typeof data.anonymous !== "boolean")
+  ) {
+    throw new HttpsError("invalid-argument", "Invalid product review.");
+  }
+  const photos = validateReviewPhotos(data.photos || [], uid);
+  const reviewId = createHash("sha256")
+    .update(`${uid}:${orderId}:${itemIndex}`)
+    .digest("hex");
+  const orderRef = db.collection("orders").doc(orderId);
+  const reviewRef = db.collection("reviews").doc(reviewId);
+  const publicRef = db.collection("publicReviews").doc(reviewId);
+
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const orderSnapshot = await transaction.get(orderRef);
+      const previousReview = await transaction.get(reviewRef);
+      if (
+        !orderSnapshot.exists ||
+        orderSnapshot.get("userId") !== uid ||
+        orderSnapshot.get("status") !== "completed"
+      ) {
+        throw new HttpsError("failed-precondition", "review-not-eligible");
+      }
+      if (previousReview.exists) {
+        throw new HttpsError("already-exists", "review-already-submitted");
+      }
+      const items = orderSnapshot.get("items");
+      if (!Array.isArray(items) || itemIndex >= items.length) {
+        throw new HttpsError("invalid-argument", "Invalid purchased item.");
+      }
+      const item = items[itemIndex];
+      const productId = typeof item?.productId === "string" ? item.productId : "";
+      const productName = typeof item?.name === "string" ? item.name.trim() : "";
+      if (
+        !productId ||
+        productId === "custom" ||
+        !/^[A-Za-z0-9_-]+$/.test(productId) ||
+        !productName
+      ) {
+        throw new HttpsError("failed-precondition", "item-not-reviewable");
+      }
+      const customerName = String(
+        orderSnapshot.get("customerName") || "Cliente",
+      ).trim();
+      const orderNumber = String(orderSnapshot.get("orderNumber") || orderId);
+      const now = FieldValue.serverTimestamp();
+      transaction.create(reviewRef, {
+        customerId: uid,
+        orderId,
+        itemIndex,
+        productId,
+        productName,
+        orderNumber,
+        customerName,
+        rating,
+        text,
+        anonymous,
+        photos,
+        featuredHome: false,
+        createdAt: now,
+      });
+      transaction.create(publicRef, {
+        productId,
+        ...(anonymous ? {} : { productName, displayName: customerName }),
+        rating,
+        text,
+        anonymous,
+        photos,
+        featuredHome: false,
+        createdAt: now,
+      });
+      return { id: reviewId };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Product review submission failed", error);
+    throw new HttpsError("internal", "Could not submit the product review.");
+  }
+});
+
+export const updateProductReview = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const data = request.data || {};
+  const orderId = requireText(data.orderId, "orderId", 80);
+  const itemIndex = data.itemIndex;
+  const rating = data.rating;
+  const text = typeof data.text === "string" ? data.text.trim() : "";
+  const anonymous = data.anonymous === true;
+  if (
+    !/^[A-Za-z0-9_-]+$/.test(orderId) ||
+    !Number.isInteger(itemIndex) ||
+    itemIndex < 0 ||
+    itemIndex > 99 ||
+    !Number.isInteger(rating) ||
+    rating < 1 ||
+    rating > 5 ||
+    typeof data.text !== "string" ||
+    text.length > 3000 ||
+    (data.anonymous !== undefined && typeof data.anonymous !== "boolean")
+  ) {
+    throw new HttpsError("invalid-argument", "Invalid product review.");
+  }
+  const photos = validateReviewPhotos(data.photos || [], uid);
+  const reviewId = createHash("sha256")
+    .update(`${uid}:${orderId}:${itemIndex}`)
+    .digest("hex");
+  const orderRef = db.collection("orders").doc(orderId);
+  const reviewRef = db.collection("reviews").doc(reviewId);
+  const publicRef = db.collection("publicReviews").doc(reviewId);
+
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const orderSnapshot = await transaction.get(orderRef);
+      const reviewSnapshot = await transaction.get(reviewRef);
+      const publicSnapshot = await transaction.get(publicRef);
+      if (
+        !orderSnapshot.exists ||
+        orderSnapshot.get("userId") !== uid ||
+        orderSnapshot.get("status") !== "completed"
+      ) {
+        throw new HttpsError("failed-precondition", "review-not-eligible");
+      }
+      if (
+        !reviewSnapshot.exists ||
+        reviewSnapshot.get("customerId") !== uid ||
+        !publicSnapshot.exists
+      ) {
+        throw new HttpsError("not-found", "review-not-found");
+      }
+      const items = orderSnapshot.get("items");
+      if (!Array.isArray(items) || itemIndex >= items.length) {
+        throw new HttpsError("invalid-argument", "Invalid purchased item.");
+      }
+      const item = items[itemIndex];
+      if (
+        !item ||
+        item.productId !== reviewSnapshot.get("productId") ||
+        item.productId === "custom"
+      ) {
+        throw new HttpsError("failed-precondition", "item-not-reviewable");
+      }
+      const customerName = String(
+        orderSnapshot.get("customerName") || "Cliente",
+      ).trim();
+      const updatedAt = FieldValue.serverTimestamp();
+      const reviewUpdates = { rating, text, anonymous, photos, updatedAt };
+      const publicUpdates = {
+        rating,
+        text,
+        anonymous,
+        photos,
+        updatedAt,
+        ...(anonymous
+          ? { productName: FieldValue.delete(), displayName: FieldValue.delete() }
+          : {
+              productName: reviewSnapshot.get("productName"),
+              displayName: customerName,
+            }),
+      };
+      transaction.update(reviewRef, reviewUpdates);
+      transaction.update(publicRef, publicUpdates);
+      return { id: reviewId };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Product review update failed", error);
+    throw new HttpsError("internal", "Could not update the product review.");
+  }
+});
+
+export const setReviewFeatured = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  if (request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin access required.");
+  }
+  const reviewId = requireText(request.data?.reviewId, "reviewId", 64);
+  const featuredHome = request.data?.featuredHome;
+  if (!/^[a-f0-9]{64}$/.test(reviewId) || typeof featuredHome !== "boolean") {
+    throw new HttpsError("invalid-argument", "Invalid review selection.");
+  }
+  const reviewRef = db.collection("reviews").doc(reviewId);
+  const publicRef = db.collection("publicReviews").doc(reviewId);
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const reviewSnapshot = await transaction.get(reviewRef);
+      const publicSnapshot = await transaction.get(publicRef);
+      const featuredSnapshot = await transaction.get(
+        db.collection("publicReviews").where("featuredHome", "==", true),
+      );
+      const settingsSnapshot = await transaction.get(
+        db.collection("siteSettings").doc("reviews"),
+      );
+      if (!reviewSnapshot.exists || !publicSnapshot.exists) {
+        throw new HttpsError("not-found", "Review not found.");
+      }
+      const currentlyFeatured = reviewSnapshot.get("featuredHome") === true;
+      const homepageLimit = settingsSnapshot.exists
+        ? settingsSnapshot.get("homepageLimit")
+        : 5;
+      if (
+        featuredHome &&
+        !currentlyFeatured &&
+        featuredSnapshot.size >= homepageLimit
+      ) {
+        throw new HttpsError("failed-precondition", "homepage-review-limit");
+      }
+      transaction.update(reviewRef, { featuredHome });
+      transaction.update(publicRef, { featuredHome });
+      return { featuredHome };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Featured review update failed", error);
+    throw new HttpsError("internal", "Could not update featured review.");
+  }
+});
+
+export const setHomepageReviewLimit = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  if (request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin access required.");
+  }
+  const homepageLimit = request.data?.homepageLimit;
+  if (!Number.isInteger(homepageLimit) || homepageLimit < 1 || homepageLimit > 30) {
+    throw new HttpsError("invalid-argument", "Invalid homepage review limit.");
+  }
+  const settingsRef = db.collection("siteSettings").doc("reviews");
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const featuredSnapshot = await transaction.get(
+        db.collection("publicReviews").where("featuredHome", "==", true),
+      );
+      if (featuredSnapshot.size > homepageLimit) {
+        throw new HttpsError(
+          "failed-precondition",
+          "homepage-review-limit-below-selected",
+        );
+      }
+      transaction.set(
+        settingsRef,
+        {
+          homepageLimit,
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: request.auth.uid,
+        },
+        { merge: true },
+      );
+      return { homepageLimit };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Homepage review limit update failed", error);
+    throw new HttpsError("internal", "Could not update homepage review limit.");
   }
 });

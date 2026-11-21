@@ -40,6 +40,10 @@ const cancelDemoOrderCall = httpsCallable<
   { orderId: string },
   { id: string; alreadyCancelled: boolean }
 >(functions, "cancelDemoOrder");
+const confirmOrderDeliveryCall = httpsCallable<
+  { orderId: string },
+  { id: string; status: "completed" }
+>(functions, "confirmOrderDelivery");
 
 export async function createDemoOrder(input: CreateDemoOrderInput) {
   return (await createDemoOrderCall(input)).data;
@@ -47,6 +51,10 @@ export async function createDemoOrder(input: CreateDemoOrderInput) {
 
 export async function cancelDemoOrder(orderId: string) {
   return (await cancelDemoOrderCall({ orderId })).data;
+}
+
+export async function confirmOrderDelivery(orderId: string) {
+  return (await confirmOrderDeliveryCall({ orderId })).data;
 }
 
 export function getCheckoutErrorMessage(error: unknown) {

@@ -4,24 +4,30 @@ import {
   AlertTriangle,
   Bell,
   MessageCircle,
+  PackageCheck,
   ShoppingBag,
+  Star,
   X,
 } from "lucide-react";
 import { DEFAULT_LOW_STOCK_THRESHOLD } from "../../app/constants";
 import {
   useAdminConversations,
   useAdminOrders,
+  useAdminReviews,
   useRecords,
   type ChatConversation,
   type CustomerOrder,
   type Product,
+  type ProductReview,
 } from "../../data";
 import {
   markAdminNotificationSeen,
   readAdminSeenIds,
   ADMIN_NOTIFICATIONS_EVENT,
+  ADMIN_SEEN_DELIVERIES,
   ADMIN_SEEN_CONVERSATIONS,
   ADMIN_SEEN_ORDERS,
+  ADMIN_SEEN_REVIEWS,
 } from "./notificationStorage";
 import { useDismissNotificationOnOutside } from "./useDismissNotificationOnOutside";
 
@@ -36,10 +42,12 @@ function AdminNotificationBell({
   orders,
   conversations,
   products,
+  reviews,
 }: {
   orders: CustomerOrder[];
   conversations: ChatConversation[];
   products: Product[];
+  reviews: ProductReview[];
 }) {
   const [open, setOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
@@ -47,13 +55,21 @@ function AdminNotificationBell({
   const [seenOrders, setSeenOrders] = useState(() =>
     readAdminSeenIds(ADMIN_SEEN_ORDERS),
   );
+  const [seenDeliveries, setSeenDeliveries] = useState(() =>
+    readAdminSeenIds(ADMIN_SEEN_DELIVERIES),
+  );
   const [seenConversations, setSeenConversations] = useState(() =>
     readAdminSeenIds(ADMIN_SEEN_CONVERSATIONS),
+  );
+  const [seenReviews, setSeenReviews] = useState(() =>
+    readAdminSeenIds(ADMIN_SEEN_REVIEWS),
   );
   useEffect(() => {
     const syncSeen = () => {
       setSeenOrders(readAdminSeenIds(ADMIN_SEEN_ORDERS));
+      setSeenDeliveries(readAdminSeenIds(ADMIN_SEEN_DELIVERIES));
       setSeenConversations(readAdminSeenIds(ADMIN_SEEN_CONVERSATIONS));
+      setSeenReviews(readAdminSeenIds(ADMIN_SEEN_REVIEWS));
     };
     window.addEventListener(ADMIN_NOTIFICATIONS_EVENT, syncSeen);
     window.addEventListener("storage", syncSeen);
@@ -66,6 +82,9 @@ function AdminNotificationBell({
     (order) =>
       (!order.isDemo || order.notificationEligible === true) &&
       !seenOrders.has(order.id),
+  );
+  const confirmedDeliveries = orders.filter(
+    (order) => order.customerConfirmedAt && !seenDeliveries.has(order.id),
   );
   const newConversations = conversations.filter(
     (conversation) =>
@@ -88,11 +107,16 @@ function AdminNotificationBell({
         product.availability === "soldout" ||
         product.availability === "paused"),
   );
+  const newReviews = reviews.filter((review) => !seenReviews.has(review.id));
   const unreadConversations = newConversations.filter(
     (conversation) => conversation.unreadForAdmin > 0,
   ).length;
   const count =
-    newOrders.length + newConversations.length + lowStockProducts.length;
+    newOrders.length +
+    confirmedDeliveries.length +
+    newConversations.length +
+    lowStockProducts.length +
+    newReviews.length;
   return (
     <div className="notification-bell" ref={bellRef}>
       <button
@@ -121,8 +145,10 @@ function AdminNotificationBell({
             </button>
           </header>
           {!newOrders.length &&
+          !confirmedDeliveries.length &&
           !newConversations.length &&
-          !lowStockProducts.length ? (
+          !lowStockProducts.length &&
+          !newReviews.length ? (
             <p className="notification-empty">Tudo em dia por aqui.</p>
           ) : (
             <div className="notification-list">
@@ -144,6 +170,28 @@ function AdminNotificationBell({
                       {newOrders.length} pedido
                       {newOrders.length === 1 ? "" : "s"} novo
                       {newOrders.length === 1 ? "" : "s"}
+                    </strong>
+                  </span>
+                </Link>
+              )}
+              {confirmedDeliveries.length > 0 && (
+                <Link
+                  to="/admin?tab=orders"
+                  onClick={() => {
+                    confirmedDeliveries.forEach((order) =>
+                      markAdminNotificationSeen(ADMIN_SEEN_DELIVERIES, order.id),
+                    );
+                    setOpen(false);
+                  }}
+                >
+                  <span className="notification-icon">
+                    <PackageCheck size={17} />
+                  </span>
+                  <span>
+                    <strong>
+                      {confirmedDeliveries.length} pedido
+                      {confirmedDeliveries.length === 1 ? "" : "s"} com recebimento
+                      confirmado
                     </strong>
                   </span>
                 </Link>
@@ -190,6 +238,26 @@ function AdminNotificationBell({
                   </span>
                 </Link>
               )}
+              {newReviews.length > 0 && (
+                <Link
+                  to="/admin?tab=reviews"
+                  onClick={() => {
+                    newReviews.forEach((review) =>
+                      markAdminNotificationSeen(ADMIN_SEEN_REVIEWS, review.id),
+                    );
+                    setOpen(false);
+                  }}
+                >
+                  <span className="notification-icon"><Star size={17} /></span>
+                  <span>
+                    <strong>
+                      {newReviews.length} produto
+                      {newReviews.length === 1 ? "" : "s"} avaliado
+                      {newReviews.length === 1 ? "" : "s"}
+                    </strong>
+                  </span>
+                </Link>
+              )}
             </div>
           )}
         </section>
@@ -202,11 +270,13 @@ export function AdminHeaderNotificationBell() {
   const conversations = useAdminConversations();
   const orders = useAdminOrders();
   const products = useRecords<Product>("products", true);
+  const reviews = useAdminReviews();
   return (
     <AdminNotificationBell
       orders={orders.data}
       conversations={conversations.data}
       products={products.data}
+      reviews={reviews.data}
     />
   );
 }

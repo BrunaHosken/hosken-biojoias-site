@@ -1,5 +1,7 @@
 export const ADMIN_SEEN_ORDERS = "hosken-admin-seen-orders";
+export const ADMIN_SEEN_DELIVERIES = "hosken-admin-seen-deliveries";
 export const ADMIN_SEEN_CONVERSATIONS = "hosken-admin-seen-conversations";
+export const ADMIN_SEEN_REVIEWS = "hosken-admin-seen-reviews";
 export const ADMIN_NOTIFICATIONS_EVENT = "hosken-admin-notifications-updated";
 export const CUSTOMER_NOTIFICATIONS_EVENT =
   "hosken-customer-notifications-updated";

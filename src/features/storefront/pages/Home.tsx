@@ -4,6 +4,7 @@ import { ArrowRight, Flower2, Leaf, MessageCircle } from "lucide-react";
 import { SessionContext } from "../../../app/contexts";
 import { Notice } from "../../../components/Feedback";
 import { useRecords, type Taxonomy } from "../../../data";
+import { HomeReviewCarousel } from "../../reviews/HomeReviewCarousel";
 
 export function Home() {
   const session = useContext(SessionContext);
@@ -117,6 +118,7 @@ export function Home() {
           Conheça nossa história <ArrowRight size={17} />
         </Link>
       </section>
+      <HomeReviewCarousel />
     </>
   );
 }

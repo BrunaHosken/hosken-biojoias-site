@@ -14,6 +14,7 @@ import { AdminProductManager } from "./AdminProductManager";
 import type { AdminContentTab } from "./catalogTypes";
 import { AdminOrders } from "./AdminOrders";
 import { AdminReports } from "./Reports";
+import { AdminReviews } from "../reviews/AdminReviews";
 
 const moduleGroups = [
   {
@@ -44,7 +45,10 @@ const moduleGroups = [
   },
   {
     label: "Análise",
-    items: [["reports", "Relatórios"]],
+    items: [
+      ["reports", "Relatórios"],
+      ["reviews", "Avaliações"],
+    ],
   },
 ];
 
@@ -196,6 +200,8 @@ export function AdminPanel() {
             />
           ) : tab === "reports" ? (
             <AdminReports />
+          ) : tab === "reviews" ? (
+            <AdminReviews />
           ) : tab === "products" ? (
             <AdminProductManager key={`products-${catalogVersion}`} />
           ) : (

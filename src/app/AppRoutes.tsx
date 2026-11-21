@@ -13,6 +13,8 @@ import { Cart } from "../features/account/Cart";
 import { Checkout } from "../features/account/Checkout";
 import { CustomerChat } from "../features/chat/CustomerChat";
 import { Admin } from "../features/admin/AdminPanel";
+import { ReviewFormPage } from "../features/reviews/ReviewFormPage";
+import { CustomerReviewsPage } from "../features/reviews/CustomerReviewsPage";
 
 export function AppRoutes() {
   return (
@@ -56,6 +58,8 @@ export function AppRoutes() {
       <Route path="/duvidas" element={<FaqPage />} />
       <Route path="/conta" element={<Account />} />
       <Route path="/pedidos" element={<OrdersPage />} />
+      <Route path="/avaliar" element={<ReviewFormPage />} />
+      <Route path="/minhas-avaliacoes" element={<CustomerReviewsPage />} />
       <Route path="/chat" element={<CustomerChat />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/carrinho" element={<Cart />} />

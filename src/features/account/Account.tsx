@@ -10,7 +10,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { deleteField, doc, setDoc } from "firebase/firestore";
-import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Star } from "lucide-react";
 import { SessionContext, useToast } from "../../app/contexts";
 import { useCustomerProfile } from "../../data";
 import { auth, db, localMode } from "../../firebase";
@@ -208,23 +208,42 @@ export function Account() {
           )}
           <section className="account-settings">
             {!session.admin && (
-              <div className="account-setting-card account-orders-link">
-                <div>
-                  <div className="eyebrow">ACOMPANHAMENTO</div>
-                  <h2>Seus pedidos</h2>
-                  <p className="muted">
-                    Consulte o histórico e as atualizações dos seus pedidos.
-                  </p>
+              <>
+                <div className="account-setting-card account-orders-link">
+                  <div>
+                    <div className="eyebrow">ACOMPANHAMENTO</div>
+                    <h2>Seus pedidos</h2>
+                    <p className="muted">
+                      Consulte o histórico e as atualizações dos seus pedidos.
+                    </p>
+                  </div>
+                  <Link
+                    className="account-orders-arrow"
+                    to="/pedidos"
+                    aria-label="Ver meus pedidos"
+                    title="Ver meus pedidos"
+                  >
+                    <ArrowRight size={24} />
+                  </Link>
                 </div>
-                <Link
-                  className="account-orders-arrow"
-                  to="/pedidos"
-                  aria-label="Ver meus pedidos"
-                  title="Ver meus pedidos"
-                >
-                  <ArrowRight size={24} />
-                </Link>
-              </div>
+                <div className="account-setting-card account-orders-link">
+                  <div>
+                    <div className="eyebrow">SUA EXPERIÊNCIA</div>
+                    <h2>Minhas avaliações</h2>
+                    <p className="muted">
+                      Avalie as peças dos pedidos concluídos ou edite suas avaliações.
+                    </p>
+                  </div>
+                  <Link
+                    className="account-orders-arrow"
+                    to="/minhas-avaliacoes"
+                    aria-label="Ver minhas avaliações"
+                    title="Ver minhas avaliações"
+                  >
+                    <Star size={22} />
+                  </Link>
+                </div>
+              </>
             )}
             <section className="account-setting-card">
               <header className="account-setting-header">
