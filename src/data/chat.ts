@@ -186,6 +186,18 @@ export async function createCustomerConversation(
   topic: ChatRequestTopic = "other",
 ) {
   const conversationRef = doc(db, "conversations", uid);
+  const existing = await getDoc(conversationRef);
+
+  const reopenExisting = async (data: Record<string, unknown>) => {
+    if (data.customerId !== uid) throw new Error("conversation-owner-mismatch");
+    await startCustomerConversation(uid, topic);
+  };
+
+  if (existing.exists()) {
+    await reopenExisting(existing.data());
+    return;
+  }
+
   try {
     await setDoc(conversationRef, {
       customerId: uid,
@@ -205,17 +217,11 @@ export async function createCustomerConversation(
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-  } catch (cause) {
-    try {
-      const existing = await getDoc(conversationRef);
-      if (existing.exists() && existing.data().customerId === uid) {
-        await startCustomerConversation(uid, topic);
-        return;
-      }
-    } catch {
-      // Preserve the creation error if an existing conversation cannot be confirmed.
-    }
-    throw cause;
+  } catch (createCause) {
+    // A second tab may create the conversation between the read and this write.
+    const racedConversation = await getDoc(conversationRef);
+    if (!racedConversation.exists()) throw createCause;
+    await reopenExisting(racedConversation.data());
   }
 }
 export type ChatRequestTopic =

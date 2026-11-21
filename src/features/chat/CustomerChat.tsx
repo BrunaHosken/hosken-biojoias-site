@@ -94,6 +94,8 @@ export function CustomerChat() {
     Boolean(contextTopic),
   );
   const [conversationEndedHere, setConversationEndedHere] = useState(false);
+  const [conversationStartError, setConversationStartError] = useState(false);
+  const [startRetryCount, setStartRetryCount] = useState(0);
   const initialDraft = directContextActive
     ? quoteReturn
       ? ""
@@ -112,21 +114,25 @@ export function CustomerChat() {
     : "/chat";
   const chat = useCustomerConversation(session.user?.uid);
   const openConversationId = useRef("");
+  // Prevent the pending intake effect from immediately reopening a conversation
+  // when the artisan closes it while the customer's chat page is already open.
+  const closedByAtelierId = useRef("");
   useEffect(() => {
     const current = chat.conversation;
     if (!current) return;
     if (current.status === "open") {
       openConversationId.current = current.id;
+      closedByAtelierId.current = "";
     } else if (
       current.status === "closed" &&
       openConversationId.current === current.id
     ) {
       openConversationId.current = "";
+      closedByAtelierId.current = current.id;
       setConversationEndedHere(true);
       setIntakeStarted(false);
       setHelpTopic(null);
       setDirectContextActive(false);
-      attemptedUsers.current.clear();
     }
   }, [chat.conversation?.id, chat.conversation?.status]);
   const hasConversationActivity = Boolean(
@@ -134,6 +140,7 @@ export function CustomerChat() {
   );
   const showIntake = Boolean(
     !session.admin &&
+    !directContextActive &&
     !chat.loading &&
     chat.serverReady &&
     !chat.error &&
@@ -154,6 +161,8 @@ export function CustomerChat() {
       !chat.serverReady ||
       chat.error ||
       !intakeStarted ||
+      (chat.conversation?.status === "closed" &&
+        closedByAtelierId.current === chat.conversation.id) ||
       (chat.conversation?.status === "open" &&
         requestTopic &&
         chat.conversation.customerRequestedTopic === requestTopic) ||
@@ -178,12 +187,16 @@ export function CustomerChat() {
           requestTopic || "other",
         );
     startRequest.catch((cause) => {
-      if (import.meta.env.DEV)
-        console.error("Customer conversation creation failed", cause);
-      attemptedUsers.current.delete(attemptKey);
-      setIntakeStarted(false);
+      if (directContextActive) {
+        setConversationStartError(true);
+      } else {
+        attemptedUsers.current.delete(attemptKey);
+        setIntakeStarted(false);
+      }
       notify(
-        "Não foi possível abrir o chat. Recarregue a página para tentar novamente.",
+        directContextActive
+          ? "Não foi possível abrir este atendimento. Você pode tentar novamente abaixo."
+          : "Não foi possível abrir o chat. Tente novamente.",
         "error",
       );
     });
@@ -200,8 +213,19 @@ export function CustomerChat() {
     requestTopic,
     directContextActive,
     intakeStarted,
+    startRetryCount,
     notify,
   ]);
+  const retryConversationStart = () => {
+    if (!session.user || !requestTopic) return;
+    closedByAtelierId.current = "";
+    const attemptKey = chat.conversation
+      ? `request:${chat.conversation.id}:${requestTopic}`
+      : `create:${session.user.uid}`;
+    attemptedUsers.current.delete(attemptKey);
+    setConversationStartError(false);
+    setStartRetryCount((count) => count + 1);
+  };
   if (!session.ready) return <div className="page">Carregando sua conta…</div>;
   if (!session.user)
     return (
@@ -311,7 +335,10 @@ export function CustomerChat() {
       {showIntake && (
         <ChatStartFlow
           onStart={(topic) => {
+            closedByAtelierId.current = "";
+            attemptedUsers.current.clear();
             setConversationEndedHere(false);
+            setConversationStartError(false);
             setDirectContextActive(false);
             setHelpTopic(topic);
             setIntakeStarted(true);
@@ -321,13 +348,32 @@ export function CustomerChat() {
       {!chat.loading &&
         !chat.error &&
         (!chat.conversation || chat.conversation.status === "closed") &&
-        intakeStarted && (
+        intakeStarted &&
+        !conversationStartError && (
           <section className="chat-start" role="status">
             <MessageCircle size={28} />
             <h2>Abrindo sua conversa…</h2>
             <p>Estamos preparando o atendimento com a Hosken Biojoias.</p>
           </section>
         )}
+      {conversationStartError && directContextActive && (
+        <section className="chat-start" role="alert">
+          <MessageCircle size={28} />
+          <h2>Não foi possível abrir o chat</h2>
+          <p>
+            {productContext
+              ? `A conversa sobre ${productContext} não abriu. Tente novamente.`
+              : "A conversa com o ateliê não abriu. Tente novamente."}
+          </p>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={retryConversationStart}
+          >
+            Tentar novamente <ArrowRight size={17} />
+          </button>
+        </section>
+      )}
       {chat.conversation &&
         chat.conversation.status === "open" &&
         !showIntake && (
@@ -365,6 +411,9 @@ export function ChatThread({
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [closeSucceeded, setCloseSucceeded] = useState(false);
+  const [closeFeedback, setCloseFeedback] = useState("");
   const [sendError, setSendError] = useState("");
   const [now, setNow] = useState(Date.now());
   const listRef = useRef<HTMLDivElement>(null);
@@ -402,6 +451,13 @@ export function ChatThread({
       );
     }
   }, [conversationId, senderRole, unreadCount]);
+  useEffect(() => {
+    if (conversation.status === "open") {
+      setCloseSucceeded(false);
+      setCloseFeedback("");
+    }
+  }, [conversation.status]);
+  const effectivelyClosed = conversation.status === "closed" || closeSucceeded;
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!text.trim() && !imageFile) return;
@@ -470,6 +526,28 @@ export function ChatThread({
       setBusy(false);
     }
   }
+  async function endConversation() {
+    if (closing || effectivelyClosed) return;
+    setClosing(true);
+    setCloseFeedback("Encerrando conversa…");
+    try {
+      await closeConversation(conversationId);
+      setCloseSucceeded(true);
+      setCloseFeedback("Conversa encerrada.");
+    } catch (cause) {
+      const errorCode =
+        typeof cause === "object" && cause !== null && "code" in cause
+          ? String(cause.code)
+          : "";
+      setCloseFeedback(
+        errorCode === "permission-denied"
+          ? "O Firebase recusou o encerramento. Confira o Console para ver o motivo."
+          : "Não foi possível encerrar o atendimento. Tente novamente.",
+      );
+    } finally {
+      setClosing(false);
+    }
+  }
   return (
     <section
       className="chat-thread"
@@ -483,20 +561,26 @@ export function ChatThread({
           <strong>{otherPartyName}</strong>
           <small>Atendimento Hosken Biojoias</small>
         </div>
-        {senderRole === "admin" && conversation.status === "open" && (
+        {senderRole === "admin" && !effectivelyClosed && (
           <button
             type="button"
             className="chat-close-button"
-            onClick={() =>
-              closeConversation(conversationId).catch(() =>
-                setSendError("Não foi possível encerrar o atendimento."),
-              )
-            }
+            onClick={() => void endConversation()}
+            disabled={closing}
+            aria-busy={closing}
           >
-            <X size={16} /> Encerrar conversa
+            <X size={16} /> {closing ? "Encerrando…" : "Encerrar conversa"}
           </button>
         )}
       </header>
+      {senderRole === "admin" && closeFeedback && (
+        <p
+          className={`chat-close-feedback${closeSucceeded ? " is-success" : closing ? " is-pending" : " is-error"}`}
+          role={closeSucceeded || closing ? "status" : "alert"}
+        >
+          {closeFeedback}
+        </p>
+      )}
       <div className="chat-messages" ref={listRef} aria-live="polite">
         {(messages.loading || quotes.loading) && (
           <p className="muted">Carregando mensagens…</p>
@@ -539,19 +623,19 @@ export function ChatThread({
           ),
         )}
       </div>
-      {conversation.status === "closed" && (
+      {effectivelyClosed && (
         <p className="chat-closed-notice" role="status">
           Atendimento encerrado. A cliente verá os assuntos disponíveis quando
           abrir o chat novamente.
         </p>
       )}
-      {senderRole === "admin" && conversation.status === "open" && (
+      {senderRole === "admin" && !effectivelyClosed && (
         <CustomQuoteComposer
           conversationId={conversationId}
           adminId={senderId}
         />
       )}
-      {conversation.status === "open" && (
+      {!effectivelyClosed && (
         <form className="chat-composer" onSubmit={submit}>
           <input
             ref={imageInputRef}
