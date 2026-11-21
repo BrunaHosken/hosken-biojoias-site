@@ -146,7 +146,7 @@ export function Checkout() {
     if (!session.user || !draftReady || draftOwnerUid !== session.user.uid)
       return;
     try {
-      sessionStorage.setItem(
+      localStorage.setItem(
         checkoutDraftStorageKey(
           session.user.uid,
           customCheckoutRequested ? customQuoteId : "",
@@ -520,7 +520,7 @@ export function Checkout() {
     const orderId = draft.orderId || crypto.randomUUID();
     const currentDraft = { ...draft, orderId };
     try {
-      sessionStorage.setItem(
+      localStorage.setItem(
         checkoutDraftStorageKey(
           session.user.uid,
           customCheckoutRequested ? customQuoteId : "",
@@ -557,6 +557,12 @@ export function Checkout() {
         expectedTotalCents: paymentTotalCents,
       });
       try {
+        localStorage.removeItem(
+          checkoutDraftStorageKey(
+            session.user.uid,
+            customCheckoutRequested ? customQuoteId : "",
+          ),
+        );
         sessionStorage.removeItem(
           checkoutDraftStorageKey(
             session.user.uid,

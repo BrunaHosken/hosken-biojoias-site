@@ -86,9 +86,16 @@ export function loadCheckoutDraft(
   customQuoteId = "",
 ): CheckoutDraft {
   try {
+    const storageKey = checkoutDraftStorageKey(uid, customQuoteId);
+    const localSaved = localStorage.getItem(storageKey);
+    const sessionSaved = sessionStorage.getItem(storageKey);
+    const savedDraft = localSaved || sessionSaved;
+    if (!localSaved && sessionSaved) {
+      localStorage.setItem(storageKey, sessionSaved);
+    }
+    if (sessionSaved) sessionStorage.removeItem(storageKey);
     const saved = JSON.parse(
-      sessionStorage.getItem(checkoutDraftStorageKey(uid, customQuoteId)) ||
-        "null",
+      savedDraft || "null",
     ) as Partial<CheckoutDraft> | null;
     if (!saved || !saved.contact || !saved.address)
       return emptyCheckoutDraft(name, email);

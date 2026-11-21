@@ -161,6 +161,10 @@ export function CheckoutDeliveryStep({
           >
             <MessageCircle size={17} /> Abrir chat para combinar
           </Link>
+          <small className="checkout-resume-note">
+            Sua sacola e os dados desta etapa ficam salvos neste navegador para
+            você continuar depois.
+          </small>
           <label className="checkout-checkbox">
             <input
               type="checkbox"
