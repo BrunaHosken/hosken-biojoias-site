@@ -452,7 +452,16 @@ service cloud.firestore {
             && request.resource.data.customerRequestedTopic in ['question','order','exchange','custom','pickup','other','product']))
         && (!('customerRequestedTopic' in request.resource.data)
           || ('customerRequestedAt' in request.resource.data));
-      allow update: if isMessageUpdate() || isMessageEditUpdate() || isMessageDeleteUpdate() || markAdminRead() || markCustomerRead() || startCustomerConversation() || closeCustomerConversation();
+      // Keep low-cost conversation actions first. Message updates perform
+      // several getAfter checks and can hit Firestore's rule-expression limit
+      // if evaluated for a simple reopen/close/read update.
+      allow update: if startCustomerConversation()
+        || closeCustomerConversation()
+        || markCustomerRead()
+        || markAdminRead()
+        || isMessageUpdate()
+        || isMessageEditUpdate()
+        || isMessageDeleteUpdate();
       allow delete: if false;
 
       match /quotes/{quoteId} {
