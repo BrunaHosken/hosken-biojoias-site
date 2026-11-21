@@ -80,6 +80,7 @@ export type OrderItem = {
   customQuoteId?: string;
   customConversationId?: string;
   categoryName?: string;
+  collectionName?: string;
   customDescription?: string;
   name: string;
   quantity: number;

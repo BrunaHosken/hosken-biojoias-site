@@ -366,8 +366,17 @@ export const createDemoOrder = onCall({ region }, async (request) => {
         const categorySnapshot = await transaction.get(
           db.collection("categories").doc(product.categoryId),
         );
+        const collectionSnapshot = await transaction.get(
+          db.collection("collections").doc(product.collectionId),
+        );
         const categorySlug = categorySnapshot.exists
           ? String(categorySnapshot.get("slug") || "")
+          : "";
+        const categoryName = categorySnapshot.exists
+          ? String(categorySnapshot.get("name") || "").trim()
+          : "";
+        const collectionName = collectionSnapshot.exists
+          ? String(collectionSnapshot.get("name") || "").trim()
           : "";
         const isNecklace = /(^|-)colar(es)?(-|$)/.test(categorySlug);
         const colorVariants = Array.isArray(product.colorVariants)
@@ -467,6 +476,8 @@ export const createDemoOrder = onCall({ region }, async (request) => {
           }
           orderItems.push({
             productId: snapshot.id,
+            ...(categoryName ? { categoryName } : {}),
+            ...(collectionName ? { collectionName } : {}),
             ...(item.variantId
               ? {
                   variantId: item.variantId,

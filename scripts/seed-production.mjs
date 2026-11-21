@@ -148,6 +148,8 @@ const sampleOrders = [
       {
         productId: "orquidea-exemplo",
         name: "Conjunto Orquídea",
+        categoryName: "Conjuntos",
+        collectionName: "Biojoias",
         quantity: 1,
         unitPriceCents: 15900,
       },
@@ -164,12 +166,16 @@ const sampleOrders = [
       {
         productId: "colar-exemplo",
         name: "Colar Jardim",
+        categoryName: "Colares",
+        collectionName: "Biojoias",
         quantity: 1,
         unitPriceCents: 8900,
       },
       {
         productId: "orquidea-exemplo",
         name: "Conjunto Orquídea",
+        categoryName: "Conjuntos",
+        collectionName: "Biojoias",
         quantity: 1,
         unitPriceCents: 15900,
       },
@@ -186,6 +192,8 @@ const sampleOrders = [
       {
         productId: "brinco-exemplo",
         name: "Brincos Jardim",
+        categoryName: "Brincos",
+        collectionName: "Biojoias",
         quantity: 1,
         unitPriceCents: 7400,
       },

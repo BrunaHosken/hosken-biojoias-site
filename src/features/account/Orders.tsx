@@ -165,12 +165,14 @@ export function OrderCard({ order }: { order: CustomerOrder }) {
             <span>
               {item.name} <small>× {item.quantity}</small>
               {(item.categoryName ||
+                item.collectionName ||
                 item.customDescription ||
                 item.colorName ||
                 item.withChain !== undefined) && (
                 <small className="order-item-options">
                   {[
                     item.categoryName ? `Tipo: ${item.categoryName}` : "",
+                    item.collectionName ? `Linha: ${item.collectionName}` : "",
                     item.customDescription || "",
                     item.colorName ? `Cor: ${item.colorName}` : "",
                     item.withChain === undefined
