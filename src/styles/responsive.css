@@ -302,6 +302,9 @@
     padding: 0;
     font-size: 13px;
   }
+  .site-header .header-actions .pwa-install-status {
+    gap: 10px;
+  }
   .site-header .header-actions .pwa-install-help {
     position: static;
     grid-column: 1 / -1;
