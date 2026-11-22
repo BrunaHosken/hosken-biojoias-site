@@ -43,6 +43,11 @@ function conversationNotificationId(conversation: ChatConversation) {
     : conversation.id;
 }
 
+function reviewNotificationId(review: ProductReview) {
+  const updatedAt = review.updatedAt?.toMillis();
+  return updatedAt ? `${review.id}:updated:${updatedAt}` : review.id;
+}
+
 function AdminNotificationBell({
   orders,
   conversations,
@@ -120,7 +125,9 @@ function AdminNotificationBell({
         product.availability === "soldout" ||
         product.availability === "paused"),
   );
-  const newReviews = reviews.filter((review) => !seenReviews.has(review.id));
+  const newReviews = reviews.filter(
+    (review) => !seenReviews.has(reviewNotificationId(review)),
+  );
   const newTestimonials = testimonials.filter(
     (testimonial) => !seenTestimonials.has(testimonial.id),
   );
@@ -281,7 +288,10 @@ function AdminNotificationBell({
                   to="/admin?tab=reviews"
                   onClick={() => {
                     newReviews.forEach((review) =>
-                      markAdminNotificationSeen(ADMIN_SEEN_REVIEWS, review.id),
+                      markAdminNotificationSeen(
+                        ADMIN_SEEN_REVIEWS,
+                        reviewNotificationId(review),
+                      ),
                     );
                     setOpen(false);
                   }}

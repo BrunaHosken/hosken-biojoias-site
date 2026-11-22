@@ -204,11 +204,9 @@ service cloud.firestore {
       allow write: if false;
     }
     match /testimonials/{testimonialId} {
-      allow read: if admin()
-        || (signedIn() && (
-          testimonialId == request.auth.uid
-          || resource.data.customerId == request.auth.uid
-        ));
+      allow get: if admin()
+        || (signedIn() && testimonialId == request.auth.uid);
+      allow list: if admin();
       allow create, update, delete: if false;
     }
     match /publicTestimonials/{testimonialId} {

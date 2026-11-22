@@ -14,7 +14,7 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   box-sizing: border-box;
   min-width: 0;
-  height: 330px;
+  height: 370px;
   padding: 22px;
   border: 1px solid var(--border);
   background: var(--surface-elevated);
@@ -56,6 +56,41 @@
   padding-right: 7px;
   scrollbar-color: var(--border) transparent;
   scrollbar-width: thin;
+}
+.home-testimonial-body {
+  display: grid;
+  grid-template-rows: auto minmax(78px, 1fr);
+  min-height: 0;
+  gap: 9px;
+  margin: 13px 0;
+}
+.home-testimonial-photo {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  max-height: 122px;
+  min-height: 0;
+  padding: 5px;
+  overflow: visible;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  cursor: zoom-in;
+}
+.home-testimonial-photo img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 112px;
+  object-fit: contain;
+  object-position: center;
+}
+.home-testimonial-body .home-testimonial-text {
+  min-height: 0;
+  margin: 0;
 }
 .home-testimonial-text::-webkit-scrollbar { width: 6px; }
 .home-testimonial-text::-webkit-scrollbar-thumb { background: var(--border); }
@@ -130,13 +165,22 @@
   text-align: right;
 }
 .testimonial-anonymous-option {
-  display: flex;
+  display: flex !important;
+  flex-direction: row !important;
   align-items: center;
   justify-content: flex-start;
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
   gap: 10px;
   color: var(--text-soft);
   font-size: 12px;
   line-height: 1.5;
+  text-align: left;
+}
+.testimonial-anonymous-option > span {
+  display: block;
+  margin: 0;
 }
 .testimonial-anonymous-option input {
   flex: 0 0 17px;
@@ -144,6 +188,57 @@
   height: 17px;
   margin: 0;
   accent-color: var(--wine);
+}
+.testimonial-photo-field {
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.testimonial-photo-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.testimonial-photo-picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.testimonial-photo-picker:has(input:disabled) { opacity: 0.6; cursor: wait; }
+.testimonial-photo-field > small { color: var(--muted); }
+.testimonial-photo-preview {
+  position: relative;
+  width: min(100%, 240px);
+  height: 170px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+.testimonial-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.testimonial-photo-preview button {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--wine);
+  cursor: pointer;
 }
 .testimonial-privacy-note {
   margin: -8px 0 0;
@@ -187,6 +282,23 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.testimonial-admin-photo {
+  display: grid;
+  place-items: center;
+  width: min(100%, 260px);
+  height: 180px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  cursor: zoom-in;
+}
+.testimonial-admin-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .admin-testimonial-card > .button { justify-self: start; }
 
 @media (max-width: 900px) {
@@ -195,8 +307,12 @@
 @media (max-width: 720px) {
   .home-testimonial-section { padding: 54px 5%; }
   .home-testimonial-grid { grid-template-columns: minmax(0, 1fr); }
-  .home-testimonial-card { height: 310px; }
+  .home-testimonial-card { height: 350px; }
+  .home-testimonial-body { grid-template-rows: auto minmax(78px, 1fr); }
+  .home-testimonial-photo { max-height: 105px; }
+  .home-testimonial-photo img { max-height: 95px; }
   .testimonial-form { padding: 18px; }
+  .testimonial-anonymous-option { justify-self: start; }
   .testimonial-form-actions .button { width: 100%; }
   .admin-testimonial-card > .button { width: 100%; }
 }

@@ -37,8 +37,18 @@ function useReviewCollection<T>(
         setError("");
         setLoading(false);
       },
-      () => {
-        setError("Não foi possível carregar as avaliações.");
+      (snapshotError) => {
+        if (snapshotError.code === "permission-denied") {
+          setError(
+            "A conta atual não tem permissão para carregar as avaliações. Confirme o acesso de administradora e as regras do Firestore.",
+          );
+        } else if (snapshotError.code === "unavailable") {
+          setError(
+            "O Firestore está indisponível. Verifique a conexão ou se o emulador está ativo.",
+          );
+        } else {
+          setError("Não foi possível carregar as avaliações.");
+        }
         setLoading(false);
       },
     );

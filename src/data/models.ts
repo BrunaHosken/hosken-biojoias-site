@@ -154,6 +154,7 @@ export type Testimonial = {
   displayName?: string;
   text: string;
   anonymous: boolean;
+  photo?: ReviewPhoto | null;
   featuredHome: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -163,6 +164,7 @@ export type PublicTestimonial = {
   displayName?: string;
   text: string;
   anonymous: boolean;
+  photo?: ReviewPhoto | null;
   featuredHome: boolean;
   createdAt?: Timestamp;
 };

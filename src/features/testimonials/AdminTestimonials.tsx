@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MessageSquareQuote } from "lucide-react";
 import { useToast } from "../../app/contexts";
 import { Pagination } from "../../components/Pagination";
+import { ImageLightbox } from "../../components/ImageLightbox";
 import {
   setHomepageTestimonialLimit,
   setTestimonialFeatured,
@@ -27,6 +28,7 @@ export function AdminTestimonials() {
   const [savingLimit, setSavingLimit] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [page, setPage] = useState(1);
+  const [lightboxImage, setLightboxImage] = useState("");
 
   useEffect(() => {
     setHomepageLimitDraft(String(homepageSettings.homepageLimit));
@@ -195,6 +197,16 @@ export function AdminTestimonials() {
               </span>
             </header>
             <p>{testimonial.text}</p>
+            {testimonial.photo?.url && (
+              <button
+                className="testimonial-admin-photo"
+                type="button"
+                aria-label="Ampliar foto do depoimento"
+                onClick={() => setLightboxImage(testimonial.photo?.url || "")}
+              >
+                <img src={testimonial.photo.url} alt="Foto enviada com o depoimento" loading="lazy" />
+              </button>
+            )}
             <button
               className="button secondary"
               type="button"
@@ -219,6 +231,13 @@ export function AdminTestimonials() {
         onChange={setPage}
         label="Paginação de depoimentos"
       />
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          alt="Foto do depoimento"
+          onClose={() => setLightboxImage("")}
+        />
+      )}
     </section>
   );
 }

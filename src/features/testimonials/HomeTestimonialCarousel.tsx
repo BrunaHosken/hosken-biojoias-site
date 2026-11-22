@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MessageSquareQuote } from "lucide-react";
+import { ImageLightbox } from "../../components/ImageLightbox";
 import {
   useFeaturedTestimonials,
   useHomepageTestimonialSettings,
@@ -29,6 +30,7 @@ export function HomeTestimonialCarousel() {
     window.matchMedia("(max-width: 720px)").matches ? 1 : 3,
   );
   const [pageIndex, setPageIndex] = useState(0);
+  const [lightboxImage, setLightboxImage] = useState("");
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 720px)");
@@ -75,8 +77,20 @@ export function HomeTestimonialCarousel() {
                 <time>{formatDate(testimonial.createdAt)}</time>
               )}
             </header>
-            <div className="home-testimonial-text">
-              <p>{testimonial.text}</p>
+            <div className="home-testimonial-body">
+              {testimonial.photo?.url && (
+                <button
+                  className="home-testimonial-photo"
+                  type="button"
+                  aria-label="Ampliar foto do depoimento"
+                  onClick={() => setLightboxImage(testimonial.photo?.url || "")}
+                >
+                  <img src={testimonial.photo.url} alt="Foto enviada com o depoimento" loading="lazy" />
+                </button>
+              )}
+              <div className="home-testimonial-text">
+                <p>{testimonial.text}</p>
+              </div>
             </div>
             <footer>
               {testimonial.anonymous
@@ -103,6 +117,13 @@ export function HomeTestimonialCarousel() {
             />
           ))}
         </div>
+      )}
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          alt="Foto do depoimento"
+          onClose={() => setLightboxImage("")}
+        />
       )}
     </section>
   );

@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
-import type { PublicTestimonial, Testimonial } from "./models";
+import type { PublicTestimonial, ReviewPhoto, Testimonial } from "./models";
 
 function useTestimonialCollection<T>(
   collectionName: string,
@@ -37,8 +37,18 @@ function useTestimonialCollection<T>(
         setError("");
         setLoading(false);
       },
-      () => {
-        setError("Não foi possível carregar os depoimentos.");
+      (snapshotError) => {
+        if (snapshotError.code === "permission-denied") {
+          setError(
+            "A conta atual não tem permissão para carregar os depoimentos. Confirme o acesso de administradora e as regras do Firestore.",
+          );
+        } else if (snapshotError.code === "unavailable") {
+          setError(
+            "O Firestore está indisponível. Verifique a conexão ou se o emulador está ativo.",
+          );
+        } else {
+          setError("Não foi possível carregar os depoimentos.");
+        }
         setLoading(false);
       },
     );
@@ -123,7 +133,11 @@ const setHomepageTestimonialLimitCall = httpsCallable<
   HomepageTestimonialSettings
 >(functions, "setHomepageTestimonialLimit");
 
-export async function submitTestimonial(input: { text: string; anonymous: boolean }) {
+export async function submitTestimonial(input: {
+  text: string;
+  anonymous: boolean;
+  photo?: ReviewPhoto | null;
+}) {
   return (await submitTestimonialCall(input)).data;
 }
 

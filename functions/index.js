@@ -1039,6 +1039,36 @@ function validateReviewPhotos(value, uid) {
   });
 }
 
+function validateTestimonialPhoto(value, uid) {
+  if (value === null) return null;
+  const path = typeof value?.path === "string" ? value.path : "";
+  const urlText = typeof value?.url === "string" ? value.url : "";
+  let url;
+  try {
+    url = new URL(urlText);
+  } catch {
+    throw new HttpsError("invalid-argument", "Invalid testimonial photo URL.");
+  }
+  const local = url.hostname === "127.0.0.1" || url.hostname === "localhost";
+  let decodedPath = "";
+  try {
+    decodedPath = decodeURIComponent(url.pathname);
+  } catch {
+    throw new HttpsError("invalid-argument", "Invalid testimonial photo URL.");
+  }
+  if (
+    !/^testimonials\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+[.]webp$/.test(path) ||
+    !path.startsWith(`testimonials/${uid}/`) ||
+    path.length > 300 ||
+    url.protocol !== (local ? "http:" : "https:") ||
+    !(url.hostname === "firebasestorage.googleapis.com" || local) ||
+    !decodedPath.endsWith(`/${path}`)
+  ) {
+    throw new HttpsError("invalid-argument", "Invalid testimonial photo.");
+  }
+  return { path, url: urlText };
+}
+
 export const submitProductReview = onCall({ region }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   const uid = request.auth.uid;
@@ -1321,6 +1351,10 @@ export const submitTestimonial = onCall({ region }, async (request) => {
   const data = request.data || {};
   const text = typeof data.text === "string" ? data.text.trim() : "";
   const anonymous = data.anonymous === true;
+  const photoProvided = Object.prototype.hasOwnProperty.call(data, "photo");
+  const submittedPhoto = photoProvided
+    ? validateTestimonialPhoto(data.photo, uid)
+    : undefined;
   if (
     text.length < 3 ||
     text.length > 1500 ||
@@ -1346,12 +1380,16 @@ export const submitTestimonial = onCall({ region }, async (request) => {
         ? testimonialSnapshot.get("createdAt") || FieldValue.serverTimestamp()
         : FieldValue.serverTimestamp();
       const now = FieldValue.serverTimestamp();
+      const photo = photoProvided
+        ? submittedPhoto
+        : testimonialSnapshot.get("photo") || null;
 
       transaction.set(testimonialRef, {
         customerId: uid,
         customerName: displayName,
         text,
         anonymous,
+        photo,
         featuredHome,
         createdAt,
         updatedAt: now,
@@ -1361,6 +1399,7 @@ export const submitTestimonial = onCall({ region }, async (request) => {
         {
           text,
           anonymous,
+          photo,
           featuredHome,
           ...(anonymous ? { displayName: FieldValue.delete() } : { displayName }),
           createdAt: publicSnapshot.exists
@@ -1610,6 +1649,24 @@ export const notifyAdminsOfNewReview = onDocumentCreated(
       "Uma avaliação nova está disponível no painel.",
       "admin?tab=reviews",
       "admin-new-reviews",
+    );
+  },
+);
+
+export const notifyAdminsOfUpdatedReview = onDocumentUpdated(
+  { document: "reviews/{reviewId}", region },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    const beforeUpdatedAt = before.updatedAt?.toMillis?.() ?? 0;
+    const afterUpdatedAt = after.updatedAt?.toMillis?.() ?? 0;
+    if (!afterUpdatedAt || afterUpdatedAt === beforeUpdatedAt) return;
+    await notifyAdmins(
+      "Avaliação atualizada",
+      "Uma avaliação de produto foi editada e está disponível no painel.",
+      "admin?tab=reviews",
+      "admin-updated-reviews",
     );
   },
 );
