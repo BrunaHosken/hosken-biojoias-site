@@ -160,6 +160,33 @@
     gap: 12px;
     margin-left: auto;
   }
+  .site-header .mobile-header-actions .notification-bell {
+    display: flex;
+    align-items: center;
+  }
+  .site-header .mobile-header-actions .notification-bell-button {
+    display: flex;
+    width: auto;
+    height: 36px;
+    min-height: 36px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+  }
+  .site-header .mobile-header-actions .notification-bell-button .mobile-action-label {
+    display: inline;
+    white-space: nowrap;
+  }
+  .site-header .mobile-header-actions .notification-bell-button .unread-badge {
+    position: static;
+    flex: 0 0 auto;
+    margin-left: 0;
+  }
   .site-header .mobile-menu {
     display: flex;
     flex: 0 0 auto;
@@ -189,32 +216,6 @@
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     box-shadow: 0 16px 35px #342e2d24;
-  }
-  .site-header .site-header-panel.open:has(.notification-panel) nav,
-  .site-header .site-header-panel.open:has(.notification-panel) .mobile-tools-title,
-  .site-header .site-header-panel.open:has(.notification-panel) .header-actions > :not(.notification-bell) {
-    display: none;
-  }
-  .site-header .site-header-panel.open:has(.notification-panel) .header-actions {
-    display: block;
-  }
-  .site-header .site-header-panel.open:has(.notification-panel) .header-actions > .notification-bell {
-    min-height: 0;
-    width: 100%;
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-  .site-header .site-header-panel.open:has(.notification-panel) .notification-bell-button {
-    display: none;
-  }
-  .site-header .site-header-panel.open:has(.notification-panel) .notification-panel {
-    position: static;
-    width: 100%;
-    max-width: none;
-    max-height: min(52dvh, 460px);
-    margin: 0;
-    box-shadow: none;
   }
   .site-header .site-header-panel nav {
     display: flex;
@@ -761,6 +762,10 @@
   }
   .site-header .mobile-header-actions {
     gap: 9px;
+  }
+  .site-header .mobile-header-actions .notification-bell-button {
+    gap: 4px;
+    font-size: 11px;
   }
   .site-header .mobile-menu {
     padding: 3px;

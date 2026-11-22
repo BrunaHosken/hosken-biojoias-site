@@ -44,11 +44,13 @@ function AdminNotificationBell({
   conversations,
   products,
   reviews,
+  onOpen,
 }: {
   orders: CustomerOrder[];
   conversations: ChatConversation[];
   products: Product[];
   reviews: ProductReview[];
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
@@ -138,7 +140,14 @@ function AdminNotificationBell({
         aria-label={count ? `${count} notificações não lidas` : "Notificações"}
         aria-expanded={open}
         aria-controls="admin-notification-panel"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          onOpen?.();
+          setOpen(true);
+        }}
       >
         <Bell size={21} />
         <span className="mobile-action-label">Notificações</span>
@@ -280,7 +289,11 @@ function AdminNotificationBell({
   );
 }
 
-export function AdminHeaderNotificationBell() {
+export function AdminHeaderNotificationBell({
+  onOpen,
+}: {
+  onOpen?: () => void;
+}) {
   const conversations = useAdminConversations();
   const orders = useAdminOrders();
   const products = useRecords<Product>("products", true);
@@ -291,6 +304,7 @@ export function AdminHeaderNotificationBell() {
       conversations={conversations.data}
       products={products.data}
       reviews={reviews.data}
+      onOpen={onOpen}
     />
   );
 }

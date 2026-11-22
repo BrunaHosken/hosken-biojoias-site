@@ -11,7 +11,13 @@ import {
 } from "./notificationStorage";
 import { useDismissNotificationOnOutside } from "./useDismissNotificationOnOutside";
 
-export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
+export function CustomerHeaderNotificationBell({
+  uid,
+  onOpen,
+}: {
+  uid: string;
+  onOpen?: () => void;
+}) {
   const orders = useCustomerOrders(uid);
   const reviews = useCustomerReviews(uid);
   const conversation = useCustomerConversation(uid);
@@ -145,7 +151,14 @@ export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
         aria-label={count ? `${count} notificações não lidas` : "Notificações"}
         aria-expanded={open}
         aria-controls="customer-notification-panel"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          onOpen?.();
+          setOpen(true);
+        }}
       >
         <Bell size={21} />
         <span className="mobile-action-label">Notificações</span>

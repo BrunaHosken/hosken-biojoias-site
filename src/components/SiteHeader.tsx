@@ -35,6 +35,9 @@ export function SiteHeader() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [compact, setCompact] = useState(false);
+  const [mobileViewport, setMobileViewport] = useState(() =>
+    window.matchMedia("(max-width: 760px)").matches,
+  );
   const itemCount = Object.values(basket.items).reduce(
     (total, quantity) => total + quantity,
     0,
@@ -53,6 +56,13 @@ export function SiteHeader() {
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
   useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const updateViewport = () => setMobileViewport(media.matches);
+    media.addEventListener("change", updateViewport);
+    return () => media.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
     if (!menuOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenuOpen(false);
@@ -60,6 +70,15 @@ export function SiteHeader() {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [menuOpen]);
+
+  const notificationBell = session.admin ? (
+    <AdminHeaderNotificationBell onOpen={() => setMenuOpen(false)} />
+  ) : session.user ? (
+    <CustomerHeaderNotificationBell
+      uid={session.user.uid}
+      onOpen={() => setMenuOpen(false)}
+    />
+  ) : null;
 
   return (
     <header
@@ -92,10 +111,7 @@ export function SiteHeader() {
             <UserRound className="account-icon" aria-hidden="true" />
             <span>{session.user ? "Minha conta" : "Entrar"}</span>
           </Link>
-          {session.admin && <AdminHeaderNotificationBell />}
-          {session.user && !session.admin && (
-            <CustomerHeaderNotificationBell uid={session.user.uid} />
-          )}
+          {!mobileViewport && notificationBell}
           {session.user && theme.ready && (
             <button
               className="theme-toggle"
@@ -157,6 +173,7 @@ export function SiteHeader() {
         </div>
       </div>
       <div className="mobile-header-actions">
+        {mobileViewport && notificationBell}
         <button
           className="icon mobile-menu"
           type="button"
