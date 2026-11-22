@@ -165,27 +165,17 @@
     align-items: center;
   }
   .site-header .mobile-header-actions .notification-bell-button {
-    display: flex;
-    width: auto;
+    display: grid;
+    width: 36px;
     height: 36px;
     min-height: 36px;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
+    place-items: center;
     padding: 0;
     border: 0;
     background: transparent;
-    font: inherit;
-    font-size: 12px;
   }
   .site-header .mobile-header-actions .notification-bell-button .mobile-action-label {
-    display: inline;
-    white-space: nowrap;
-  }
-  .site-header .mobile-header-actions .notification-bell-button .unread-badge {
-    position: static;
-    flex: 0 0 auto;
-    margin-left: 0;
+    display: none;
   }
   .site-header .mobile-menu {
     display: flex;
@@ -762,10 +752,6 @@
   }
   .site-header .mobile-header-actions {
     gap: 9px;
-  }
-  .site-header .mobile-header-actions .notification-bell-button {
-    gap: 4px;
-    font-size: 11px;
   }
   .site-header .mobile-menu {
     padding: 3px;
