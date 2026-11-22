@@ -6,6 +6,23 @@ export const ADMIN_NOTIFICATIONS_EVENT = "hosken-admin-notifications-updated";
 export const CUSTOMER_NOTIFICATIONS_EVENT =
   "hosken-customer-notifications-updated";
 
+export async function updateAppIconBadge(count: number) {
+  if (typeof navigator === "undefined") return;
+  const appNavigator = navigator as Navigator & {
+    setAppBadge?: (contents?: number) => Promise<void>;
+    clearAppBadge?: () => Promise<void>;
+  };
+  try {
+    if (count > 0) {
+      await appNavigator.setAppBadge?.(count);
+    } else {
+      await appNavigator.clearAppBadge?.();
+    }
+  } catch {
+    // The OS or browser may not support app icon badges.
+  }
+}
+
 export function readAdminSeenIds(key: string) {
   try {
     const values = JSON.parse(localStorage.getItem(key) || "[]");

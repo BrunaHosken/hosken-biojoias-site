@@ -28,6 +28,7 @@ import {
   ADMIN_SEEN_CONVERSATIONS,
   ADMIN_SEEN_ORDERS,
   ADMIN_SEEN_REVIEWS,
+  updateAppIconBadge,
 } from "./notificationStorage";
 import { useDismissNotificationOnOutside } from "./useDismissNotificationOnOutside";
 
@@ -117,6 +118,18 @@ function AdminNotificationBell({
     newConversations.length +
     lowStockProducts.length +
     newReviews.length;
+
+  useEffect(() => {
+    void updateAppIconBadge(count);
+  }, [count]);
+
+  useEffect(
+    () => () => {
+      void updateAppIconBadge(0);
+    },
+    [],
+  );
+
   return (
     <div className="notification-bell" ref={bellRef}>
       <button
@@ -128,6 +141,7 @@ function AdminNotificationBell({
         onClick={() => setOpen((current) => !current)}
       >
         <Bell size={21} />
+        <span className="mobile-action-label">Notificações</span>
         {count > 0 && (
           <span className="unread-badge">{count > 99 ? "99+" : count}</span>
         )}

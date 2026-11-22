@@ -7,6 +7,7 @@ import {
   readCustomerNotificationState,
   saveCustomerNotificationState,
   type CustomerNotificationState,
+  updateAppIconBadge,
 } from "./notificationStorage";
 import { useDismissNotificationOnOutside } from "./useDismissNotificationOnOutside";
 
@@ -103,6 +104,17 @@ export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
         );
   const count = unreadConversations + pendingOrders.length + pendingReviews.length;
 
+  useEffect(() => {
+    void updateAppIconBadge(count);
+  }, [count]);
+
+  useEffect(
+    () => () => {
+      void updateAppIconBadge(0);
+    },
+    [],
+  );
+
   function clearOrderNotifications() {
     const acknowledgedOrderUpdates = {
       ...notificationState.acknowledgedOrderUpdates,
@@ -136,6 +148,7 @@ export function CustomerHeaderNotificationBell({ uid }: { uid: string }) {
         onClick={() => setOpen((current) => !current)}
       >
         <Bell size={21} />
+        <span className="mobile-action-label">Notificações</span>
         {count > 0 && (
           <span className="unread-badge">{count > 99 ? "99+" : count}</span>
         )}

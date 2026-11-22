@@ -147,89 +147,169 @@
   .site-header.header-compact .wordmark small {
     display: none;
   }
-  .site-header nav {
-    order: 4;
-    top: 77px;
-  }
-  .site-header.header-compact nav.open {
-    top: 67px;
-  }
-  .site-header .header-actions {
+  .site-header .mobile-header-actions {
+    display: flex;
     order: 2;
     flex: 0 0 auto;
-    gap: 4px;
+    align-items: center;
+    gap: 12px;
     margin-left: auto;
   }
-  .site-header.header-compact .header-actions {
-    gap: 4px;
-  }
   .site-header .mobile-menu {
-    order: 1;
     display: flex;
     flex: 0 0 auto;
-    margin-left: 0;
     padding: 5px;
   }
   .site-header .mobile-menu svg {
     width: 21px;
     height: 21px;
   }
-  nav {
+  .site-header .site-header-panel {
     display: none;
+  }
+  .site-header .site-header-panel.open {
     position: absolute;
-    left: 0;
+    z-index: 105;
+    top: 100%;
     right: 0;
-    background: var(--surface);
-    z-index: 10;
-    padding: 20px 6%;
-    border-bottom: 1px solid var(--border);
-  }
-  nav.open {
+    left: 0;
     display: flex;
+    max-height: min(72dvh, 620px);
     flex-direction: column;
-    align-items: start;
-    gap: 5px;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 14px;
+    overflow-y: auto;
+    padding: 14px 5% 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 16px 35px #342e2d24;
   }
-  .header-actions .account-link {
-    order: 2;
-    display: inline-flex;
+  .site-header .site-header-panel nav {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 0 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .site-header.header-compact .site-header-panel nav {
+    gap: 0;
+    font-size: 14px;
+  }
+  .site-header .site-header-panel nav a {
+    display: block;
+    padding: 11px 4px;
+    border-bottom: 0;
+  }
+  .site-header .mobile-tools-title {
+    display: block;
+    margin: 0;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .site-header .header-actions {
+    display: grid;
+    flex: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .site-header.header-compact .header-actions {
+    gap: 8px;
+  }
+  .site-header .header-actions > a,
+  .site-header .header-actions > button,
+  .site-header .header-actions > .notification-bell,
+  .site-header .header-actions > .pwa-install-control {
+    min-width: 0;
+    min-height: 44px;
+    justify-content: flex-start;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    background: var(--surface-elevated);
+  }
+  .site-header .header-actions .account-link {
+    gap: 9px;
+  }
+  .site-header .header-actions .account-icon {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+  .site-header .header-actions .account-link span,
+  .site-header .header-actions .header-logout span,
+  .site-header .header-actions .mobile-action-label {
+    display: inline;
+  }
+  .site-header .header-actions .notification-bell {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 3px;
   }
-  .account-link span {
+  .site-header .header-actions .notification-bell-button {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 24px;
+    align-items: center;
+    gap: 9px;
+    padding: 0;
+    justify-content: flex-start;
+  }
+  .site-header .header-actions .notification-bell-button .unread-badge {
+    position: static;
+    flex: 0 0 auto;
+    margin-left: 2px;
+  }
+  .site-header .header-actions .theme-toggle {
+    width: auto;
+    height: auto;
+    gap: 9px;
+    border-radius: 0;
+    color: var(--text);
+    font: inherit;
+  }
+  .site-header .header-actions .theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+  .site-header .header-actions .desktop-bag {
     display: none;
   }
-  .header-actions .account-icon {
-    display: block;
-    width: 19px;
-    height: 19px;
+  .site-header .header-actions .header-logout {
+    order: 2;
+    gap: 9px;
+    font: inherit;
+    cursor: pointer;
   }
-  .header-actions .notification-bell-button {
-    width: 30px;
-    height: 30px;
-    padding: 3px;
+  .site-header .header-actions .pwa-install-control {
+    order: 1;
+    display: flex;
+    align-items: center;
   }
-  .header-actions .notification-bell {
-    order: 3;
+  .site-header .header-actions .pwa-install-button,
+  .site-header .header-actions .pwa-install-status {
+    min-height: 24px;
+    justify-content: flex-start;
+    padding: 0;
+    font-size: 13px;
   }
-  .header-actions .bag {
-    order: 4;
+  .site-header .header-actions .pwa-install-help {
+    position: static;
+    grid-column: 1 / -1;
+    width: auto;
+    box-shadow: none;
   }
-  .header-actions .theme-toggle {
-    order: 4;
-    width: 30px;
-    height: 30px;
-  }
-  .header-actions .theme-toggle svg {
-    width: 17px;
-    height: 17px;
-  }
-  .header-actions .bag {
-    order: 5;
-  }
-  .header-actions .header-logout {
-    order: 6;
+  .site-header .header-actions .pwa-install-control.has-help {
+    grid-column: 1 / -1;
   }
   .site-header .notification-panel {
     position: fixed;
@@ -254,16 +334,6 @@
   .site-header .bag svg {
     width: 19px;
     height: 19px;
-  }
-  .header-logout {
-    padding: 3px 1px;
-  }
-  .header-logout span {
-    display: none;
-  }
-  .site-header .header-logout svg {
-    width: 15px;
-    height: 15px;
   }
   .hero {
     grid-template-columns: 1fr;
@@ -659,32 +729,12 @@
   .site-header.header-compact .wordmark {
     font-size: 14px;
   }
-  .site-header .header-actions {
-    gap: 2px;
-  }
-  .site-header .header-actions .account-icon {
-    width: 17px;
-    height: 17px;
-  }
-  .site-header .header-actions .notification-bell-button {
-    width: 26px;
-    height: 26px;
-  }
-  .site-header .header-actions .theme-toggle {
-    width: 26px;
-    height: 26px;
-  }
-  .site-header .header-actions .theme-toggle svg {
-    width: 15px;
-    height: 15px;
-  }
   .site-header .header-actions .bag svg {
     width: 17px;
     height: 17px;
   }
-  .site-header .header-logout svg {
-    width: 14px;
-    height: 14px;
+  .site-header .mobile-header-actions {
+    gap: 9px;
   }
   .site-header .mobile-menu {
     padding: 3px;

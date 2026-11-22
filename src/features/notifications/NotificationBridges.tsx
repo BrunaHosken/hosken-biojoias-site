@@ -17,15 +17,6 @@ export function AdminNotificationBridge() {
     document.title = unreadCount
       ? `(${unreadCount}) Atendimento · Hosken Biojoias`
       : "Hosken Biojoias";
-    const appNavigator = navigator as Navigator & {
-      setAppBadge?: (contents?: number) => Promise<void>;
-      clearAppBadge?: () => Promise<void>;
-    };
-    if (unreadCount > 0) {
-      appNavigator.setAppBadge?.(unreadCount).catch(() => {});
-    } else {
-      appNavigator.clearAppBadge?.().catch(() => {});
-    }
     return () => {
       document.title = "Hosken Biojoias";
     };
@@ -63,24 +54,11 @@ export function CustomerNotificationBridge({ uid }: { uid: string }) {
     document.title = unreadCount
       ? `(${unreadCount}) Hosken Biojoias`
       : "Hosken Biojoias";
-    const appNavigator = navigator as Navigator & {
-      setAppBadge?: (contents?: number) => Promise<void>;
-      clearAppBadge?: () => Promise<void>;
-    };
-    if (unreadCount > 0) {
-      appNavigator.setAppBadge?.(unreadCount).catch(() => {});
-    } else {
-      appNavigator.clearAppBadge?.().catch(() => {});
-    }
   }, [unreadCount]);
 
   useEffect(
     () => () => {
       document.title = "Hosken Biojoias";
-      const appNavigator = navigator as Navigator & {
-        clearAppBadge?: () => Promise<void>;
-      };
-      appNavigator.clearAppBadge?.().catch(() => {});
     },
     [],
   );

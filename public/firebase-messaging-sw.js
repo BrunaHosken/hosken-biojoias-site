@@ -30,6 +30,14 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId) {
   });
 }
 
+// Keeps this worker useful for the installable app while all store data remains
+// online and current. Offline purchases and authenticated pages are not cached.
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  if (new URL(event.request.url).origin !== self.location.origin) return;
+  event.respondWith(fetch(event.request));
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = new URL(event.notification.data?.path || "./", self.registration.scope).href;

@@ -55,7 +55,7 @@ function serviceWorkerUrl() {
   return url;
 }
 
-async function registerServiceWorker() {
+export async function registerMessagingServiceWorker() {
   if (!("serviceWorker" in navigator)) throw new Error("push-not-supported");
   return navigator.serviceWorker.register(serviceWorkerUrl().href, {
     scope: import.meta.env.BASE_URL,
@@ -66,7 +66,7 @@ async function registerServiceWorker() {
 async function getCurrentToken() {
   const supported = await messagingIsSupported();
   if (!supported) throw new Error("push-not-supported");
-  const registration = await registerServiceWorker();
+  const registration = await registerMessagingServiceWorker();
   const token = await getToken(getMessaging(app), {
     vapidKey: VAPID_KEY,
     serviceWorkerRegistration: registration,

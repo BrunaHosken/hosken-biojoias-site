@@ -10,11 +10,17 @@ import {
 import { AppRoutes } from "./AppRoutes";
 import {
   listenForPushMessages,
+  registerMessagingServiceWorker,
   syncPushForUser,
 } from "../features/notifications/pushNotifications";
 
 export function SiteLayout() {
   const session = useContext(SessionContext);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    void registerMessagingServiceWorker().catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!session.user) return;
