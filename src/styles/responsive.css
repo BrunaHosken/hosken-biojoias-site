@@ -55,6 +55,7 @@
 }
 @media (max-width: 760px) {
   .admin-workspace {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -82,10 +83,10 @@
   }
   .admin-navigation {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
-    gap: 10px;
-    padding: 11px;
+    gap: 12px;
+    padding: 18px 14px 14px;
   }
   .admin-navigation:not(.is-open) {
     display: none;
