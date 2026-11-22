@@ -247,7 +247,13 @@
 }
 .testimonial-form-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 12px;
+}
+.testimonial-delete-button {
+  margin-right: auto;
+  color: var(--wine);
 }
 .testimonial-selection-status {
   padding: 13px 15px;
@@ -313,6 +319,7 @@
   .home-testimonial-photo img { max-height: 95px; }
   .testimonial-form { padding: 18px; }
   .testimonial-anonymous-option { justify-self: start; }
+  .testimonial-form-actions { flex-direction: column-reverse; align-items: stretch; }
   .testimonial-form-actions .button { width: 100%; }
   .admin-testimonial-card > .button { width: 100%; }
 }

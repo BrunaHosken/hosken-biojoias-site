@@ -7,9 +7,11 @@ import {
   type FormEvent,
 } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ImagePlus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ImagePlus, Trash2, X } from "lucide-react";
 import { SessionContext, useToast } from "../../app/contexts";
+import { ConfirmationModal } from "../../components/Feedback";
 import {
+  deleteTestimonial,
   submitTestimonial,
   useMyTestimonial,
   type ReviewPhoto,
@@ -37,6 +39,7 @@ export function TestimonialFormPage() {
   const [photoPreview, setPhotoPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     const uid = session.user?.uid || "";
@@ -104,6 +107,31 @@ export function TestimonialFormPage() {
           ? "A imagem ficou maior que 5 MB após a otimização. Escolha outra foto."
           : "Não foi possível salvar seu depoimento. Confira a foto e tente novamente.",
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeTestimonial() {
+    if (!session.user || !testimonial.data || busy) return;
+    setBusy(true);
+    setFormError("");
+    try {
+      await deleteTestimonial(session.user.uid);
+      if (testimonial.data.photo?.path) {
+        await deleteObject(storageRef(storage, testimonial.data.photo.path)).catch(
+          () => undefined,
+        );
+      }
+      setConfirmDelete(false);
+      setText("");
+      setAnonymous(false);
+      setSavedPhoto(null);
+      setPhoto(null);
+      notify("Seu depoimento foi excluído.", "success");
+    } catch {
+      setConfirmDelete(false);
+      setFormError("Não foi possível excluir o depoimento. Tente novamente.");
     } finally {
       setBusy(false);
     }
@@ -205,12 +233,32 @@ export function TestimonialFormPage() {
         </p>
         {formError && <p className="notice" role="alert">{formError}</p>}
         <div className="testimonial-form-actions">
+          {testimonial.data && (
+            <button
+              className="button secondary testimonial-delete-button"
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 size={17} /> Excluir depoimento
+            </button>
+          )}
           <button className="button" type="submit" disabled={busy || text.trim().length < 3}>
             {busy ? "Salvando…" : testimonial.data ? "Salvar alterações" : "Enviar depoimento"}
             <ArrowRight size={18} />
           </button>
         </div>
       </form>
+      {confirmDelete && (
+        <ConfirmationModal
+          title="Excluir depoimento?"
+          message="Seu depoimento e a foto serão removidos. Se ele estava na página inicial, também deixará de aparecer lá. Essa ação não pode ser desfeita."
+          confirmLabel="Excluir depoimento"
+          busy={busy}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => void removeTestimonial()}
+        />
+      )}
     </div>
   );
 }

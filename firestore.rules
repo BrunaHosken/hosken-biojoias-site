@@ -207,11 +207,15 @@ service cloud.firestore {
       allow get: if admin()
         || (signedIn() && testimonialId == request.auth.uid);
       allow list: if admin();
-      allow create, update, delete: if false;
+      allow delete: if signedIn()
+        && testimonialId == request.auth.uid
+        && resource.data.customerId == request.auth.uid;
+      allow create, update: if false;
     }
     match /publicTestimonials/{testimonialId} {
       allow read: if resource.data.featuredHome == true;
-      allow create, update, delete: if false;
+      allow delete: if signedIn() && testimonialId == request.auth.uid;
+      allow create, update: if false;
     }
     match /siteSettings/testimonials {
       allow read: if true;

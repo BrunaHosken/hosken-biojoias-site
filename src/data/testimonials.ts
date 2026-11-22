@@ -5,6 +5,7 @@ import {
   onSnapshot,
   query,
   where,
+  writeBatch,
   type QueryFieldFilterConstraint,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -139,6 +140,13 @@ export async function submitTestimonial(input: {
   photo?: ReviewPhoto | null;
 }) {
   return (await submitTestimonialCall(input)).data;
+}
+
+export async function deleteTestimonial(uid: string) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "testimonials", uid));
+  batch.delete(doc(db, "publicTestimonials", uid));
+  await batch.commit();
 }
 
 export async function setTestimonialFeatured(
