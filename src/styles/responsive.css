@@ -309,6 +309,7 @@
   }
   .site-header .header-actions .pwa-install-status {
     gap: 10px;
+    padding: 9px 11px;
   }
   .site-header .header-actions .pwa-install-help {
     position: static;
