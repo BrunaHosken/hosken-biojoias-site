@@ -19,14 +19,14 @@ export function ReportMetrics({
         <span>No período selecionado</span>
       </article>
       <article>
-        <small>PEDIDOS PAGOS</small>
+        <small>PEDIDOS CONCLUÍDOS</small>
         <strong>{orderCount}</strong>
-        <span>Sem cancelamentos ou reembolsos</span>
+        <span>Cancelados e reembolsados ficam fora</span>
       </article>
       <article>
         <small>FATURAMENTO BRUTO</small>
         <strong>{money(revenueCents)}</strong>
-        <span>Valores de demonstração</span>
+        <span>Pedidos concluídos no período</span>
       </article>
       <article>
         <small>MAIS VENDIDO</small>

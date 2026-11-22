@@ -1,4 +1,5 @@
-import { DEMO_REPORT_SALES, REPORT_COLORS } from "./reportFixtures";
+import type { CustomerOrder } from "../../data";
+import { REPORT_COLORS } from "./reportFixtures";
 import type {
   ReportFilters,
   ReportOptions,
@@ -10,25 +11,72 @@ export function localDateInputValue(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-export function getDemoReportSales(today: Date): ReportSale[] {
-  return DEMO_REPORT_SALES.map((sale) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() - sale.daysAgo);
-    return { ...sale, date };
-  });
+function reportKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "sem-classificacao";
 }
 
-export function getDemoReportOptions(): ReportOptions {
+export function getCompletedOrderSales(orders: CustomerOrder[]): ReportSale[] {
+  return orders
+    .filter(
+      (order) =>
+        order.status === "completed" &&
+        !["cancelled", "refunded"].includes(order.paymentStatus || ""),
+    )
+    .flatMap((order) => {
+      const date = order.createdAt?.toDate();
+      if (!date || !Array.isArray(order.items)) return [];
+
+      return order.items
+        .filter(
+          (item) =>
+            Number.isSafeInteger(item.quantity) &&
+            item.quantity > 0 &&
+            Number.isSafeInteger(item.unitPriceCents) &&
+            item.unitPriceCents >= 0,
+        )
+        .map((item) => {
+          const lineName = item.collectionName || "Sem linha";
+          const typeName = item.categoryName || "Sem tipo de peça";
+          const productId =
+            item.productId === "custom"
+              ? item.customQuoteId ||
+                item.customConversationId ||
+                reportKey(item.name)
+              : item.productId;
+          return {
+            orderNumber: order.orderNumber || order.id,
+            date,
+            productId,
+            productName: item.name,
+            lineId: reportKey(lineName),
+            lineName,
+            typeId: reportKey(typeName),
+            typeName,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            orderStatus: order.status,
+            paymentStatus: order.paymentStatus,
+          };
+        });
+    });
+}
+
+export function getReportOptions(sales: ReportSale[]): ReportOptions {
   return {
     lines: Array.from(
-      new Map(DEMO_REPORT_SALES.map((sale) => [sale.lineId, sale.lineName])),
+      new Map(sales.map((sale) => [sale.lineId, sale.lineName])),
     ),
     types: Array.from(
-      new Map(DEMO_REPORT_SALES.map((sale) => [sale.typeId, sale.typeName])),
+      new Map(sales.map((sale) => [sale.typeId, sale.typeName])),
     ),
     products: Array.from(
       new Map(
-        DEMO_REPORT_SALES.map((sale) => [sale.productId, sale.productName]),
+        sales.map((sale) => [sale.productId, sale.productName]),
       ),
     ),
   };
@@ -46,7 +94,8 @@ export function buildReportSummary(
     : null;
   const filteredSales = sales.filter(
     (sale) =>
-      sale.paymentStatus === "approved" &&
+      sale.orderStatus === "completed" &&
+      !["cancelled", "refunded"].includes(sale.paymentStatus || "") &&
       (!start || sale.date >= start) &&
       (!end || sale.date <= end) &&
       (!filters.lineFilter || sale.lineId === filters.lineFilter) &&

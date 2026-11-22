@@ -192,7 +192,7 @@ export function AdminPanel() {
               }}
             />
           ) : tab === "reports" ? (
-            <AdminReports />
+            <AdminReports orders={adminOrders} />
           ) : tab === "reviews" ? (
             <AdminReviews />
           ) : tab === "testimonials" ? (

@@ -30,7 +30,7 @@ export function ReportChart({
       </div>
       {!groups.length ? (
         <p className="report-empty">
-          Nenhuma venda fictícia encontrada com estes filtros.
+          Nenhuma venda concluída encontrada com estes filtros.
         </p>
       ) : grouping === "line" || grouping === "type" ? (
         <div className="report-donut-layout">

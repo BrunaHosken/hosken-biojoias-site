@@ -697,20 +697,10 @@ textarea {
   color: var(--muted);
   font-size: 12px;
 }
-.report-demo-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 11px;
-  color: var(--warning-text);
-  background: var(--surface-warning);
-  font-size: 10px;
-  white-space: nowrap;
-}
-.report-demo-note {
+.report-data-note {
   padding: 12px 15px;
-  border-left: 2px solid #b58b55;
-  background: var(--surface-warning);
+  border-left: 2px solid var(--wine);
+  background: var(--surface-muted);
   color: var(--muted);
   font-size: 11px;
   line-height: 1.6;

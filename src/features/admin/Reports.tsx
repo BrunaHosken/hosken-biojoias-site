@@ -1,16 +1,17 @@
-import { useState } from "react";
-import { Info } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ReportChart } from "./ReportChart";
 import { ReportFilters } from "./ReportFilters";
 import { ReportMetrics } from "./ReportMetrics";
 import { ReportTable } from "./ReportTable";
 import {
   buildReportSummary,
-  getDemoReportOptions,
-  getDemoReportSales,
+  getCompletedOrderSales,
+  getReportOptions,
   localDateInputValue,
 } from "./reportModel";
 import type { ReportGrouping } from "./reportTypes";
+import { Notice } from "../../components/Feedback";
+import type { CustomerOrder } from "../../data";
 
 const groupNames: Record<ReportGrouping, string> = {
   line: "linha",
@@ -19,12 +20,11 @@ const groupNames: Record<ReportGrouping, string> = {
   month: "mês",
 };
 
-export function AdminReports() {
-  const [today] = useState(() => {
-    const value = new Date();
-    value.setHours(12, 0, 0, 0);
-    return value;
-  });
+export function AdminReports({
+  orders,
+}: {
+  orders: { data: CustomerOrder[]; error: string; loading: boolean };
+}) {
   const [fromDate, setFromDate] = useState(() => {
     const value = new Date();
     value.setDate(value.getDate() - 29);
@@ -36,15 +36,23 @@ export function AdminReports() {
   const [productFilter, setProductFilter] = useState("");
   const [grouping, setGrouping] = useState<ReportGrouping>("type");
 
-  const summary = buildReportSummary(getDemoReportSales(today), {
-    fromDate,
-    toDate,
-    lineFilter,
-    typeFilter,
-    productFilter,
-    grouping,
-  });
-  const options = getDemoReportOptions();
+  const sales = useMemo(
+    () => getCompletedOrderSales(orders.data),
+    [orders.data],
+  );
+  const summary = useMemo(
+    () =>
+      buildReportSummary(sales, {
+        fromDate,
+        toDate,
+        lineFilter,
+        typeFilter,
+        productFilter,
+        grouping,
+      }),
+    [sales, fromDate, toDate, lineFilter, typeFilter, productFilter, grouping],
+  );
+  const options = useMemo(() => getReportOptions(sales), [sales]);
 
   return (
     <section className="admin-reports">
@@ -56,44 +64,49 @@ export function AdminReports() {
             Explore os resultados por período, linha, tipo de peça ou produto.
           </p>
         </div>
-        <span className="report-demo-label">
-          <Info size={15} /> Dados fictícios
-        </span>
       </div>
-      <div className="report-demo-note" role="note">
-        Estes dados são apenas exemplos para demonstrar os filtros e gráficos.
-        Não representam vendas reais.
+      <div className="report-data-note" role="note">
+        O relatório considera somente pedidos concluídos. Pedidos cancelados e
+        reembolsados ficam fora dos totais.
       </div>
-      <ReportFilters
-        fromDate={fromDate}
-        toDate={toDate}
-        lineFilter={lineFilter}
-        typeFilter={typeFilter}
-        productFilter={productFilter}
-        grouping={grouping}
-        options={options}
-        onFromDateChange={setFromDate}
-        onToDateChange={setToDate}
-        onLineChange={setLineFilter}
-        onTypeChange={setTypeFilter}
-        onProductChange={setProductFilter}
-        onGroupingChange={setGrouping}
-      />
-      <ReportMetrics
-        unitsSold={summary.unitsSold}
-        orderCount={summary.orderCount}
-        revenueCents={summary.revenueCents}
-        bestSeller={summary.bestSeller}
-      />
-      <ReportChart
-        grouping={grouping}
-        groupName={groupNames[grouping]}
-        groups={summary.groups}
-        unitsSold={summary.unitsSold}
-        maxGroupUnits={summary.maxGroupUnits}
-        pieGradient={summary.pieGradient}
-      />
-      <ReportTable groupName={groupNames[grouping]} groups={summary.groups} />
+      <Notice loading={orders.loading} error={orders.error} />
+      {!orders.loading && !orders.error && (
+        <>
+          <ReportFilters
+            fromDate={fromDate}
+            toDate={toDate}
+            lineFilter={lineFilter}
+            typeFilter={typeFilter}
+            productFilter={productFilter}
+            grouping={grouping}
+            options={options}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onLineChange={setLineFilter}
+            onTypeChange={setTypeFilter}
+            onProductChange={setProductFilter}
+            onGroupingChange={setGrouping}
+          />
+          <ReportMetrics
+            unitsSold={summary.unitsSold}
+            orderCount={summary.orderCount}
+            revenueCents={summary.revenueCents}
+            bestSeller={summary.bestSeller}
+          />
+          <ReportChart
+            grouping={grouping}
+            groupName={groupNames[grouping]}
+            groups={summary.groups}
+            unitsSold={summary.unitsSold}
+            maxGroupUnits={summary.maxGroupUnits}
+            pieGradient={summary.pieGradient}
+          />
+          <ReportTable
+            groupName={groupNames[grouping]}
+            groups={summary.groups}
+          />
+        </>
+      )}
     </section>
   );
 }

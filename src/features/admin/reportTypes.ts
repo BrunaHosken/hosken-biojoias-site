@@ -1,8 +1,8 @@
 export type ReportGrouping = "line" | "type" | "product" | "month";
 
-export type DemoReportSale = {
+export type ReportSale = {
   orderNumber: string;
-  daysAgo: number;
+  date: Date;
   productId: string;
   productName: string;
   lineId: string;
@@ -11,10 +11,9 @@ export type DemoReportSale = {
   typeName: string;
   quantity: number;
   unitPriceCents: number;
-  paymentStatus: "approved" | "cancelled" | "refunded";
+  orderStatus: string;
+  paymentStatus?: string;
 };
-
-export type ReportSale = DemoReportSale & { date: Date };
 
 export type ReportGroup = {
   key: string;
