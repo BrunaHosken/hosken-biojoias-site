@@ -9,16 +9,8 @@ import {
   getReportOptions,
   localDateInputValue,
 } from "./reportModel";
-import type { ReportGrouping } from "./reportTypes";
 import { Notice } from "../../components/Feedback";
 import type { CustomerOrder } from "../../data";
-
-const groupNames: Record<ReportGrouping, string> = {
-  line: "linha",
-  type: "tipo de peça",
-  product: "produto",
-  month: "mês",
-};
 
 export function AdminReports({
   orders,
@@ -34,24 +26,25 @@ export function AdminReports({
   const [lineFilter, setLineFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [productFilter, setProductFilter] = useState("");
-  const [grouping, setGrouping] = useState<ReportGrouping>("type");
 
   const sales = useMemo(
     () => getCompletedOrderSales(orders.data),
     [orders.data],
   );
-  const summary = useMemo(
-    () =>
-      buildReportSummary(sales, {
-        fromDate,
-        toDate,
-        lineFilter,
-        typeFilter,
-        productFilter,
-        grouping,
-      }),
-    [sales, fromDate, toDate, lineFilter, typeFilter, productFilter, grouping],
-  );
+  const summaries = useMemo(() => {
+    const filters = {
+      fromDate,
+      toDate,
+      lineFilter,
+      typeFilter,
+      productFilter,
+    };
+    return {
+      lines: buildReportSummary(sales, { ...filters, grouping: "line" }),
+      types: buildReportSummary(sales, { ...filters, grouping: "type" }),
+      products: buildReportSummary(sales, { ...filters, grouping: "product" }),
+    };
+  }, [sales, fromDate, toDate, lineFilter, typeFilter, productFilter]);
   const options = useMemo(() => getReportOptions(sales), [sales]);
 
   return (
@@ -78,33 +71,34 @@ export function AdminReports({
             lineFilter={lineFilter}
             typeFilter={typeFilter}
             productFilter={productFilter}
-            grouping={grouping}
             options={options}
             onFromDateChange={setFromDate}
             onToDateChange={setToDate}
             onLineChange={setLineFilter}
             onTypeChange={setTypeFilter}
             onProductChange={setProductFilter}
-            onGroupingChange={setGrouping}
           />
           <ReportMetrics
-            unitsSold={summary.unitsSold}
-            orderCount={summary.orderCount}
-            revenueCents={summary.revenueCents}
-            bestSeller={summary.bestSeller}
+            unitsSold={summaries.products.unitsSold}
+            orderCount={summaries.products.orderCount}
+            revenueCents={summaries.products.revenueCents}
+            bestSeller={summaries.products.bestSeller}
           />
-          <ReportChart
-            grouping={grouping}
-            groupName={groupNames[grouping]}
-            groups={summary.groups}
-            unitsSold={summary.unitsSold}
-            maxGroupUnits={summary.maxGroupUnits}
-            pieGradient={summary.pieGradient}
-          />
-          <ReportTable
-            groupName={groupNames[grouping]}
-            groups={summary.groups}
-          />
+          <div className="report-chart-grid">
+            <ReportChart
+              groupName="linha"
+              groups={summaries.lines.groups}
+              unitsSold={summaries.lines.unitsSold}
+              pieGradient={summaries.lines.pieGradient}
+            />
+            <ReportChart
+              groupName="tipo de peça"
+              groups={summaries.types.groups}
+              unitsSold={summaries.types.unitsSold}
+              pieGradient={summaries.types.pieGradient}
+            />
+          </div>
+          <ReportTable groupName="produto" groups={summaries.products.groups} />
         </>
       )}
     </section>

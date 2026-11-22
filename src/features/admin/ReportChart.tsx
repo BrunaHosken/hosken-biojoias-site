@@ -1,20 +1,15 @@
-import { money } from "../../data";
 import { REPORT_COLORS } from "./reportFixtures";
-import type { ReportGroup, ReportGrouping } from "./reportTypes";
+import type { ReportGroup } from "./reportTypes";
 
 export function ReportChart({
-  grouping,
   groupName,
   groups,
   unitsSold,
-  maxGroupUnits,
   pieGradient,
 }: {
-  grouping: ReportGrouping;
   groupName: string;
   groups: ReportGroup[];
   unitsSold: number;
-  maxGroupUnits: number;
   pieGradient: string;
 }) {
   return (
@@ -32,7 +27,7 @@ export function ReportChart({
         <p className="report-empty">
           Nenhuma venda concluída encontrada com estes filtros.
         </p>
-      ) : grouping === "line" || grouping === "type" ? (
+      ) : (
         <div className="report-donut-layout">
           <div
             className="report-donut"
@@ -64,31 +59,6 @@ export function ReportChart({
               </li>
             ))}
           </ul>
-        </div>
-      ) : (
-        <div
-          className="report-bars"
-          role="img"
-          aria-label={`Gráfico de barras de vendas por ${groupName}`}
-        >
-          {groups.slice(0, 8).map((group, index) => (
-            <div className="report-bar-row" key={group.key}>
-              <div>
-                <strong>{group.label}</strong>
-                <span>
-                  {group.quantity} un. · {money(group.revenueCents)}
-                </span>
-              </div>
-              <div className="report-bar-track">
-                <span
-                  style={{
-                    width: `${(group.quantity / maxGroupUnits) * 100}%`,
-                    background: REPORT_COLORS[index % REPORT_COLORS.length],
-                  }}
-                />
-              </div>
-            </div>
-          ))}
         </div>
       )}
     </div>

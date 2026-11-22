@@ -759,6 +759,11 @@ textarea {
   border: 1px solid var(--border);
   background: var(--surface);
 }
+.report-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
 .report-card-heading {
   align-items: flex-start;
   margin-bottom: 22px;
@@ -1016,6 +1021,11 @@ textarea {
 }
 .confirmation-actions .button {
   gap: 8px;
+}
+@media (max-width: 1050px) {
+  .report-chart-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .danger-button {
   border-color: #982d40;

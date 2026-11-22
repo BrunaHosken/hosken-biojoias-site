@@ -1,4 +1,4 @@
-import type { ReportGrouping, ReportOptions } from "./reportTypes";
+import type { ReportOptions } from "./reportTypes";
 
 type ReportFiltersProps = {
   fromDate: string;
@@ -6,14 +6,12 @@ type ReportFiltersProps = {
   lineFilter: string;
   typeFilter: string;
   productFilter: string;
-  grouping: ReportGrouping;
   options: ReportOptions;
   onFromDateChange: (value: string) => void;
   onToDateChange: (value: string) => void;
   onLineChange: (value: string) => void;
   onTypeChange: (value: string) => void;
   onProductChange: (value: string) => void;
-  onGroupingChange: (value: ReportGrouping) => void;
 };
 
 export function ReportFilters({
@@ -22,14 +20,12 @@ export function ReportFilters({
   lineFilter,
   typeFilter,
   productFilter,
-  grouping,
   options,
   onFromDateChange,
   onToDateChange,
   onLineChange,
   onTypeChange,
   onProductChange,
-  onGroupingChange,
 }: ReportFiltersProps) {
   return (
     <div className="report-filters">
@@ -89,20 +85,6 @@ export function ReportFilters({
               {name}
             </option>
           ))}
-        </select>
-      </label>
-      <label>
-        Agrupar por
-        <select
-          value={grouping}
-          onChange={(event) =>
-            onGroupingChange(event.target.value as ReportGrouping)
-          }
-        >
-          <option value="type">Tipo de peça</option>
-          <option value="line">Linha</option>
-          <option value="product">Produto</option>
-          <option value="month">Mês</option>
         </select>
       </label>
     </div>
