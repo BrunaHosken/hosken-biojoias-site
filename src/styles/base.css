@@ -267,22 +267,6 @@ nav a.active {
 .pwa-install-status {
   color: var(--success-text);
 }
-.pwa-install-help {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 120;
-  width: min(290px, calc(100vw - 32px));
-  margin: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  background: var(--surface-elevated);
-  color: var(--text);
-  box-shadow: 0 12px 30px #342e2d24;
-  font-size: 12px;
-  line-height: 1.55;
-  white-space: normal;
-}
 .mobile-action-label {
   display: none;
 }

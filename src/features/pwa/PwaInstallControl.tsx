@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Check, Download } from "lucide-react";
+import { useToast } from "../../app/contexts";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -24,7 +25,7 @@ export function PwaInstallControl() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [standalone, setStandalone] = useState(false);
   const [installationComplete, setInstallationComplete] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(false);
+  const notify = useToast();
 
   useEffect(() => {
     const displayMode = window.matchMedia("(display-mode: standalone)");
@@ -36,7 +37,6 @@ export function PwaInstallControl() {
     const handleAppInstalled = () => {
       setInstallationComplete(true);
       setInstallPrompt(null);
-      setShowInstructions(false);
     };
 
     updateDisplayMode();
@@ -53,7 +53,12 @@ export function PwaInstallControl() {
 
   async function handleInstallClick() {
     if (!installPrompt) {
-      setShowInstructions((visible) => !visible);
+      notify(
+        isAppleMobile()
+          ? "No Safari, toque em Compartilhar e escolha Adicionar à Tela de Início."
+          : "No menu do navegador, escolha Instalar app ou Adicionar à tela inicial.",
+        "info",
+      );
       return;
     }
 
@@ -62,7 +67,10 @@ export function PwaInstallControl() {
       const choice = await installPrompt.userChoice;
       if (choice.outcome === "accepted") setInstallationComplete(true);
     } catch {
-      setShowInstructions(true);
+      notify(
+        "Não foi possível iniciar a instalação. Tente pelo menu do navegador.",
+        "warning",
+      );
     } finally {
       setInstallPrompt(null);
     }
@@ -78,23 +86,15 @@ export function PwaInstallControl() {
   }
 
   return (
-    <div className={`pwa-install-control${showInstructions ? " has-help" : ""}`}>
+    <div className="pwa-install-control">
       <button
         type="button"
         className="pwa-install-button"
-        aria-expanded={showInstructions}
         onClick={() => void handleInstallClick()}
       >
         <Download size={17} aria-hidden="true" />
         <span>Instalar app</span>
       </button>
-      {showInstructions && (
-        <p className="pwa-install-help" role="status">
-          {isAppleMobile()
-            ? "No Safari, toque em Compartilhar e escolha Adicionar à Tela de Início."
-            : "No menu do navegador, escolha Instalar app ou Adicionar à tela inicial."}
-        </p>
-      )}
     </div>
   );
 }
