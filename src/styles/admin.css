@@ -883,6 +883,34 @@ textarea {
   overflow-x: auto;
   border: 1px solid var(--border);
 }
+.report-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 15px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.report-table-pagination > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.report-table-pagination .button {
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.report-table-pagination .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 .report-table {
   width: 100%;
   min-width: 560px;
@@ -1021,6 +1049,16 @@ textarea {
 }
 .confirmation-actions .button {
   gap: 8px;
+}
+@media (max-width: 520px) {
+  .report-table-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .report-table-pagination > div {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 @media (max-width: 1050px) {
   .report-chart-grid {
