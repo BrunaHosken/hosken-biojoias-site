@@ -190,6 +190,32 @@
     background: var(--surface);
     box-shadow: 0 16px 35px #342e2d24;
   }
+  .site-header .site-header-panel.open:has(.notification-panel) nav,
+  .site-header .site-header-panel.open:has(.notification-panel) .mobile-tools-title,
+  .site-header .site-header-panel.open:has(.notification-panel) .header-actions > :not(.notification-bell) {
+    display: none;
+  }
+  .site-header .site-header-panel.open:has(.notification-panel) .header-actions {
+    display: block;
+  }
+  .site-header .site-header-panel.open:has(.notification-panel) .header-actions > .notification-bell {
+    min-height: 0;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .site-header .site-header-panel.open:has(.notification-panel) .notification-bell-button {
+    display: none;
+  }
+  .site-header .site-header-panel.open:has(.notification-panel) .notification-panel {
+    position: static;
+    width: 100%;
+    max-width: none;
+    max-height: min(52dvh, 460px);
+    margin: 0;
+    box-shadow: none;
+  }
   .site-header .site-header-panel nav {
     display: flex;
     flex: none;
