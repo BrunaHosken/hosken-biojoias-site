@@ -15,6 +15,7 @@ import type { AdminContentTab } from "./catalogTypes";
 import { AdminOrders } from "./AdminOrders";
 import { AdminReports } from "./Reports";
 import { AdminReviews } from "../reviews/AdminReviews";
+import { AdminTestimonials } from "../testimonials/AdminTestimonials";
 
 const moduleGroups = [
   {
@@ -48,6 +49,7 @@ const moduleGroups = [
     items: [
       ["reports", "Relatórios"],
       ["reviews", "Avaliações"],
+      ["testimonials", "Depoimentos"],
     ],
   },
 ];
@@ -100,15 +102,6 @@ export function AdminPanel() {
     document.title = unreadCount
       ? `(${unreadCount}) Atendimento · Hosken Biojoias`
       : "Administração · Hosken Biojoias";
-    const appNavigator = navigator as Navigator & {
-      setAppBadge?: (contents?: number) => Promise<void>;
-      clearAppBadge?: () => Promise<void>;
-    };
-    if (unreadCount > 0) {
-      appNavigator.setAppBadge?.(unreadCount).catch(() => {});
-    } else {
-      appNavigator.clearAppBadge?.().catch(() => {});
-    }
     return () => {
       document.title = "Hosken Biojoias";
     };
@@ -202,6 +195,8 @@ export function AdminPanel() {
             <AdminReports />
           ) : tab === "reviews" ? (
             <AdminReviews />
+          ) : tab === "testimonials" ? (
+            <AdminTestimonials />
           ) : tab === "products" ? (
             <AdminProductManager key={`products-${catalogVersion}`} />
           ) : (

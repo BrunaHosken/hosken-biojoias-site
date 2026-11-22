@@ -5,6 +5,7 @@ import { SessionContext } from "../../../app/contexts";
 import { Notice } from "../../../components/Feedback";
 import { useRecords, type Taxonomy } from "../../../data";
 import { HomeReviewCarousel } from "../../reviews/HomeReviewCarousel";
+import { HomeTestimonialCarousel } from "../../testimonials/HomeTestimonialCarousel";
 
 export function Home() {
   const session = useContext(SessionContext);
@@ -118,6 +119,7 @@ export function Home() {
           Conheça nossa história <ArrowRight size={17} />
         </Link>
       </section>
+      <HomeTestimonialCarousel />
       <HomeReviewCarousel />
     </>
   );

@@ -15,6 +15,7 @@ import { CustomerChat } from "../features/chat/CustomerChat";
 import { Admin } from "../features/admin/AdminPanel";
 import { ReviewFormPage } from "../features/reviews/ReviewFormPage";
 import { CustomerReviewsPage } from "../features/reviews/CustomerReviewsPage";
+import { TestimonialFormPage } from "../features/testimonials/TestimonialFormPage";
 
 export function AppRoutes() {
   return (
@@ -60,6 +61,7 @@ export function AppRoutes() {
       <Route path="/pedidos" element={<OrdersPage />} />
       <Route path="/avaliar" element={<ReviewFormPage />} />
       <Route path="/minhas-avaliacoes" element={<CustomerReviewsPage />} />
+      <Route path="/meu-depoimento" element={<TestimonialFormPage />} />
       <Route path="/chat" element={<CustomerChat />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/carrinho" element={<Cart />} />

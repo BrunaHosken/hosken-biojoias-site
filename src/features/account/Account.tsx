@@ -10,7 +10,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { deleteField, doc, setDoc } from "firebase/firestore";
-import { ArrowRight, Eye, EyeOff, Star } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, MessageSquareQuote, Star } from "lucide-react";
 import { SessionContext, useToast } from "../../app/contexts";
 import { useCustomerProfile } from "../../data";
 import { auth, db, localMode } from "../../firebase";
@@ -242,6 +242,23 @@ export function Account() {
                     title="Ver minhas avaliações"
                   >
                     <Star size={22} />
+                  </Link>
+                </div>
+                <div className="account-setting-card account-orders-link">
+                  <div>
+                    <div className="eyebrow">SUA HISTÓRIA</div>
+                    <h2>Meu depoimento</h2>
+                    <p className="muted">
+                      Compartilhe sua experiência com o ateliê. Não é preciso ter comprado.
+                    </p>
+                  </div>
+                  <Link
+                    className="account-orders-arrow"
+                    to="/meu-depoimento"
+                    aria-label="Escrever ou editar meu depoimento"
+                    title="Escrever ou editar meu depoimento"
+                  >
+                    <MessageSquareQuote size={22} />
                   </Link>
                 </div>
               </>

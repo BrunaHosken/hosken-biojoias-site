@@ -1315,6 +1315,156 @@ export const setHomepageReviewLimit = onCall({ region }, async (request) => {
   }
 });
 
+export const submitTestimonial = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const data = request.data || {};
+  const text = typeof data.text === "string" ? data.text.trim() : "";
+  const anonymous = data.anonymous === true;
+  if (
+    text.length < 3 ||
+    text.length > 1500 ||
+    typeof data.text !== "string" ||
+    (data.anonymous !== undefined && typeof data.anonymous !== "boolean")
+  ) {
+    throw new HttpsError("invalid-argument", "Invalid testimonial.");
+  }
+  const testimonialRef = db.collection("testimonials").doc(uid);
+  const publicRef = db.collection("publicTestimonials").doc(uid);
+  const profileRef = db.collection("users").doc(uid);
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const testimonialSnapshot = await transaction.get(testimonialRef);
+      const publicSnapshot = await transaction.get(publicRef);
+      const profileSnapshot = await transaction.get(profileRef);
+      const displayName = String(
+        profileSnapshot.get("displayName") || request.auth.token.name || "Cliente",
+      ).trim().slice(0, 100) || "Cliente";
+      const featuredHome = testimonialSnapshot.exists &&
+        testimonialSnapshot.get("featuredHome") === true;
+      const createdAt = testimonialSnapshot.exists
+        ? testimonialSnapshot.get("createdAt") || FieldValue.serverTimestamp()
+        : FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
+
+      transaction.set(testimonialRef, {
+        customerId: uid,
+        customerName: displayName,
+        text,
+        anonymous,
+        featuredHome,
+        createdAt,
+        updatedAt: now,
+      });
+      transaction.set(
+        publicRef,
+        {
+          text,
+          anonymous,
+          featuredHome,
+          ...(anonymous ? { displayName: FieldValue.delete() } : { displayName }),
+          createdAt: publicSnapshot.exists
+            ? publicSnapshot.get("createdAt") || createdAt
+            : createdAt,
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+      return { id: uid, created: !testimonialSnapshot.exists };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Testimonial submission failed", error);
+    throw new HttpsError("internal", "Could not submit the testimonial.");
+  }
+});
+
+export const setTestimonialFeatured = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  if (request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin access required.");
+  }
+  const testimonialId = requireText(request.data?.testimonialId, "testimonialId", 128);
+  const featuredHome = request.data?.featuredHome;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(testimonialId) || typeof featuredHome !== "boolean") {
+    throw new HttpsError("invalid-argument", "Invalid testimonial selection.");
+  }
+  const testimonialRef = db.collection("testimonials").doc(testimonialId);
+  const publicRef = db.collection("publicTestimonials").doc(testimonialId);
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const testimonialSnapshot = await transaction.get(testimonialRef);
+      const publicSnapshot = await transaction.get(publicRef);
+      const featuredSnapshot = await transaction.get(
+        db.collection("publicTestimonials").where("featuredHome", "==", true),
+      );
+      const settingsSnapshot = await transaction.get(
+        db.collection("siteSettings").doc("testimonials"),
+      );
+      if (!testimonialSnapshot.exists || !publicSnapshot.exists) {
+        throw new HttpsError("not-found", "Testimonial not found.");
+      }
+      const currentlyFeatured = testimonialSnapshot.get("featuredHome") === true;
+      const homepageLimit = settingsSnapshot.exists
+        ? settingsSnapshot.get("homepageLimit")
+        : 5;
+      if (
+        featuredHome &&
+        !currentlyFeatured &&
+        featuredSnapshot.size >= homepageLimit
+      ) {
+        throw new HttpsError("failed-precondition", "homepage-testimonial-limit");
+      }
+      transaction.update(testimonialRef, { featuredHome });
+      transaction.update(publicRef, { featuredHome });
+      return { featuredHome };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Featured testimonial update failed", error);
+    throw new HttpsError("internal", "Could not update featured testimonial.");
+  }
+});
+
+export const setHomepageTestimonialLimit = onCall({ region }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  if (request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin access required.");
+  }
+  const homepageLimit = request.data?.homepageLimit;
+  if (!Number.isInteger(homepageLimit) || homepageLimit < 1 || homepageLimit > 30) {
+    throw new HttpsError("invalid-argument", "Invalid homepage testimonial limit.");
+  }
+  const settingsRef = db.collection("siteSettings").doc("testimonials");
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const featuredSnapshot = await transaction.get(
+        db.collection("publicTestimonials").where("featuredHome", "==", true),
+      );
+      if (featuredSnapshot.size > homepageLimit) {
+        throw new HttpsError(
+          "failed-precondition",
+          "homepage-testimonial-limit-below-selected",
+        );
+      }
+      transaction.set(
+        settingsRef,
+        {
+          homepageLimit,
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: request.auth.uid,
+        },
+        { merge: true },
+      );
+      return { homepageLimit };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error("Homepage testimonial limit update failed", error);
+    throw new HttpsError("internal", "Could not update homepage testimonial limit.");
+  }
+});
+
 export const notifyAdminsOfNewOrder = onDocumentCreated(
   { document: "orders/{orderId}", region },
   async (event) => {
@@ -1460,6 +1610,19 @@ export const notifyAdminsOfNewReview = onDocumentCreated(
       "Uma avaliação nova está disponível no painel.",
       "admin?tab=reviews",
       "admin-new-reviews",
+    );
+  },
+);
+
+export const notifyAdminsOfNewTestimonial = onDocumentCreated(
+  { document: "testimonials/{testimonialId}", region },
+  async (event) => {
+    if (!event.data?.exists) return;
+    await notifyAdmins(
+      "Novo depoimento recebido",
+      "Um depoimento novo está disponível no painel.",
+      "admin?tab=testimonials",
+      "admin-new-testimonials",
     );
   },
 );

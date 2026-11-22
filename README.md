@@ -23,7 +23,7 @@ Site: http://127.0.0.1:5173 · Painel do banco: http://127.0.0.1:4000
 
 Acesse `/conta` com `admin@hosken.local` e senha `HoskenLocal2026!`. Essa conta é criada **exclusivamente no emulador**, não é uma conta real e não funciona em produção. Depois, abra `/admin`.
 
-O script de seed preserva cadastros existentes. O banco exporta os dados para `.emulator-data/` ao encerrar com Ctrl+C e importa esse conteúdo na próxima execução. Não encerre o processo à força para preservar as últimas alterações. O carrinho fica no navegador; os cadastros ficam no Firestore local. Os emuladores escutam somente nesta máquina.
+O script de seed preserva cadastros existentes. O banco exporta os dados para `.emulator-data/` ao encerrar com Ctrl+C e importa esse conteúdo na próxima execução. Para salvar tudo antes de desligar o computador, volte ao terminal do emulador, pressione Ctrl+C uma vez e espere a mensagem de exportação e encerramento completo; só então desligue. Se o sistema encerrar os processos à força, as alterações desde a última exportação podem se perder. A pasta `.emulator-data/` fica só neste computador e não vai para o Git. O carrinho fica no navegador; os cadastros ficam no Firestore local. Os emuladores escutam somente nesta máquina.
 
 ## O que funciona
 

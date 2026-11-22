@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Bell,
   MessageCircle,
+  MessageSquareQuote,
   PackageCheck,
   ShoppingBag,
   Star,
@@ -14,11 +15,13 @@ import {
   useAdminConversations,
   useAdminOrders,
   useAdminReviews,
+  useAdminTestimonials,
   useRecords,
   type ChatConversation,
   type CustomerOrder,
   type Product,
   type ProductReview,
+  type Testimonial,
 } from "../../data";
 import {
   markAdminNotificationSeen,
@@ -28,6 +31,7 @@ import {
   ADMIN_SEEN_CONVERSATIONS,
   ADMIN_SEEN_ORDERS,
   ADMIN_SEEN_REVIEWS,
+  ADMIN_SEEN_TESTIMONIALS,
   updateAppIconBadge,
 } from "./notificationStorage";
 import { useDismissNotificationOnOutside } from "./useDismissNotificationOnOutside";
@@ -44,12 +48,14 @@ function AdminNotificationBell({
   conversations,
   products,
   reviews,
+  testimonials,
   onOpen,
 }: {
   orders: CustomerOrder[];
   conversations: ChatConversation[];
   products: Product[];
   reviews: ProductReview[];
+  testimonials: Testimonial[];
   onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -67,12 +73,16 @@ function AdminNotificationBell({
   const [seenReviews, setSeenReviews] = useState(() =>
     readAdminSeenIds(ADMIN_SEEN_REVIEWS),
   );
+  const [seenTestimonials, setSeenTestimonials] = useState(() =>
+    readAdminSeenIds(ADMIN_SEEN_TESTIMONIALS),
+  );
   useEffect(() => {
     const syncSeen = () => {
       setSeenOrders(readAdminSeenIds(ADMIN_SEEN_ORDERS));
       setSeenDeliveries(readAdminSeenIds(ADMIN_SEEN_DELIVERIES));
       setSeenConversations(readAdminSeenIds(ADMIN_SEEN_CONVERSATIONS));
       setSeenReviews(readAdminSeenIds(ADMIN_SEEN_REVIEWS));
+      setSeenTestimonials(readAdminSeenIds(ADMIN_SEEN_TESTIMONIALS));
     };
     window.addEventListener(ADMIN_NOTIFICATIONS_EVENT, syncSeen);
     window.addEventListener("storage", syncSeen);
@@ -111,6 +121,9 @@ function AdminNotificationBell({
         product.availability === "paused"),
   );
   const newReviews = reviews.filter((review) => !seenReviews.has(review.id));
+  const newTestimonials = testimonials.filter(
+    (testimonial) => !seenTestimonials.has(testimonial.id),
+  );
   const unreadConversations = newConversations.filter(
     (conversation) => conversation.unreadForAdmin > 0,
   ).length;
@@ -120,10 +133,11 @@ function AdminNotificationBell({
     newConversations.length +
     lowStockProducts.length +
     newReviews.length;
+  const notificationCount = count + newTestimonials.length;
 
   useEffect(() => {
-    void updateAppIconBadge(count);
-  }, [count]);
+    void updateAppIconBadge(notificationCount);
+  }, [notificationCount]);
 
   useEffect(
     () => () => {
@@ -136,8 +150,8 @@ function AdminNotificationBell({
     <div className="notification-bell" ref={bellRef}>
       <button
         type="button"
-        className={`notification-bell-button${count > 0 ? " has-notifications" : ""}${open ? " is-open" : ""}`}
-        aria-label={count ? `${count} notificações não lidas` : "Notificações"}
+        className={`notification-bell-button${notificationCount > 0 ? " has-notifications" : ""}${open ? " is-open" : ""}`}
+        aria-label={notificationCount ? `${notificationCount} notificações não lidas` : "Notificações"}
         aria-expanded={open}
         aria-controls="admin-notification-panel"
         onClick={() => {
@@ -151,8 +165,8 @@ function AdminNotificationBell({
       >
         <Bell size={21} />
         <span className="mobile-action-label">Notificações</span>
-        {count > 0 && (
-          <span className="unread-badge">{count > 99 ? "99+" : count}</span>
+        {notificationCount > 0 && (
+          <span className="unread-badge">{notificationCount > 99 ? "99+" : notificationCount}</span>
         )}
       </button>
       {open && (
@@ -171,7 +185,8 @@ function AdminNotificationBell({
           !confirmedDeliveries.length &&
           !newConversations.length &&
           !lowStockProducts.length &&
-          !newReviews.length ? (
+          !newReviews.length &&
+          !newTestimonials.length ? (
             <p className="notification-empty">Tudo em dia por aqui.</p>
           ) : (
             <div className="notification-list">
@@ -281,6 +296,31 @@ function AdminNotificationBell({
                   </span>
                 </Link>
               )}
+              {newTestimonials.length > 0 && (
+                <Link
+                  to="/admin?tab=testimonials"
+                  onClick={() => {
+                    newTestimonials.forEach((testimonial) =>
+                      markAdminNotificationSeen(
+                        ADMIN_SEEN_TESTIMONIALS,
+                        testimonial.id,
+                      ),
+                    );
+                    setOpen(false);
+                  }}
+                >
+                  <span className="notification-icon">
+                    <MessageSquareQuote size={17} />
+                  </span>
+                  <span>
+                    <strong>
+                      {newTestimonials.length} novo
+                      {newTestimonials.length === 1 ? "" : "s"} depoimento
+                      {newTestimonials.length === 1 ? "" : "s"}
+                    </strong>
+                  </span>
+                </Link>
+              )}
             </div>
           )}
         </section>
@@ -298,12 +338,14 @@ export function AdminHeaderNotificationBell({
   const orders = useAdminOrders();
   const products = useRecords<Product>("products", true);
   const reviews = useAdminReviews();
+  const testimonials = useAdminTestimonials();
   return (
     <AdminNotificationBell
       orders={orders.data}
       conversations={conversations.data}
       products={products.data}
       reviews={reviews.data}
+      testimonials={testimonials.data}
       onOpen={onOpen}
     />
   );

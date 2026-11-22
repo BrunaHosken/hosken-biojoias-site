@@ -203,6 +203,19 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    match /testimonials/{testimonialId} {
+      allow read: if admin()
+        || (signedIn() && resource.data.customerId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+    match /publicTestimonials/{testimonialId} {
+      allow read: if resource.data.featuredHome == true;
+      allow create, update, delete: if false;
+    }
+    match /siteSettings/testimonials {
+      allow read: if true;
+      allow write: if false;
+    }
     match /conversations/{conversationId} {
       function canAccessConversation() {
         return signedIn() && (conversationId == request.auth.uid || admin());

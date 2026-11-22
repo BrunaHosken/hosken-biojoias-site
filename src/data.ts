@@ -12,3 +12,4 @@ export * from "./data/productAvailability";
 export * from "./data/productVisibility";
 export * from "./data/pricing";
 export * from "./data/reviews";
+export * from "./data/testimonials";

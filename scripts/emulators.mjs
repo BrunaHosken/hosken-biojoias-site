@@ -30,9 +30,10 @@ const child = spawn(
     detached: process.platform !== "win32",
   },
 );
-// Encaminhar o sinal apenas ao CLI, que exporta os dados e encerra o Java.
-process.on("SIGINT", () => child.kill("SIGINT"));
-process.on("SIGTERM", () => child.kill("SIGTERM"));
+// Encaminhar sinais de encerramento ao CLI para que exporte os dados antes de sair.
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGQUIT"]) {
+  process.on(signal, () => child.kill(signal));
+}
 child.on("error", (error) => {
   console.error(error.message);
   process.exitCode = 1;

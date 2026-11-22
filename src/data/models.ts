@@ -147,6 +147,25 @@ export type PublicProductReview = {
   featuredHome: boolean;
   createdAt?: Timestamp;
 };
+export type Testimonial = {
+  id: string;
+  customerId: string;
+  customerName?: string;
+  displayName?: string;
+  text: string;
+  anonymous: boolean;
+  featuredHome: boolean;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+};
+export type PublicTestimonial = {
+  id: string;
+  displayName?: string;
+  text: string;
+  anonymous: boolean;
+  featuredHome: boolean;
+  createdAt?: Timestamp;
+};
 export type ChatConversation = {
   id: string;
   customerId: string;
