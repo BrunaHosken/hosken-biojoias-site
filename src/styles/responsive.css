@@ -4,6 +4,11 @@
     margin: auto;
   }
 }
+@media (min-width: 761px) {
+  .site-header .header-actions .pwa-install-control:not(.pwa-install-status) {
+    display: none;
+  }
+}
 @media (max-width: 1050px) {
   header {
     gap: 15px;
