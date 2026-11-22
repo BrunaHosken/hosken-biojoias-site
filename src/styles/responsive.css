@@ -312,12 +312,18 @@
   }
   .site-header .header-actions .pwa-install-help {
     position: static;
-    grid-column: 1 / -1;
-    width: auto;
+    width: 100%;
+    box-sizing: border-box;
     box-shadow: none;
   }
   .site-header .header-actions .pwa-install-control.has-help {
     grid-column: 1 / -1;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .site-header .header-actions .pwa-install-control.has-help .pwa-install-button {
+    width: 100%;
   }
   .site-header .notification-panel {
     position: fixed;
