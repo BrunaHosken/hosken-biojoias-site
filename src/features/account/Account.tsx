@@ -68,6 +68,7 @@ export function Account() {
       ? requestedReturnTo
       : "";
   const authActionInProgress = useRef(false);
+  const previousSessionUid = useRef<string | null>(null);
   const loginEmailRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"login" | "register" | "reset">(() =>
     searchParams.get("reset") === "1" ? "reset" : "login",
@@ -96,6 +97,17 @@ export function Account() {
       navigate(returnTo, { replace: true });
     }
   }, [session.ready, session.user, returnTo, navigate]);
+  useEffect(() => {
+    if (!session.ready) return;
+
+    const currentUid = session.user?.uid ?? null;
+    if (previousSessionUid.current && !currentUid) {
+      setMode("login");
+      setPendingRegistration(null);
+      setRegistrationPhone("");
+    }
+    previousSessionUid.current = currentUid;
+  }, [session.ready, session.user?.uid]);
   useEffect(() => {
     setProfileName(session.user?.displayName || "");
     setProfileEmail(session.user?.email || "");
