@@ -296,6 +296,32 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
     }
   }
 
+  async function toggleContent(record: Content) {
+    const nextStatus = record.status === "published" ? "draft" : "published";
+    if (tab === "events" && nextStatus === "published") {
+      const schedule = getEventSchedule(record);
+      if (!schedule.length || schedule.some((entry) => !entry.date)) {
+        notify(
+          "Para publicar um evento, cadastre pelo menos uma data e preencha todas as datas adicionadas.",
+          "warning",
+        );
+        return;
+      }
+    }
+    try {
+      await updateDoc(doc(db, tab, record.id), { status: nextStatus });
+      const label = tab === "policies" ? "Documento" : "Cadastro";
+      notify(
+        nextStatus === "published"
+          ? `${label} publicado.`
+          : `${label} ocultado.`,
+        "success",
+      );
+    } catch {
+      notify("Não foi possível alterar a publicação deste cadastro.", "error");
+    }
+  }
+
   function editRecord(record: AdminRecord) {
     if (tab === "collections") {
       void discardUnsavedLineImages();
@@ -414,6 +440,7 @@ export function AdminContentManager({ tab }: { tab: AdminContentTab }) {
         uploadingImages={lineImagesUploading}
         onEdit={editRecord}
         onToggleTaxonomy={toggleTaxonomy}
+        onToggleContent={toggleContent}
         onRequestDelete={requestDelete}
       />
       {pendingDelete && (

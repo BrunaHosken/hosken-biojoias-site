@@ -152,7 +152,7 @@ export function AdminContentFields({
       {!["categories", "collections", "colors"].includes(tab) && (
         <label>
           {tab === "policies"
-            ? "Texto da política"
+            ? "Texto do documento"
             : tab === "faqs"
               ? "Resposta"
               : "Texto"}
@@ -171,8 +171,8 @@ export function AdminContentFields({
           />
           {tab === "policies" && (
             <small className="field-hint">
-              Cadastre cada assunto em um item separado e publique quando
-              estiver pronto.
+              Cadastre cada termo ou política em um item separado. Publicar ou
+              editar um documento publicado pede novo aceite das contas existentes.
             </small>
           )}
         </label>

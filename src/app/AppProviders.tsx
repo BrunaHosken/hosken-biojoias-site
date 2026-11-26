@@ -6,9 +6,18 @@ import {
   type ReactNode,
 } from "react";
 import { onIdTokenChanged } from "firebase/auth";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  where,
+} from "firebase/firestore";
 import {
   BasketContext,
+  LegalContext,
   SessionContext,
   ToastContext,
   ThemeContext,
@@ -16,12 +25,25 @@ import {
   type Session,
   type ToastKind,
   type ToastMessage,
+  type LegalDocument,
 } from "./contexts";
 import { auth, db, localMode } from "../firebase";
 import { ToastNotice } from "../components/Feedback";
 import { normalizeBasketItems } from "../data/basket";
+import { createLegalVersion } from "../data/legalVersion";
 
 const publicPreview = import.meta.env.VITE_PUBLIC_PREVIEW === "true";
+const guestThemeStorageKey = "hosken-theme-guest";
+
+function readGuestTheme(): Theme {
+  try {
+    return localStorage.getItem(guestThemeStorageKey) === "dark"
+      ? "dark"
+      : "light";
+  } catch {
+    return "light";
+  }
+}
 
 function readBasket(): Record<string, number> {
   try {
@@ -47,8 +69,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
     ready: false,
   });
   const [items, setItems] = useState(readBasket);
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>(readGuestTheme);
   const [themeReady, setThemeReady] = useState(false);
+  const [legalDocuments, setLegalDocuments] = useState<LegalDocument[]>([]);
+  const [legalVersion, setLegalVersion] = useState("");
+  const [legalReady, setLegalReady] = useState(false);
+  const [legalError, setLegalError] = useState(false);
+  const [acceptedLegalVersion, setAcceptedLegalVersion] = useState("");
+  const [profileReady, setProfileReady] = useState(false);
+  const [registrationInProgress, setRegistrationInProgress] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastId = useRef(0);
 
@@ -68,20 +97,12 @@ export function AppProviders({ children }: { children: ReactNode }) {
       onIdTokenChanged(auth, async (user) => {
         try {
           const token = await user?.getIdTokenResult();
-          if (!user) {
-            setTheme("light");
-            setThemeReady(true);
-            document.documentElement.dataset.theme = "light";
-          }
           setSession({
             user,
             admin: token?.claims.admin === true,
             ready: true,
           });
         } catch {
-          setTheme("light");
-          setThemeReady(true);
-          document.documentElement.dataset.theme = "light";
           setSession({ user: null, admin: false, ready: true });
         }
       }),
@@ -89,27 +110,89 @@ export function AppProviders({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    if (!session.ready) {
+      setThemeReady(false);
+      return;
+    }
     const uid = session.user?.uid;
     if (!uid) {
-      setTheme("light");
+      setTheme(readGuestTheme());
       setThemeReady(true);
+      setAcceptedLegalVersion("");
+      setProfileReady(true);
       return;
     }
     setTheme("light");
+    setAcceptedLegalVersion("");
+    setProfileReady(false);
     document.documentElement.dataset.theme = "light";
     setThemeReady(false);
     return onSnapshot(
       doc(db, "users", uid),
       (snapshot) => {
-        setTheme(snapshot.data()?.theme === "dark" ? "dark" : "light");
+        const profile = snapshot.data();
+        setTheme(profile?.theme === "dark" ? "dark" : "light");
+        setAcceptedLegalVersion(
+          typeof profile?.acceptedLegalVersion === "string"
+            ? profile.acceptedLegalVersion
+            : "",
+        );
         setThemeReady(true);
+        setProfileReady(true);
       },
       () => {
         setTheme("light");
         setThemeReady(true);
+        setProfileReady(true);
       },
     );
-  }, [session.user?.uid]);
+  }, [session.ready, session.user?.uid]);
+
+  useEffect(() => {
+    let active = true;
+    let calculation = 0;
+    setLegalReady(false);
+    setLegalError(false);
+    const unsubscribe = onSnapshot(
+      query(collection(db, "policies"), where("status", "==", "published")),
+      (snapshot) => {
+        calculation += 1;
+        const currentCalculation = calculation;
+        setLegalReady(false);
+        const documents = snapshot.docs.map((item) => ({
+          id: item.id,
+          title: String(item.data().title || ""),
+          body: String(item.data().body || ""),
+          policyType: String(item.data().policyType || "general"),
+        }));
+        setLegalDocuments(documents);
+        void createLegalVersion(documents)
+          .then((version) => {
+            if (!active || currentCalculation !== calculation) return;
+            setLegalVersion(version);
+            setLegalError(false);
+            setLegalReady(true);
+          })
+          .catch(() => {
+            if (!active || currentCalculation !== calculation) return;
+            setLegalVersion("");
+            setLegalError(true);
+            setLegalReady(true);
+          });
+      },
+      () => {
+        if (!active) return;
+        setLegalDocuments([]);
+        setLegalVersion("");
+        setLegalError(true);
+        setLegalReady(true);
+      },
+    );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -119,7 +202,12 @@ export function AppProviders({ children }: { children: ReactNode }) {
     async (nextTheme: Theme) => {
       const user = session.user;
       if (!user) {
-        setTheme("light");
+        setTheme(nextTheme);
+        try {
+          localStorage.setItem(guestThemeStorageKey, nextTheme);
+        } catch {
+          notify("A preferência ficará salva somente nesta aba.", "warning");
+        }
         return;
       }
       const previousTheme = theme;
@@ -137,6 +225,20 @@ export function AppProviders({ children }: { children: ReactNode }) {
     },
     [notify, session.user, theme],
   );
+
+  const acceptCurrentVersion = useCallback(async () => {
+    const user = session.user;
+    if (!user || !legalVersion) return;
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        acceptedLegalVersion: legalVersion,
+        acceptedLegalAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+    setAcceptedLegalVersion(legalVersion);
+  }, [legalVersion, session.user]);
 
   useEffect(() => {
     try {
@@ -160,24 +262,39 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <ThemeContext.Provider
           value={{ theme, ready: themeReady, chooseTheme }}
         >
-          <BasketContext.Provider
-            value={{ items, change, clear: () => setItems({}) }}
+          <LegalContext.Provider
+            value={{
+              documents: legalDocuments,
+              version: legalVersion,
+              ready: legalReady,
+              error: legalError,
+              acceptedVersion: acceptedLegalVersion,
+              profileReady,
+              registrationInProgress,
+              beginRegistration: () => setRegistrationInProgress(true),
+              endRegistration: () => setRegistrationInProgress(false),
+              acceptCurrentVersion,
+            }}
           >
-            {(localMode || publicPreview) && (
-              <div className="local-banner">
-                {publicPreview ? "PRÉVIA DO ATELIÊ" : "ATELIÊ EM CONSTRUÇÃO"}{" "}
-                <span>
-                  {publicPreview
-                    ? "Versão de demonstração · dados ilustrativos · compras desativadas"
-                    : "Ambiente local · produtos e valores de exemplo · compras simuladas no emulador"}
-                </span>
-              </div>
-            )}
-            {toast && (
-              <ToastNotice toast={toast} onDismiss={() => setToast(null)} />
-            )}
-            {children}
-          </BasketContext.Provider>
+            <BasketContext.Provider
+              value={{ items, change, clear: () => setItems({}) }}
+            >
+              {(localMode || publicPreview) && (
+                <div className="local-banner">
+                  {publicPreview ? "PRÉVIA DO ATELIÊ" : "ATELIÊ EM CONSTRUÇÃO"}{" "}
+                  <span>
+                    {publicPreview
+                      ? "Versão de demonstração · dados ilustrativos · compras desativadas"
+                      : "Ambiente local · produtos e valores de exemplo · compras simuladas no emulador"}
+                  </span>
+                </div>
+              )}
+              {toast && (
+                <ToastNotice toast={toast} onDismiss={() => setToast(null)} />
+              )}
+              {children}
+            </BasketContext.Provider>
+          </LegalContext.Provider>
         </ThemeContext.Provider>
       </SessionContext.Provider>
     </ToastContext.Provider>

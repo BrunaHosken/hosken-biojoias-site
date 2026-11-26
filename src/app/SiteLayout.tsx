@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import { SessionContext } from "./contexts";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
+import { LegalAcceptanceGate } from "../components/LegalAcceptanceGate";
 import {
   AdminNotificationBridge,
   CustomerNotificationBridge,
@@ -31,6 +32,7 @@ export function SiteLayout() {
   return (
     <>
       <SiteHeader />
+      <LegalAcceptanceGate />
       <main>
         <AppRoutes />
       </main>

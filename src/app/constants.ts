@@ -7,6 +7,7 @@ export const availability: Record<string, string> = {
 };
 
 export const POLICY_TYPES = [
+  { id: "terms", label: "Termos de uso" },
   { id: "delivery", label: "Entrega e frete" },
   { id: "reshipment", label: "Reenvio" },
   { id: "cancellation", label: "Cancelamento" },

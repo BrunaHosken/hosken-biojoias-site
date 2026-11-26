@@ -20,6 +20,7 @@ type AdminRecordListProps = {
   onEdit: (record: AdminRecord) => void;
   onToggleProduct?: (product: Product) => void;
   onToggleTaxonomy?: (taxonomy: Taxonomy) => void;
+  onToggleContent?: (content: Content) => void;
   onRequestDelete: (record: AdminRecord) => void;
 };
 
@@ -30,6 +31,7 @@ export function AdminRecordList({
   onEdit,
   onToggleProduct,
   onToggleTaxonomy,
+  onToggleContent,
   onRequestDelete,
 }: AdminRecordListProps) {
   return (
@@ -116,13 +118,24 @@ export function AdminRecordList({
                 </>
               )}
             {["news", "events", "partnerStores", "policies", "faqs"].includes(tab) && (
-              <button
-                className="text-button"
-                disabled={uploadingImages}
-                onClick={() => onEdit(record)}
-              >
-                Editar
-              </button>
+              "title" in record && (
+                <>
+                  <button
+                    className="text-button"
+                    disabled={uploadingImages}
+                    onClick={() => onEdit(record)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={uploadingImages}
+                    onClick={() => onToggleContent?.(record)}
+                  >
+                    {record.status === "published" ? "Ocultar" : "Publicar"}
+                  </button>
+                </>
+              )
             )}
             <button
               className="text-button"

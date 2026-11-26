@@ -39,3 +39,36 @@ export const ThemeContext = createContext<ThemeSettings>({
   ready: false,
   chooseTheme: async () => {},
 });
+
+export type LegalDocument = {
+  id: string;
+  title: string;
+  body: string;
+  policyType?: string;
+};
+
+export type LegalSettings = {
+  documents: LegalDocument[];
+  version: string;
+  ready: boolean;
+  error: boolean;
+  acceptedVersion: string;
+  profileReady: boolean;
+  registrationInProgress: boolean;
+  beginRegistration: () => void;
+  endRegistration: () => void;
+  acceptCurrentVersion: () => Promise<void>;
+};
+
+export const LegalContext = createContext<LegalSettings>({
+  documents: [],
+  version: "",
+  ready: false,
+  error: false,
+  acceptedVersion: "",
+  profileReady: false,
+  registrationInProgress: false,
+  beginRegistration: () => {},
+  endRegistration: () => {},
+  acceptCurrentVersion: async () => {},
+});

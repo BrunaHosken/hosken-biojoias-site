@@ -4,21 +4,60 @@ import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   updateEmail,
   updatePassword,
   updateProfile,
 } from "firebase/auth";
-import { deleteField, doc, setDoc } from "firebase/firestore";
+import { deleteField, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { ArrowRight, Eye, EyeOff, MessageSquareQuote, Star } from "lucide-react";
-import { SessionContext, useToast } from "../../app/contexts";
+import {
+  LegalContext,
+  SessionContext,
+  useToast,
+  type LegalDocument,
+} from "../../app/contexts";
 import { useCustomerProfile } from "../../data";
 import { auth, db, localMode } from "../../firebase";
 import { formatBrazilianMobile } from "./checkoutModel";
 import { PushNotificationSettings } from "../notifications/PushNotificationSettings";
+import { LegalAcceptanceModal } from "../../components/LegalAcceptanceModal";
+
+type RegistrationDraft = {
+  displayName: string;
+  phone: string;
+  email: string;
+  password: string;
+};
+
+type LocalResetCode = {
+  email: string;
+  oobCode: string;
+  requestType: string;
+};
+
+async function getLocalResetCodes(): Promise<LocalResetCode[]> {
+  const projectId = auth.app.options.projectId;
+  if (!projectId) return [];
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:9099/emulator/v1/projects/${encodeURIComponent(projectId)}/oobCodes`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) return [];
+    const payload = (await response.json()) as {
+      oobCodes?: LocalResetCode[];
+    };
+    return Array.isArray(payload.oobCodes) ? payload.oobCodes : [];
+  } catch {
+    return [];
+  }
+}
 
 export function Account() {
   const session = useContext(SessionContext);
+  const legal = useContext(LegalContext);
   const customerProfile = useCustomerProfile(session.user?.uid);
   const notify = useToast();
   const navigate = useNavigate();
@@ -29,7 +68,10 @@ export function Account() {
       ? requestedReturnTo
       : "";
   const authActionInProgress = useRef(false);
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const loginEmailRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<"login" | "register" | "reset">(() =>
+    searchParams.get("reset") === "1" ? "reset" : "login",
+  );
   const [busy, setBusy] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -37,6 +79,10 @@ export function Account() {
   const [profileEmail, setProfileEmail] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
   const [registrationPhone, setRegistrationPhone] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [localResetLink, setLocalResetLink] = useState("");
+  const [pendingRegistration, setPendingRegistration] =
+    useState<RegistrationDraft | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -158,25 +204,82 @@ export function Account() {
       setBusy(false);
     }
   }
-  async function register(e: FormEvent<HTMLFormElement>) {
+  async function resetPassword(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
-    const form = new FormData(e.currentTarget);
-    const displayName = String(form.get("displayName")).trim();
-    const phone = formatBrazilianMobile(registrationPhone).replace(/\D/g, "");
+    setLocalResetLink("");
+    try {
+      const codesBefore = localMode ? await getLocalResetCodes() : [];
+      await sendPasswordResetEmail(auth, resetEmail.trim());
+      if (localMode) {
+        const codesAfter = await getLocalResetCodes();
+        const matchingCodes = codesAfter.filter(
+          (item) =>
+            item.email.toLowerCase() === resetEmail.trim().toLowerCase() &&
+            item.requestType === "PASSWORD_RESET",
+        );
+        const newCode = matchingCodes.find(
+          (item) => !codesBefore.some((before) => before.oobCode === item.oobCode),
+        );
+        const resetCode = newCode || matchingCodes.at(-1);
+        if (resetCode) {
+          const basePath = import.meta.env.BASE_URL.endsWith("/")
+            ? import.meta.env.BASE_URL
+            : `${import.meta.env.BASE_URL}/`;
+          const link = new URL(`${basePath}redefinir-senha`, window.location.origin);
+          link.searchParams.set("mode", "resetPassword");
+          link.searchParams.set("oobCode", resetCode.oobCode);
+          setLocalResetLink(link.toString());
+          return;
+        }
+        notify(
+          "O pedido foi criado, mas não consegui montar o link do emulador. Confira se o Authentication Emulator está rodando.",
+          "warning",
+        );
+        return;
+      }
+      notify(
+        "Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.",
+        "success",
+      );
+      setResetEmail("");
+      setMode("login");
+    } catch {
+      notify(
+        "Não foi possível enviar o link agora. Confira o endereço e tente novamente.",
+        "error",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function createAccount(
+    draft: RegistrationDraft,
+    acceptedDocuments: LegalDocument[] = [],
+  ) {
+    setBusy(true);
+    authActionInProgress.current = true;
+    legal.beginRegistration();
     try {
       const credential = await createUserWithEmailAndPassword(
         auth,
-        String(form.get("email")),
-        String(form.get("password")),
+        draft.email,
+        draft.password,
       );
-      await updateProfile(credential.user, { displayName });
+      await updateProfile(credential.user, { displayName: draft.displayName });
       await setDoc(doc(db, "users", credential.user.uid), {
-        displayName,
-        ...(phone ? { phone } : {}),
+        displayName: draft.displayName,
+        ...(draft.phone ? { phone: draft.phone } : {}),
         theme: "light",
+        ...(acceptedDocuments.length && legal.version
+          ? {
+              acceptedLegalVersion: legal.version,
+              acceptedLegalAt: serverTimestamp(),
+            }
+          : {}),
       });
       notify("Sua conta foi criada.", "success");
+      setPendingRegistration(null);
       if (returnTo) navigate(returnTo, { replace: true });
     } catch (cause) {
       authActionInProgress.current = false;
@@ -190,8 +293,36 @@ export function Account() {
         "error",
       );
     } finally {
+      legal.endRegistration();
       setBusy(false);
     }
+  }
+
+  async function register(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!legal.ready) {
+      notify("Aguarde o carregamento dos termos e tente novamente.", "warning");
+      return;
+    }
+    if (legal.error || (legal.documents.length > 0 && !legal.version)) {
+      notify(
+        "Não foi possível carregar os termos e políticas. Tente novamente antes de criar sua conta.",
+        "error",
+      );
+      return;
+    }
+    const form = new FormData(e.currentTarget);
+    const draft = {
+      displayName: String(form.get("displayName")).trim(),
+      phone: formatBrazilianMobile(registrationPhone).replace(/\D/g, ""),
+      email: String(form.get("email")).trim(),
+      password: String(form.get("password")),
+    };
+    if (legal.documents.length > 0 && legal.version) {
+      setPendingRegistration(draft);
+      return;
+    }
+    await createAccount(draft);
   }
   return (
     <div className="page narrow">
@@ -474,92 +605,156 @@ export function Account() {
         </>
       ) : (
         <>
-          <p>
-            {mode === "login"
-              ? "Entre para acessar sua conta."
-              : "Crie uma conta para acompanhar seus pedidos."}
-          </p>
-          <form onSubmit={mode === "login" ? login : register}>
-            {mode === "register" && (
-              <>
+          {mode === "reset" ? (
+            <>
+              <p>
+                Informe o e-mail da sua conta. Se ele estiver cadastrado,
+                enviaremos um link para redefinir a senha.
+              </p>
+              <form onSubmit={resetPassword}>
                 <label>
-                  Nome
+                  E-mail
                   <input
-                    name="displayName"
-                    type="text"
-                    autoComplete="name"
-                    maxLength={100}
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    maxLength={254}
+                    value={resetEmail}
+                    onChange={(event) => {
+                      setResetEmail(event.target.value);
+                      setLocalResetLink("");
+                    }}
                     required
                   />
                 </label>
+                <button className="button" disabled={busy}>
+                  {busy ? "Enviando link…" : "Enviar link de recuperação"}
+                </button>
+              </form>
+              {localResetLink && (
+                <div className="account-reset-link notice" role="status">
+                  O emulador local não envia e-mails. Abra este link para
+                  escolher uma nova senha:
+                  <a className="button" href={localResetLink}>
+                    Abrir formulário de nova senha <ArrowRight size={18} />
+                  </a>
+                </div>
+              )}
+              <p>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setMode("login")}
+                >
+                  Voltar ao login
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                {mode === "login"
+                  ? "Entre para acessar sua conta."
+                  : "Crie uma conta para acompanhar seus pedidos."}
+              </p>
+              <form onSubmit={mode === "login" ? login : register}>
+                {mode === "register" && (
+                  <>
+                    <label>
+                      Nome
+                      <input
+                        name="displayName"
+                        type="text"
+                        autoComplete="name"
+                        maxLength={100}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Celular (opcional)
+                      <input
+                        name="phone"
+                        type="tel"
+                        autoComplete="tel"
+                        inputMode="tel"
+                        maxLength={15}
+                        pattern="\([0-9]{2}\) [0-9]{5}-[0-9]{4}"
+                        title="Digite um celular com DDD, por exemplo (22) 99999-9999."
+                        placeholder="(22) 99999-9999"
+                        value={registrationPhone}
+                        onChange={(event) =>
+                          setRegistrationPhone(
+                            formatBrazilianMobile(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                  </>
+                )}
                 <label>
-                  Celular (opcional)
+                  E-mail
                   <input
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    maxLength={15}
-                    pattern="\([0-9]{2}\) [0-9]{5}-[0-9]{4}"
-                    title="Digite um celular com DDD, por exemplo (22) 99999-9999."
-                    placeholder="(22) 99999-9999"
-                    value={registrationPhone}
-                    onChange={(event) =>
-                      setRegistrationPhone(
-                        formatBrazilianMobile(event.target.value),
-                      )
-                    }
+                    name="email"
+                    type="email"
+                    autoComplete="username"
+                    maxLength={254}
+                    required
+                    ref={loginEmailRef}
                   />
                 </label>
-              </>
-            )}
-            <label>
-              E-mail
-              <input
-                name="email"
-                type="email"
-                autoComplete="username"
-                maxLength={254}
-                required
-              />
-            </label>
-            <label>
-              Senha
-              <input
-                name="password"
-                type="password"
-                autoComplete={
-                  mode === "login" ? "current-password" : "new-password"
-                }
-                minLength={6}
-                required
-              />
-            </label>
-            <button className="button" disabled={busy}>
-              {busy
-                ? mode === "login"
-                  ? "Entrando…"
-                  : "Criando conta…"
-                : mode === "login"
-                  ? "Entrar"
-                  : "Criar conta"}
-            </button>
-          </form>
-          <p>
-            {mode === "login"
-              ? "Ainda não tem uma conta?"
-              : "Já tem uma conta?"}{" "}
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setMode(mode === "login" ? "register" : "login");
-                setRegistrationPhone("");
-              }}
-            >
-              {mode === "login" ? "Criar conta" : "Entrar"}
-            </button>
-          </p>
+                <label>
+                  Senha
+                  <input
+                    name="password"
+                    type="password"
+                    autoComplete={
+                      mode === "login" ? "current-password" : "new-password"
+                    }
+                    minLength={6}
+                    required
+                  />
+                </label>
+                <button className="button" disabled={busy}>
+                  {busy
+                    ? mode === "login"
+                      ? "Entrando…"
+                      : "Criando conta…"
+                    : mode === "login"
+                      ? "Entrar"
+                      : "Criar conta"}
+                </button>
+              </form>
+              {mode === "login" && (
+                <p>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => {
+                      setResetEmail(loginEmailRef.current?.value || "");
+                      setMode("reset");
+                    }}
+                  >
+                    Esqueceu sua senha?
+                  </button>
+                </p>
+              )}
+              <p>
+                {mode === "login"
+                  ? "Ainda não tem uma conta?"
+                  : "Já tem uma conta?"}{" "}
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    setMode(mode === "login" ? "register" : "login");
+                    setRegistrationPhone("");
+                  }}
+                >
+                  {mode === "login" ? "Criar conta" : "Entrar"}
+                </button>
+              </p>
+            </>
+          )}
           {localMode && (
             <aside className="notice">
               Depois de iniciar o banco, execute <code>npm run db:seed</code>.
@@ -570,6 +765,16 @@ export function Account() {
             </aside>
           )}
         </>
+      )}
+      {pendingRegistration && legal.documents.length > 0 && (
+        <LegalAcceptanceModal
+          key={legal.version}
+          documents={legal.documents}
+          canDismiss
+          busy={busy}
+          onDismiss={() => setPendingRegistration(null)}
+          onAccept={() => createAccount(pendingRegistration, legal.documents)}
+        />
       )}
     </div>
   );

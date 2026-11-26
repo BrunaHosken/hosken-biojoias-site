@@ -112,7 +112,7 @@ export function SiteHeader() {
             <span>{session.user ? "Minha conta" : "Entrar"}</span>
           </Link>
           {!mobileViewport && notificationBell}
-          {session.user && theme.ready && (
+          {theme.ready && (
             <button
               className="theme-toggle"
               type="button"

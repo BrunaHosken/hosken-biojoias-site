@@ -127,7 +127,7 @@ service cloud.firestore {
               && request.resource.data.keys().hasAll(['policyType'])
               && text(request.resource.data.title, 160)
               && text(request.resource.data.body, 12000)
-              && request.resource.data.policyType in ['delivery','reshipment','cancellation','returns','payment','privacy','general']
+              && request.resource.data.policyType in ['terms','delivery','reshipment','cancellation','returns','payment','privacy','general']
               && request.resource.data.status in ['published','draft']
             : contentCollection == 'partnerStores'
               ? request.resource.data.keys().hasOnly(['title','body','status','partnerType','location','address','mapUrl'])
@@ -148,15 +148,28 @@ service cloud.firestore {
     }
     match /users/{uid} {
       function validProfile(data) {
-        return data.keys().hasOnly(['displayName','phone','theme'])
+        return data.keys().hasOnly(['displayName','phone','theme','acceptedLegalVersion','acceptedLegalAt'])
           && (!('displayName' in data) || text(data.displayName, 100))
           && (!('phone' in data)
             || (data.phone is string && data.phone.matches('^[0-9]{11}$')))
-          && (!('theme' in data) || data.theme in ['light','dark']);
+          && (!('theme' in data) || data.theme in ['light','dark'])
+          && ((!('acceptedLegalVersion' in data) && !('acceptedLegalAt' in data))
+            || ('acceptedLegalVersion' in data
+              && text(data.acceptedLegalVersion, 64)
+              && data.acceptedLegalVersion.size() == 64
+              && 'acceptedLegalAt' in data
+              && data.acceptedLegalAt is timestamp));
       }
       allow read: if signedIn() && (request.auth.uid == uid || admin());
-      allow create, update: if signedIn() && request.auth.uid == uid
-        && validProfile(request.resource.data);
+      allow create: if signedIn() && request.auth.uid == uid
+        && validProfile(request.resource.data)
+        && (!('acceptedLegalVersion' in request.resource.data)
+          || request.resource.data.acceptedLegalAt == request.time);
+      allow update: if signedIn() && request.auth.uid == uid
+        && validProfile(request.resource.data)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['acceptedLegalVersion','acceptedLegalAt'])
+          || (request.resource.data.diff(resource.data).affectedKeys().hasAll(['acceptedLegalVersion','acceptedLegalAt'])
+            && request.resource.data.acceptedLegalAt == request.time));
     }
     match /users/{uid}/savedAddresses/{addressId} {
       function validAddress(data) {

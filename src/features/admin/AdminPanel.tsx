@@ -40,7 +40,7 @@ const moduleGroups = [
       ["news", "Novidades"],
       ["events", "Eventos"],
       ["partnerStores", "Lojas parceiras"],
-      ["policies", "Políticas"],
+      ["policies", "Termos e políticas"],
       ["faqs", "Perguntas frequentes"],
     ],
   },

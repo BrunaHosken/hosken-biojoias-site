@@ -25,7 +25,7 @@ export function SiteFooter() {
         </a>
         <a href="mailto:hoskenbiojoias2026@gmail.com">E-mail ↗</a>
         <Link to="/duvidas">Perguntas frequentes</Link>
-        <Link to="/politicas">Políticas da loja</Link>
+        <Link to="/politicas">Termos e políticas</Link>
         {admin && <Link to="/admin">Administrar</Link>}
       </div>
       <small>© {new Date().getFullYear()} Hosken Biojoias</small>

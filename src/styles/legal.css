@@ -1,0 +1,153 @@
+.legal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(32 25 27 / 58%);
+}
+
+.legal-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 720px);
+  max-height: min(88dvh, 820px);
+  padding: clamp(20px, 4vw, 34px);
+  overflow: hidden;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 24%);
+}
+
+.legal-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.legal-modal-header h2 {
+  margin: 8px 0 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(28px, 5vw, 38px);
+  font-weight: 500;
+  line-height: 1.05;
+}
+
+.legal-modal-close {
+  display: grid;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--border);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.legal-modal-intro {
+  margin: 16px 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.legal-modal-documents {
+  flex: 1 1 auto;
+  min-height: 120px;
+  padding: 0 12px 0 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-modal-document {
+  padding: 18px 0;
+}
+
+.legal-modal-document + .legal-modal-document {
+  border-top: 1px solid var(--border);
+}
+
+.legal-modal-document > span {
+  color: var(--wine);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.legal-modal-document h3 {
+  margin: 8px 0;
+  font-size: 18px;
+}
+
+.legal-modal-document p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.policy-section {
+  margin-top: clamp(36px, 6vw, 64px);
+}
+
+.policy-section > h2 {
+  margin: 0 0 24px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 500;
+}
+
+.legal-acceptance-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 11px;
+  margin: 20px 0;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.legal-acceptance-check input {
+  flex: 0 0 auto;
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--wine);
+}
+
+.legal-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .legal-modal-backdrop {
+    padding: 10px;
+  }
+
+  .legal-modal {
+    max-height: 92dvh;
+    padding: 20px;
+  }
+
+  .legal-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .legal-modal-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+}

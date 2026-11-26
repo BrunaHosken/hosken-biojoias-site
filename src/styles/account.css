@@ -115,3 +115,44 @@
   color: var(--success-text);
   font-size: 12px;
 }
+.password-reset-page {
+  min-height: 54vh;
+  padding-top: 56px;
+  padding-bottom: 72px;
+}
+.password-reset-card {
+  border: 1px solid var(--border);
+  padding: clamp(22px, 5vw, 40px);
+  background: var(--surface-soft);
+}
+.password-reset-card h2 {
+  margin: 0 0 12px;
+}
+.password-reset-card > p:last-child {
+  margin-bottom: 0;
+}
+.password-reset-card .account-edit-form {
+  margin-top: 0;
+}
+.password-reset-error {
+  color: var(--error-text);
+  font-size: 13px;
+}
+.account-reset-link {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+  font-size: 13px;
+}
+.account-reset-link .button {
+  justify-self: start;
+}
+@media (max-width: 600px) {
+  .password-reset-page {
+    padding-top: 36px;
+    padding-bottom: 48px;
+  }
+  .account-reset-link .button {
+    width: 100%;
+  }
+}

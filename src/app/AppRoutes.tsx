@@ -8,6 +8,7 @@ import { FaqPage } from "../features/storefront/pages/FaqPage";
 import { About } from "../features/storefront/pages/About";
 import { Contact } from "../features/storefront/Contact";
 import { Account } from "../features/account/Account";
+import { PasswordResetPage } from "../features/account/PasswordResetPage";
 import { OrdersPage } from "../features/account/Orders";
 import { Cart } from "../features/account/Cart";
 import { Checkout } from "../features/account/Checkout";
@@ -58,6 +59,7 @@ export function AppRoutes() {
       <Route path="/politicas" element={<PoliciesPage />} />
       <Route path="/duvidas" element={<FaqPage />} />
       <Route path="/conta" element={<Account />} />
+      <Route path="/redefinir-senha" element={<PasswordResetPage />} />
       <Route path="/pedidos" element={<OrdersPage />} />
       <Route path="/avaliar" element={<ReviewFormPage />} />
       <Route path="/minhas-avaliacoes" element={<CustomerReviewsPage />} />
